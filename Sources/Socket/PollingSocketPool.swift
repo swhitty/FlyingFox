@@ -44,8 +44,9 @@ final actor PollingSocketPool: AsyncSocketPool {
         self.interval = interval
     }
 
-    func suspend(untilReady socket: Socket) async {
-        await withCheckedContinuation {
+    func suspend(untilReady socket: Socket) async throws {
+        try Task.checkCancellation()
+        try await withCheckedThrowingContinuation {
             appendContinuation(Continuation($0), for: socket)
         }
     }
@@ -67,7 +68,18 @@ final actor PollingSocketPool: AsyncSocketPool {
         }
         isPolling = true
 
+        do {
+            try await poll()
+        } catch {
+            for continuation in waiting.values.flatMap({ $0 }) {
+                continuation.cancel()
+            }
+        }
+    }
+
+    private func poll() async throws {
         repeat {
+            try Task.checkCancellation()
             var buffer = waiting.keys.map {
                 pollfd(fd: $0, events: Int16(POLLIN), revents: 0)
             }
@@ -89,9 +101,9 @@ final actor PollingSocketPool: AsyncSocketPool {
 
     final class Continuation: Hashable {
 
-        private let continuation: CheckedContinuation<Void, Never>
+        private let continuation: CheckedContinuation<Void, Swift.Error>
 
-        init(_ continuation: CheckedContinuation<Void, Never>) {
+        init(_ continuation: CheckedContinuation<Void, Swift.Error>) {
             self.continuation = continuation
         }
 
@@ -99,12 +111,16 @@ final actor PollingSocketPool: AsyncSocketPool {
             continuation.resume()
         }
 
+        func cancel() {
+            continuation.resume(throwing: CancellationError())
+        }
+
         func hash(into hasher: inout Hasher) {
-          ObjectIdentifier(self).hash(into: &hasher)
+            ObjectIdentifier(self).hash(into: &hasher)
         }
 
         static func == (lhs: Continuation, rhs: Continuation) -> Bool {
-          lhs === rhs
+            lhs === rhs
         }
     }
 }

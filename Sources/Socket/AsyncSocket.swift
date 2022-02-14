@@ -33,7 +33,7 @@ import Foundation
 
 protocol AsyncSocketPool {
     func run() async throws
-    func suspend(untilReady socket: Socket) async
+    func suspend(untilReady socket: Socket) async throws
 }
 
 struct AsyncSocket {
@@ -51,7 +51,7 @@ struct AsyncSocket {
         var file = try socket.accept()?.file
 
         while file == nil {
-            await pool.suspend(untilReady: socket)
+            try await pool.suspend(untilReady: socket)
             file = try socket.accept()?.file
         }
 
@@ -63,7 +63,7 @@ struct AsyncSocket {
         var byte = try socket.read()
 
         while byte == nil {
-            await pool.suspend(untilReady: socket)
+            try await pool.suspend(untilReady: socket)
             byte = try socket.read()
         }
 

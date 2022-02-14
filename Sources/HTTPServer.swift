@@ -67,12 +67,21 @@ public final actor HTTPServer {
         self.socket = asyncSocket
         print("starting server port:", port)
 
+        do {
+            try await listenForConnections(on: asyncSocket, pool: pool)
+        } catch {
+            print("server error: ", error.localizedDescription)
+            closeAllConnections()
+        }
+    }
+
+    private func listenForConnections(on socket: AsyncSocket, pool: AsyncSocketPool) async throws {
         try await withThrowingTaskGroup(of: Void.self) { group in
             group.addTask {
                 try await pool.run()
             }
             group.addTask {
-                for try await socket in asyncSocket.sockets {
+                for try await socket in socket.sockets {
                     await self.addConnection(HTTPConnection(socket: socket))
                 }
             }
@@ -116,16 +125,15 @@ public final actor HTTPServer {
         }
     }
 
-    func close() {
+    func closeAllConnections() {
         for (connection, task) in connections {
             try? connection.close()
             task.cancel()
         }
+        connections = [:]
+        print("connections", connections.count)
         try? socket?.close()
-    }
-
-    deinit {
-        close()
+        socket = nil
     }
 }
 
