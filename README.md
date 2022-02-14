@@ -86,7 +86,7 @@ By default routes accept all HTTP methods, but specific methods can be supplied;
 let HTTPRoute(string: "GET /hello/world")
 
 route ~= "GET /hello/world" // true
-route ~= "POST hello/world/" // false
+route ~= "PUT /hello/world" // false
 ```
 
 ## AsyncSocket / PollingSocketPool
