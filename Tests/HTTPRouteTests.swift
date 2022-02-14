@@ -34,19 +34,31 @@ import XCTest
 
 final class HTTPRouteTests: XCTestCase {
 
-    func testComponents() {
+    func testPathComponents() {
         XCTAssertEqual(
-            HTTPRoute("hello/world").components,
+            HTTPRoute("hello/world").path,
             [.caseInsensitive("hello"), .caseInsensitive("world")]
         )
 
         XCTAssertEqual(
-            HTTPRoute("hello/*").components,
+            HTTPRoute("hello/*").path,
             [.caseInsensitive("hello"), .wildcard]
         )
     }
 
-    func testWildcard_Matches() {
+    func testMethod() {
+        XCTAssertEqual(
+            HTTPRoute("hello/world").method,
+            .wildcard
+        )
+
+        XCTAssertEqual(
+            HTTPRoute("GET hello").method,
+            .caseInsensitive("GET")
+        )
+    }
+
+    func testWildcard_MatchesPath() {
         let route = HTTPRoute("/fish/*")
 
         XCTAssertTrue(
@@ -55,6 +67,42 @@ final class HTTPRouteTests: XCTestCase {
 
         XCTAssertTrue(
             route ~= "/fish/chips/mushy/peas"
+        )
+
+        XCTAssertFalse(
+            route ~= "/chips"
+        )
+    }
+
+    func testMethod_Matches() {
+        let route = HTTPRoute("POST /fish/chips")
+
+        XCTAssertTrue(
+            route ~= "POST /fish/chips"
+        )
+
+        XCTAssertTrue(
+            route ~= "post  /fish/chips/"
+        )
+
+        XCTAssertFalse(
+            route ~= "GET /fish/chips"
+        )
+    }
+
+    func testWildcardMethod_Matches() {
+        let route = HTTPRoute("/fish/chips")
+
+        XCTAssertTrue(
+            route ~= "/fish/chips/"
+        )
+
+        XCTAssertTrue(
+            route ~= "GET /fish/chips"
+        )
+
+        XCTAssertTrue(
+            route ~= "ANY /fish/chips"
         )
 
         XCTAssertFalse(

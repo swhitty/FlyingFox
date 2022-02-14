@@ -62,7 +62,7 @@ Any unmatched requests receive `HTTP 404`.
 Requests can be routed to static files via `FileHTTPHandler`:
 
 ```swift
-await server.appendHandler(for: "mock", handler: .file(named: "mock.json"))
+await server.appendHandler(for: "GET /mock", handler: .file(named: "mock.json"))
 ```
 
 `FileHTTPHandler` will return `HTTP 404` if the file does not exist.
@@ -74,9 +74,18 @@ Routes can include wildcards which can be pattern matched against paths:
 ```swift
 let HTTPRoute(string: "/hello/*/world")
 
-route ~= "/hello/fish/world" // true
-route ~= "hello/dog/world/" // true
+route ~= "GET /hello/fish/world" // true
+route ~= "POST hello/dog/world/" // true
 route ~= "/hello/world" // false
+```
+
+By default routes accept all HTTP methods, but specific methods can be supplied;
+
+```swift
+let HTTPRoute(string: "GET /hello/world")
+
+route ~= "GET /hello/world" // true
+route ~= "POST hello/world/" // false
 ```
 
 ## AsyncSocket / PollingSocketPool

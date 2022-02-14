@@ -114,7 +114,7 @@ public final actor HTTPServer {
     }
 
     func handleRequest(_ request: HTTPRequest) async -> HTTPResponse {
-        guard let handler = handlers.first(where: { $0.route ~= request.path })?.handler else {
+        guard let handler = handlers.first(where: { $0.route ~= request })?.handler else {
             return HTTPResponse(statusCode: .notFound)
         }
 

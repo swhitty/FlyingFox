@@ -33,10 +33,13 @@ import Foundation
 
 
 public struct HTTPRoute {
-    public var components: [Component]
+    public var method: Component
+    public var path: [Component]
 
     public init(_ string: String) {
-        self.components = string
+        let comps = Self.components(for: string)
+        self.method = Component(comps.method)
+        self.path = comps.path
             .split(separator: "/", omittingEmptySubsequences: true)
             .map { Component(String($0)) }
     }
@@ -75,19 +78,22 @@ public extension HTTPRoute.Component {
 
 public extension HTTPRoute {
 
-    private func component(for index: Int) -> Component? {
-        if components.indices.contains(index) {
-            return components[index]
-        } else if components.last == .wildcard {
+    private func pathComponent(for index: Int) -> Component? {
+        if path.indices.contains(index) {
+            return path[index]
+        } else if path.last == .wildcard {
             return .wildcard
         }
         return nil
     }
 
-    private func patternMatch(to path: String) -> Bool {
+    private func patternMatch(method: String, path: String) -> Bool {
         let nodes = path.split(separator: "/", omittingEmptySubsequences: true)
+        guard self.method ~= method else {
+            return false
+        }
         for (idx, node) in nodes.enumerated() {
-            guard let comp = component(for: idx), comp ~= String(node) else {
+            guard let comp = pathComponent(for: idx), comp ~= String(node) else {
                 return false
             }
         }
@@ -95,11 +101,21 @@ public extension HTTPRoute {
         return true
     }
 
-    static func ~= (path: String, route: HTTPRoute) -> Bool {
-        route.patternMatch(to: path)
+    private static func components(for target: String) -> (method: String, path: String) {
+        let comps = target.split(separator: " ", maxSplits: 2, omittingEmptySubsequences: true)
+        guard comps.count > 1 else {
+            return (method: "*", path: target)
+        }
+        return (method: String(comps[0]), path: String(comps[1]))
     }
 
-    static func ~= (route: HTTPRoute, path: String) -> Bool {
-        route.patternMatch(to: path)
+    static func ~= (route: HTTPRoute, target: String) -> Bool {
+        let comps = HTTPRoute.components(for: target)
+        return route.patternMatch(method: comps.method, path: comps.path)
     }
+
+    static func ~= (route: HTTPRoute, request: HTTPRequest) -> Bool {
+        route.patternMatch(method: request.method.rawValue, path: request.path)
+    }
+
 }
