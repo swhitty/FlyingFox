@@ -74,6 +74,7 @@ Routes can include wildcards which can be pattern matched against paths:
 ```swift
 let HTTPRoute(string: "/hello/*/world")
 
+route ~= "/hello/fish/world" // true
 route ~= "GET /hello/fish/world" // true
 route ~= "POST hello/dog/world/" // true
 route ~= "/hello/world" // false
