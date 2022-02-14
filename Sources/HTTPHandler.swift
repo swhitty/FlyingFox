@@ -111,10 +111,10 @@ public extension HTTPHandler where Self == FileHTTPHandler {
     static func file(named: String, in bundle: Bundle = .main) -> FileHTTPHandler {
         FileHTTPHandler(named: named, in: bundle)
     }
-   }
-   
-   public extension HTTPHandler where Self == RedirectHTTPHandler {
-       static func redirect(to location: String) -> RedirectHTTPHandler {
+}
+
+public extension HTTPHandler where Self == RedirectHTTPHandler {
+    static func redirect(to location: String) -> RedirectHTTPHandler {
         RedirectHTTPHandler(location: location)
     }
 }
