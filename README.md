@@ -95,7 +95,7 @@ Internally, FlyingFox uses standard BSD sockets configured with the flag `O_NONB
 
 ```swift
 protocol AsyncSocketPool {
-  func suspend(untilReady socket: Socket) async
+  func suspend(untilReady socket: Socket) async throws
 }
 ```
 
@@ -103,4 +103,6 @@ protocol AsyncSocketPool {
 
 # Credits
 
-FlyingFox is primarily the work of [Simon Whitty](https://github.com/simonwhitty).
+FlyingFox is primarily the work of [Simon Whitty](https://github.com/swhitty).
+
+([Full list of contributors](https://github.com/swhitty/FlyingFox/graphs/contributors))
