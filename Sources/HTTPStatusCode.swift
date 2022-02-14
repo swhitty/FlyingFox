@@ -40,8 +40,9 @@ public struct HTTPStatusCode: Hashable {
 }
 
 public extension HTTPStatusCode {
-    static let ok           = HTTPStatusCode(200, phrase: "OK")
-    static let badRequest   = HTTPStatusCode(400, phrase: "Bad Request")
-    static let notFound     = HTTPStatusCode(404, phrase: "Not Found")
-    static let serverError  = HTTPStatusCode(500, phrase: "Internal Server Error")
+    static let ok               = HTTPStatusCode(200, phrase: "OK")
+    static let movedPermanently = HTTPStatusCode(301, phrase: "Moved Permanently")
+    static let badRequest       = HTTPStatusCode(400, phrase: "Bad Request")
+    static let notFound         = HTTPStatusCode(404, phrase: "Not Found")
+    static let serverError      = HTTPStatusCode(500, phrase: "Internal Server Error")
 }

@@ -48,6 +48,23 @@ public struct ClosureHTTPHandler: HTTPHandler {
     }
 }
 
+public struct RedirectHTTPHandler: HTTPHandler {
+
+    private let location: String
+
+    public init(location: String) {
+        self.location = location
+    }
+
+    public func handleRequest(_ request: HTTPRequest) async throws -> HTTPResponse {
+        HTTPResponse(
+            statusCode: .movedPermanently,
+            headers: [.location: location]
+        )
+    }
+
+}
+
 public struct FileHTTPHandler: HTTPHandler {
 
     private let path: URL?
