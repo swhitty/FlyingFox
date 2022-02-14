@@ -8,7 +8,7 @@
 
 # Introduction
 
-**FlyingFox** is a lightweight HTTP server built using [Swift Concurrency](https://docs.swift.org/swift-book/LanguageGuide/Concurrency.html). The server uses non blocking sockets handling each connection using a [Task](https://developer.apple.com/documentation/swift/task) on the default concurrent executor.
+**FlyingFox** is a lightweight HTTP server built using [Swift Concurrency](https://docs.swift.org/swift-book/LanguageGuide/Concurrency.html). The server uses non blocking sockets, handling each connection in a [Task](https://developer.apple.com/documentation/swift/task) on the default concurrent executor.
 
 # Installation
 
