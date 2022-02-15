@@ -69,11 +69,11 @@ await server.appendHandler(for: "GET /mock", handler: .file(named: "mock.json"))
 
 ### ProxyHTTPHandler
 
-Requests can be proxied through a URL:
+Requests can be proxied via a base URL:
 
 ```swift
-// GET /202?sleep=1000  ---->  https://httpstat.us/202?sleep=1000
 await server.appendHandler(for: "GET *", handler: .proxy(via: "https://httpstat.us"))
+// GET /202?sleep=1000  ---->  https://httpstat.us/202?sleep=1000
 ```
 
 ### Wildcards
