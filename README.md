@@ -81,7 +81,7 @@ await server.appendHandler(for: "GET *", handler: .proxy(via: "https://httpstat.
 Routes can include wildcards which can be pattern matched against paths:
 
 ```swift
-let HTTPRoute(string: "/hello/*/world")
+let HTTPRoute("/hello/*/world")
 
 route ~= "/hello/fish/world" // true
 route ~= "GET /hello/fish/world" // true
