@@ -89,7 +89,6 @@ struct Socket: Hashable {
 
         if let address = listenAddress {
             guard address.withCString({ cstring in inet_pton(AF_INET6, cstring, &addr.sin6_addr) }) == 1 else {
-                print("\(address) is not converted.")
                 throw SocketError.bindFailed(makeErrorMessage())
             }
         }

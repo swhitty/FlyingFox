@@ -1,8 +1,8 @@
 //
-//  HTTPResponse.swift
+//  Task+TimeoutTests.swift
 //  FlyingFox
 //
-//  Created by Simon Whitty on 13/02/2022.
+//  Created by Simon Whitty on 15/02/2022.
 //  Copyright © 2022 Simon Whitty. All rights reserved.
 //
 //  Distributed under the permissive MIT license
@@ -29,27 +29,52 @@
 //  SOFTWARE.
 //
 
-import Foundation
+@testable import FlyingFox
+import XCTest
 
-public struct HTTPResponse {
-    public var version: HTTPVersion
-    public var statusCode: HTTPStatusCode
-    public var headers: [HTTPHeader: String]
-    public var body: Data
+final class TaskTimeoutTests: XCTestCase {
 
-    public init(version: HTTPVersion = .http11,
-                statusCode: HTTPStatusCode,
-                headers: [HTTPHeader: String] = [:],
-                body: Data = Data()) {
-        self.version = version
-        self.statusCode = statusCode
-        self.headers = headers
-        self.body = body
+    func testTimeoutReturnsSuccess_WhenTimeoutDoesNotExpire() async throws {
+        // given
+        let value = try await Task(timeout: 0.5) {
+            "Fish"
+        }.value
+
+        // then
+        XCTAssertEqual(value, "Fish")
     }
-}
 
-extension HTTPResponse {
-    var shouldKeepAlive: Bool {
-        headers[.connection]?.caseInsensitiveCompare("keep-alive") == .orderedSame
+    func testTimeoutThrowsError_WhenTimeoutExpires() async {
+        // given
+        let task = Task<Void, Error>(timeout: 0.5) {
+            try? await Task.sleep(nanoseconds: 10_000_000_000)
+        }
+
+        // then
+        do {
+            _ = try await task.value
+            XCTFail("Expected TimeoutError")
+        } catch {
+            XCTAssertTrue(error is TimeoutError)
+        }
+    }
+
+
+    func testTimeoutCancels() async {
+        // given
+        let task = Task(timeout: 0.5) {
+            try? await Task.sleep(nanoseconds: 10_000_000_000)
+        }
+
+        // when
+        task.cancel()
+
+        // then
+        do {
+            _ = try await task.value
+            XCTFail("Expected CancellationError")
+        } catch {
+            XCTAssertTrue(error is CancellationError)
+        }
     }
 }

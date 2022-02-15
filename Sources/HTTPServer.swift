@@ -34,12 +34,14 @@ import Foundation
 public final actor HTTPServer {
 
     private let port: UInt16
+    private let timeout: TimeInterval
     private var socket: AsyncSocket?
     private var connections = [HTTPConnection: Task<Void, Never>]()
     private var handlers: [(route: HTTPRoute, handler: HTTPHandler)]
 
-    public init(port: UInt16, handlers: [(route: HTTPRoute, handler: HTTPHandler)] = []) {
+    public init(port: UInt16, timeout: TimeInterval = 15, handlers: [(route: HTTPRoute, handler: HTTPHandler)] = []) {
         self.port = port
+        self.timeout = timeout
         self.handlers = []
     }
 
@@ -95,11 +97,12 @@ public final actor HTTPServer {
         connections[connection] = Task {
             do {
                 for try await request in connection.requests {
-                    let response = await self.handleRequest(request)
-                    try connection.sendResponse(response, for: request)
+                    let response = await handleRequest(request)
+                    try connection.sendResponse(response)
+                    guard response.shouldKeepAlive else { break }
                 }
             } catch {
-                print("error", connection.hostname, error)
+                print("connection error", connection.hostname, error)
             }
             removeConnection(connection)
         }
@@ -114,13 +117,24 @@ public final actor HTTPServer {
     }
 
     func handleRequest(_ request: HTTPRequest) async -> HTTPResponse {
+        var response = await handleRequest(request, timeout: timeout)
+        if request.shouldKeepAlive {
+            response.headers[.connection] = request.headers[.connection]
+        }
+        return response
+    }
+
+    func handleRequest(_ request: HTTPRequest, timeout: TimeInterval) async -> HTTPResponse {
         guard let handler = handlers.first(where: { $0.route ~= request })?.handler else {
             return HTTPResponse(statusCode: .notFound)
         }
 
         do {
-            return try await handler.handleRequest(request)
+            return try await withThrowingTimeout(seconds: timeout) {
+                try await handler.handleRequest(request)
+            }
         } catch {
+            print("handler error", error)
             return HTTPResponse(statusCode: .serverError)
         }
     }

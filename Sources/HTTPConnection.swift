@@ -46,8 +46,8 @@ final class HTTPConnection: Hashable {
         HTTPRequestSequence(bytes: socket.bytes)
     }
 
-    func sendResponse(_ response: HTTPResponse, for request: HTTPRequest) throws {
-        try socket.write(HTTPResponseEncoder.encodeResponse(response, for: request))
+    func sendResponse(_ response: HTTPResponse) throws {
+        try socket.write(HTTPResponseEncoder.encodeResponse(response))
     }
 
     func close() throws {

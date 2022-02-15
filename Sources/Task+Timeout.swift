@@ -1,8 +1,8 @@
 //
-//  HTTPResponse.swift
+//  Task+Timeout.swift
 //  FlyingFox
 //
-//  Created by Simon Whitty on 13/02/2022.
+//  Created by Simon Whitty on 15/02/2022.
 //  Copyright © 2022 Simon Whitty. All rights reserved.
 //
 //  Distributed under the permissive MIT license
@@ -31,25 +31,31 @@
 
 import Foundation
 
-public struct HTTPResponse {
-    public var version: HTTPVersion
-    public var statusCode: HTTPStatusCode
-    public var headers: [HTTPHeader: String]
-    public var body: Data
-
-    public init(version: HTTPVersion = .http11,
-                statusCode: HTTPStatusCode,
-                headers: [HTTPHeader: String] = [:],
-                body: Data = Data()) {
-        self.version = version
-        self.statusCode = statusCode
-        self.headers = headers
-        self.body = body
+func withThrowingTimeout<T>(seconds: TimeInterval, body: @escaping @Sendable () async throws -> T) async throws -> T {
+    try await withThrowingTaskGroup(of: T.self) { group -> T in
+        group.addTask(operation: {
+            try await body()
+        })
+        group.addTask {
+            try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+            throw TimeoutError()
+        }
+        let success = try await group.next()!
+        group.cancelAll()
+        return success
     }
 }
 
-extension HTTPResponse {
-    var shouldKeepAlive: Bool {
-        headers[.connection]?.caseInsensitiveCompare("keep-alive") == .orderedSame
+struct TimeoutError: LocalizedError {
+    var errorDescription: String? = "Timed out before completion"
+}
+
+extension Task where Failure == Error {
+
+    // Start a new Task with a timeout.
+    init(priority: TaskPriority? = nil, timeout: TimeInterval, operation: @escaping @Sendable () async throws -> Success) {
+        self = Task(priority: priority) {
+            try await withThrowingTimeout(seconds: timeout, body: operation)
+        }
     }
 }

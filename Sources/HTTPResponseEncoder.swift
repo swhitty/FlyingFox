@@ -33,19 +33,15 @@ import Foundation
 
 struct HTTPResponseEncoder {
 
-    static func makeHeaderLines(from response: HTTPResponse, for request: HTTPRequest) -> [String] {
+    static func makeHeaderLines(from response: HTTPResponse) -> [String] {
         let status = [response.version.rawValue,
                       String(response.statusCode.code),
                       response.statusCode.phrase].joined(separator: " ")
 
         var httpHeaders = response.headers
 
-        if request.shouldKeepAlive {
-            httpHeaders[.connection] = "keep-alive"
-        }
-
         if response.body.isEmpty {
-            httpHeaders[.contentLength] = nil
+            httpHeaders[.contentLength] = String(0)
         } else {
             httpHeaders[.contentLength] = String(response.body.count)
         }
@@ -55,13 +51,15 @@ struct HTTPResponseEncoder {
         return [status] + headers + ["\r\n"]
     }
 
-    static func encodeResponse(_ response: HTTPResponse, for request: HTTPRequest) throws -> Data {
-        guard var data = makeHeaderLines(from: response, for: request)
+    static func encodeResponse(_ response: HTTPResponse) throws -> Data {
+        guard var data = makeHeaderLines(from: response)
                 .joined(separator: "\r\n")
                 .data(using: .utf8) else {
                     throw Error("Invalid Response Headers")
             }
+
         data.append(response.body)
+
         return data
     }
 }
