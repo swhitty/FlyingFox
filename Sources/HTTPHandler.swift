@@ -62,7 +62,62 @@ public struct RedirectHTTPHandler: HTTPHandler {
             headers: [.location: location]
         )
     }
+}
 
+public struct ProxyHTTPHandler: HTTPHandler {
+
+    private let base: String
+    private let session: URLSession
+
+    public init(base: String, session: URLSession = .shared) {
+        self.base = base
+        self.session = session
+    }
+
+    public func handleRequest(_ request: HTTPRequest) async throws -> HTTPResponse {
+        let req = try makeURLRequest(for: request)
+        let (data, response) = try await session.makeRequest(req)
+        return makeResponse(for: response, data: data)
+    }
+
+    func makeURLRequest(for request: HTTPRequest) throws -> URLRequest {
+        let url = try makeURL(for: request)
+        var req = URLRequest(url: url)
+        req.httpMethod = request.method.rawValue
+        req.httpBody = request.body
+        req.allHTTPHeaderFields = request.headers.reduce(into: [:]) {
+            if $1.key != .host {
+                $0![$1.key.rawValue] = $1.value
+            }
+        }
+        return req
+    }
+
+    func makeURL(for request: HTTPRequest) throws -> URL {
+        guard let base = URL(string: base).map( {$0.appendingPathComponent(request.path) }),
+              var comps = URLComponents(url: base, resolvingAgainstBaseURL: false) else {
+            throw URLError(.badURL)
+        }
+        if !request.query.isEmpty {
+            comps.queryItems = request.query.map(URLQueryItem.init)
+        }
+        guard let url = comps.url else {
+            throw URLError(.badURL)
+        }
+        return url
+    }
+
+    func makeResponse(for response: HTTPURLResponse, data: Data) -> HTTPResponse {
+        var headers = [HTTPHeader: String]()
+        for (name, value) in response.allHeaderFields {
+            if let name = name as? String {
+                headers[HTTPHeader(rawValue: name)] = value as? String
+            }
+        }
+        return HTTPResponse(statusCode: HTTPStatusCode(response.statusCode, phrase: ""),
+                            headers: headers,
+                            body: data)
+    }
 }
 
 public struct FileHTTPHandler: HTTPHandler {
@@ -116,5 +171,11 @@ public extension HTTPHandler where Self == FileHTTPHandler {
 public extension HTTPHandler where Self == RedirectHTTPHandler {
     static func redirect(to location: String) -> RedirectHTTPHandler {
         RedirectHTTPHandler(location: location)
+    }
+}
+
+public extension HTTPHandler where Self == ProxyHTTPHandler {
+    static func proxy(via url: String) -> ProxyHTTPHandler {
+        ProxyHTTPHandler(base: url)
     }
 }

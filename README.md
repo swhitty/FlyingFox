@@ -67,6 +67,15 @@ await server.appendHandler(for: "GET /mock", handler: .file(named: "mock.json"))
 
 `FileHTTPHandler` will return `HTTP 404` if the file does not exist.
 
+### ProxyHTTPHandler
+
+Requests can be proxied through a URL:
+
+```swift
+// GET /202?sleep=1000  ---->  https://httpstat.us/202?sleep=1000
+await server.appendHandler(for: "GET *", handler: .proxy(via: "https://httpstat.us"))
+```
+
 ### Wildcards
 
 Routes can include wildcards which can be pattern matched against paths:
