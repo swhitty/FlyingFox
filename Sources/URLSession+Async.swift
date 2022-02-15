@@ -34,7 +34,7 @@ import Foundation
 extension URLSession {
 
     func makeRequest(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
-        if #available(macOS 12.0, iOS 13.0, *) {
+        if #available(macOS 12.0, iOS 15.0, *) {
             return try await data(for: request) as! (Data, HTTPURLResponse)
         } else {
             let continuation = Continuation()
