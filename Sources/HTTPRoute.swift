@@ -38,8 +38,16 @@ public struct HTTPRoute {
 
     public init(_ string: String) {
         let comps = Self.components(for: string)
-        self.method = Component(comps.method)
-        self.path = comps.path
+        self.init(method: comps.method, path: comps.path)
+    }
+
+    public init(method: HTTPMethod, path: String) {
+        self.init(method: method.rawValue, path: path)
+    }
+
+    init(method: String, path: String) {
+        self.method = Component(method)
+        self.path = path
             .split(separator: "/", omittingEmptySubsequences: true)
             .map { Component(String($0)) }
     }
@@ -118,4 +126,11 @@ public extension HTTPRoute {
         route.patternMatch(method: request.method.rawValue, path: request.path)
     }
 
+}
+
+extension HTTPRoute: ExpressibleByStringLiteral {
+
+    public init(stringLiteral value: String) {
+        self.init(value)
+    }
 }
