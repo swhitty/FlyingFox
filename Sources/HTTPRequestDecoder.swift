@@ -72,8 +72,8 @@ struct HTTPRequestDecoder {
     static func readHeader(from line: String) -> (header: HTTPHeader, value: String)? {
         let comps = line.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: true)
         guard comps.count > 1 else { return nil }
-        let name = comps[0].trimmingCharacters(in: .whitespaces)
-        let value = comps[1].trimmingCharacters(in: .whitespaces)
+        let name = comps[0].trimmingCharacters(in: .whitespacesAndNewlines)
+        let value = comps[1].trimmingCharacters(in: .whitespacesAndNewlines)
         return (HTTPHeader(rawValue: name), value)
     }
 
