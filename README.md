@@ -76,6 +76,16 @@ await server.appendHandler(for: "GET *", handler: .proxy(via: "https://httpstat.
 // GET /202?sleep=1000  ---->  https://httpstat.us/202?sleep=1000
 ```
 
+### RedirectHTTPHandler
+
+Requests can be redirected to a URL:
+
+```swift
+await server.appendHandler(for: "GET /fish/*", handler: .redirect(to: "https://pie.dev/get"))
+// GET /fish/chips  --->  HTTP 301
+//                        Location: https://pie.dev/get
+```
+
 ### Wildcards
 
 Routes can include wildcards which can be pattern matched against paths:
