@@ -36,7 +36,6 @@ public final actor HTTPServer {
     private let port: UInt16
     private let timeout: TimeInterval
     private var socket: AsyncSocket?
-    private var connections = [HTTPConnection: Task<Void, Never>]()
     private var handlers: [(route: HTTPRoute, handler: HTTPHandler)]
 
     public init(port: UInt16, timeout: TimeInterval = 15, handlers: [(route: HTTPRoute, handler: HTTPHandler)] = []) {
@@ -70,50 +69,50 @@ public final actor HTTPServer {
         print("starting server port:", port)
 
         do {
-            try await listenForConnections(on: asyncSocket, pool: pool)
+            try await start(on: asyncSocket, pool: pool)
         } catch {
             print("server error: ", error.localizedDescription)
-            closeAllConnections()
+            try? asyncSocket.close()
+            throw error
         }
     }
 
-    private func listenForConnections(on socket: AsyncSocket, pool: AsyncSocketPool) async throws {
+    private func start(on socket: AsyncSocket, pool: AsyncSocketPool) async throws {
         try await withThrowingTaskGroup(of: Void.self) { group in
             group.addTask {
                 try await pool.run()
             }
             group.addTask {
-                for try await socket in socket.sockets {
-                    await self.addConnection(HTTPConnection(socket: socket))
-                }
+                try await self.listenForConnections(on: socket)
             }
             try await group.waitForAll()
         }
     }
 
-    func addConnection(_ connection: HTTPConnection) {
-        print("new connection", connection.hostname)
-
-        connections[connection] = Task {
-            do {
-                for try await request in connection.requests {
-                    let response = await handleRequest(request)
-                    try connection.sendResponse(response)
-                    guard response.shouldKeepAlive else { break }
+    private func listenForConnections(on socket: AsyncSocket) async throws {
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            for try await socket in socket.sockets {
+                group.addTask {
+                    try await self.handleConnection(HTTPConnection(socket: socket))
                 }
-            } catch {
-                print("connection error", connection.hostname, error)
             }
-            removeConnection(connection)
+            group.cancelAll()
         }
-        print("connections", connections.count)
     }
 
-    func removeConnection(_ connection: HTTPConnection)  {
-        connections[connection]?.cancel()
-        connections[connection] = nil
-        try? connection.close()
-        print("connections", connections.count)
+    func handleConnection(_ connection: HTTPConnection) async throws {
+        print("open connection", connection.hostname)
+        do {
+            for try await request in connection.requests {
+                let response = await handleRequest(request)
+                try connection.sendResponse(response)
+                guard response.shouldKeepAlive else { break }
+            }
+        } catch {
+            print("connection error", error)
+        }
+        try connection.close()
+        print("close connection", connection.hostname)
     }
 
     func handleRequest(_ request: HTTPRequest) async -> HTTPResponse {
@@ -137,17 +136,6 @@ public final actor HTTPServer {
             print("handler error", error)
             return HTTPResponse(statusCode: .serverError)
         }
-    }
-
-    func closeAllConnections() {
-        for (connection, task) in connections {
-            try? connection.close()
-            task.cancel()
-        }
-        connections = [:]
-        print("connections", connections.count)
-        try? socket?.close()
-        socket = nil
     }
 }
 
