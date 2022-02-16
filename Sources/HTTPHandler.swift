@@ -114,6 +114,7 @@ public struct ProxyHTTPHandler: HTTPHandler {
                 headers[HTTPHeader(rawValue: name)] = value as? String
             }
         }
+        response.headers[.contentEncoding] = nil
         return HTTPResponse(statusCode: HTTPStatusCode(response.statusCode, phrase: ""),
                             headers: headers,
                             body: data)

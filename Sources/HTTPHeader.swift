@@ -46,9 +46,10 @@ public struct HTTPHeader: RawRepresentable, Hashable {
 }
 
 public extension HTTPHeader {
-    static let connection    = HTTPHeader(rawValue: "Connection")
-    static let contentLength = HTTPHeader(rawValue: "Content-Length")
-    static let contentType   = HTTPHeader(rawValue: "Content-Type")
-    static let host          = HTTPHeader(rawValue: "Host")
-    static let location      = HTTPHeader(rawValue: "Location")
+    static let connection      = HTTPHeader(rawValue: "Connection")
+    static let contentLength   = HTTPHeader(rawValue: "Content-Length")
+    static let contentType     = HTTPHeader(rawValue: "Content-Type")
+    static let contentEncoding = HTTPHeader(rawValue: "Content-Encoding")
+    static let host            = HTTPHeader(rawValue: "Host")
+    static let location        = HTTPHeader(rawValue: "Location")
 }
