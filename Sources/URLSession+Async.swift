@@ -31,41 +31,42 @@
 
 import Foundation
 
+@available(iOS, deprecated: 15.0, message: "use data(for request: URLRequest) directly")
+@available(macOS, deprecated: 12.0, message: "use data(for request: URLRequest) directly")
 extension URLSession {
 
-    func makeRequest(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
+    func data(for request: URLRequest) async throws -> (Data, URLResponse) {
+
         if #available(macOS 12.0, iOS 15.0, *) {
-            return try await data(for: request) as! (Data, HTTPURLResponse)
+            return try await data(for: request, delegate: nil)
         } else {
-            let continuation = Continuation()
-            return try await withTaskCancellationHandler(
-                operation: { try await continuation.data(for: request, using: self) },
-                onCancel: continuation.cancel
-            )
+            return try await makeData(for: request)
         }
     }
 
-    private final class Continuation {
+    private func makeData(for request: URLRequest) async throws -> (Data, URLResponse) {
 
-        private var dataTask: URLSessionDataTask?
-        private var continuation: CheckedContinuation<(Data, HTTPURLResponse), Error>?
+        var dataTask: URLSessionDataTask?
+        let onCancel = { dataTask?.cancel() }
 
-        func data(for request: URLRequest, using session: URLSession) async throws -> (Data, HTTPURLResponse) {
-            try await withCheckedThrowingContinuation { continuation in
-                self.dataTask = session.dataTask(with: request) { data, response, error in
-                    if let response = response as? HTTPURLResponse {
-                        continuation.resume(returning:  (data ?? Data(), response))
-                    } else {
-                        continuation.resume(throwing: error ?? URLError(.unknown))
+        return try await withTaskCancellationHandler(
+            operation: {
+                try await withCheckedThrowingContinuation { continuation in
+                    dataTask = self.dataTask(with: request) { data, response, error in
+                        guard let data = data, let response = response else {
+                            let error = error ?? URLError(.unknown)
+                            return continuation.resume(throwing: error)
+                        }
+
+                        continuation.resume(returning: (data, response))
                     }
-                }
-                self.dataTask?.resume()
-            }
-        }
 
-        @Sendable
-        func cancel() {
-            dataTask?.cancel()
-        }
+                    dataTask?.resume()
+                }
+            },
+            onCancel: {
+                onCancel()
+            }
+        )
     }
 }
