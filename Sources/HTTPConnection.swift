@@ -31,7 +31,7 @@
 
 import Foundation
 
-final class HTTPConnection: Hashable {
+struct HTTPConnection {
 
     let hostname: String
     private let socket: AsyncSocket
@@ -52,14 +52,6 @@ final class HTTPConnection: Hashable {
 
     func close() throws {
         try socket.close()
-    }
-
-    func hash(into hasher: inout Hasher) {
-      ObjectIdentifier(self).hash(into: &hasher)
-    }
-
-    static func == (lhs: HTTPConnection, rhs: HTTPConnection) -> Bool {
-      lhs === rhs
     }
 }
 
