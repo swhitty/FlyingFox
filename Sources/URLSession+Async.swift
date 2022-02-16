@@ -31,35 +31,42 @@
 
 import Foundation
 
-@available(iOS, deprecated: 15.0, message: "This method should only be called on iOS below 15.0")
-public extension URLSession {
+@available(iOS, deprecated: 15.0, message: "use data(for request: URLRequest) directly")
+@available(macOS, deprecated: 12.0, message: "use data(for request: URLRequest) directly")
+extension URLSession {
 
-  func data(from url: URL) async throws -> (Data, URLResponse) {
-    try await data(for: URLRequest(url: url))
-  }
+    func data(for request: URLRequest) async throws -> (Data, URLResponse) {
 
-  func data(for request: URLRequest) async throws -> (Data, URLResponse) {
-    var dataTask: URLSessionDataTask?
-    let onCancel = { dataTask?.cancel() }
-
-    return try await withTaskCancellationHandler(
-      operation: {
-        try await withCheckedThrowingContinuation { continuation in
-          dataTask = self.dataTask(with: request) { data, response, error in
-            guard let data = data, let response = response else {
-              let error = error ?? URLError(.unknown)
-              return continuation.resume(throwing: error)
-            }
-
-            continuation.resume(returning: (data, response))
-          }
-
-          dataTask?.resume()
+        if #available(macOS 12.0, iOS 15.0, *) {
+            return try await data(for: request, delegate: nil)
+        } else {
+            return try await makeData(for: request)
         }
-      },
-      onCancel: {
-        onCancel()
-      }
-    )
-  }
+    }
+
+    private func makeData(for request: URLRequest) async throws -> (Data, URLResponse) {
+
+        var dataTask: URLSessionDataTask?
+        let onCancel = { dataTask?.cancel() }
+
+        return try await withTaskCancellationHandler(
+            operation: {
+                try await withCheckedThrowingContinuation { continuation in
+                    dataTask = self.dataTask(with: request) { data, response, error in
+                        guard let data = data, let response = response else {
+                            let error = error ?? URLError(.unknown)
+                            return continuation.resume(throwing: error)
+                        }
+
+                        continuation.resume(returning: (data, response))
+                    }
+
+                    dataTask?.resume()
+                }
+            },
+            onCancel: {
+                onCancel()
+            }
+        )
+    }
 }
