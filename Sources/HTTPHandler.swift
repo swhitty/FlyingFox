@@ -76,8 +76,8 @@ public struct ProxyHTTPHandler: HTTPHandler {
 
     public func handleRequest(_ request: HTTPRequest) async throws -> HTTPResponse {
         let req = try makeURLRequest(for: request)
-        let (data, response) = try await session.makeRequest(req)
-        return makeResponse(for: response, data: data)
+        let (data, response) = try await session.data(for: req)
+        return makeResponse(for: response as! HTTPURLResponse, data: data)
     }
 
     func makeURLRequest(for request: HTTPRequest) throws -> URLRequest {
