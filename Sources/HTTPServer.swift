@@ -93,14 +93,14 @@ public final actor HTTPServer {
         try await withThrowingTaskGroup(of: Void.self) { group in
             for try await socket in socket.sockets {
                 group.addTask {
-                    try await self.handleConnection(HTTPConnection(socket: socket))
+                    await self.handleConnection(HTTPConnection(socket: socket))
                 }
             }
             group.cancelAll()
         }
     }
 
-    func handleConnection(_ connection: HTTPConnection) async throws {
+    func handleConnection(_ connection: HTTPConnection) async {
         print("open connection", connection.hostname)
         do {
             for try await request in connection.requests {
@@ -111,7 +111,7 @@ public final actor HTTPServer {
         } catch {
             print("connection error", error)
         }
-        try connection.close()
+        try? connection.close()
         print("close connection", connection.hostname)
     }
 
