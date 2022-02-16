@@ -100,7 +100,7 @@ public final actor HTTPServer {
         }
     }
 
-    func handleConnection(_ connection: HTTPConnection) async {
+    private func handleConnection(_ connection: HTTPConnection) async {
         print("open connection", connection.hostname)
         do {
             for try await request in connection.requests {
@@ -115,7 +115,7 @@ public final actor HTTPServer {
         print("close connection", connection.hostname)
     }
 
-    func handleRequest(_ request: HTTPRequest) async -> HTTPResponse {
+    private func handleRequest(_ request: HTTPRequest) async -> HTTPResponse {
         var response = await handleRequest(request, timeout: timeout)
         if request.shouldKeepAlive {
             response.headers[.connection] = request.headers[.connection]
@@ -123,7 +123,7 @@ public final actor HTTPServer {
         return response
     }
 
-    func handleRequest(_ request: HTTPRequest, timeout: TimeInterval) async -> HTTPResponse {
+    private func handleRequest(_ request: HTTPRequest, timeout: TimeInterval) async -> HTTPResponse {
         guard let handler = handlers.first(where: { $0.route ~= request })?.handler else {
             return HTTPResponse(statusCode: .notFound)
         }
