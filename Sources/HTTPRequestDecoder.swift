@@ -38,7 +38,7 @@ struct HTTPRequestDecoder {
         let comps = status
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .split(separator: " ", maxSplits: 2, omittingEmptySubsequences: true)
-        guard comps.count == 3, !comps[0].isEmpty else {
+        guard comps.count == 3 else {
             throw Error("No HTTP Method")
         }
 

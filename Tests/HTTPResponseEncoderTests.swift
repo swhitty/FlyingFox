@@ -69,7 +69,6 @@ final class HTTPResponseEncoderTests: XCTestCase {
     }
 
     func testHeaderLines_IncludeSuppliedHeaders() {
-
         let lines = HTTPResponseEncoder
             .makeHeaderLines(from: .make(headers: [
                 .connection: "keep",
@@ -103,6 +102,23 @@ final class HTTPResponseEncoderTests: XCTestCase {
                 .makeHeaderLines(from: .make(headers: [.connection: "keep", .contentType: "none"]))
                 .last,
             "\r\n"
+        )
+    }
+
+    func testEncodesResponse() throws {
+        XCTAssertEqual(
+            try HTTPResponseEncoder.encodeResponse(
+                .make(version: .http11,
+                      statusCode: .ok,
+                      headers: [:],
+                      body: "Hello World!".data(using: .utf8)!)
+            ),
+            """
+            HTTP/1.1 200 OK\r
+            Content-Length: 12\r
+            \r
+            Hello World!
+            """.data(using: .utf8)
         )
     }
 }

@@ -46,25 +46,12 @@ struct HTTPResponseEncoder {
     }
 
     static func encodeResponse(_ response: HTTPResponse) throws -> Data {
-        guard var data = makeHeaderLines(from: response)
-                .joined(separator: "\r\n")
-                .data(using: .utf8) else {
-                    throw Error("Invalid Response Headers")
-            }
+        var data = makeHeaderLines(from: response)
+            .joined(separator: "\r\n")
+            .data(using: .utf8)!
 
         data.append(response.body)
 
         return data
-    }
-}
-
-extension HTTPResponseEncoder {
-
-    struct Error: LocalizedError {
-        var errorDescription: String?
-
-        init(_ description: String) {
-            self.errorDescription = description
-        }
     }
 }

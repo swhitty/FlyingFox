@@ -146,6 +146,21 @@ final class HTTPRequestDecoderTests: XCTestCase {
             "Hello".data(using: .utf8)
         )
     }
+
+    func testInvalidStatusLine_ThrowsErrorM() async throws {
+        do {
+            _ = try await HTTPRequestDecoder.decodeRequestFromString(
+                """
+                GET/hello HTTP/1.1\r
+                \r
+                """
+            )
+            XCTFail("Expected Error")
+        } catch {
+            XCTAssertTrue(error is HTTPRequestDecoder.Error)
+        }
+    }
+
 }
 
 private extension HTTPRequestDecoder {
