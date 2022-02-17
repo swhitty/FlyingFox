@@ -134,7 +134,7 @@ public final actor HTTPServer {
             }
         } catch {
             print("handler error", error)
-            return HTTPResponse(statusCode: .serverError)
+            return HTTPResponse(statusCode: .internalServerError)
         }
     }
 }
