@@ -1,8 +1,8 @@
 //
-//  HTTPRequest.swift
+//  ConsumingAsyncSequence.swift
 //  FlyingFox
 //
-//  Created by Simon Whitty on 13/02/2022.
+//  Created by Simon Whitty on 17/02/2022.
 //  Copyright © 2022 Simon Whitty. All rights reserved.
 //
 //  Distributed under the permissive MIT license
@@ -29,24 +29,17 @@
 //  SOFTWARE.
 //
 
-import Foundation
+final class ConsumingAsyncSequence<Element>: AsyncSequence, AsyncIteratorProtocol {
 
-public struct HTTPRequest: Equatable {
-    public var method: HTTPMethod
-    public var version: HTTPVersion
-    public var path: String
-    public var query: [QueryItem]
-    public var headers: [HTTPHeader: String]
-    public var body: Data
+    private var iterator: Array<Element>.Iterator
 
-    public struct QueryItem: Equatable {
-        public var name: String
-        public var value: String
+    init<T: Sequence>(_ sequence: T) where T.Element == Element {
+        self.iterator = Array(sequence).makeIterator()
     }
-}
 
-extension HTTPRequest {
-    var shouldKeepAlive: Bool {
-        headers[.connection]?.caseInsensitiveCompare("keep-alive") == .orderedSame
+    func makeAsyncIterator() -> ConsumingAsyncSequence<Element> { self }
+
+    func next() async throws -> Element? {
+        iterator.next()
     }
 }

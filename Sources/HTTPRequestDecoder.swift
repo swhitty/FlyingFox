@@ -35,13 +35,15 @@ struct HTTPRequestDecoder {
 
     static func decodeRequest<S>(from bytes: S) async throws -> HTTPRequest where S: AsyncSequence, S.Element == UInt8 {
         let status = try await bytes.takeLine()
-        let comps = status.split(separator: " ", maxSplits: 2, omittingEmptySubsequences: true)
+        let comps = status
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .split(separator: " ", maxSplits: 2, omittingEmptySubsequences: true)
         guard comps.count == 3, !comps[0].isEmpty else {
             throw Error("No HTTP Method")
         }
 
-        let method = HTTPMethod(rawValue: String(comps[0]))
-        let version = HTTPVersion(rawValue: String(comps[2]))
+        let method = HTTPMethod(String(comps[0]))
+        let version = HTTPVersion(String(comps[2]))
         let (path, query) = Self.readComponents(from: String(comps[1]))
 
         let headers = try await bytes
@@ -62,10 +64,13 @@ struct HTTPRequestDecoder {
         )
     }
 
-    static func readComponents(from target: String) -> (path: String, query: [(name: String, value: String)]) {
+    static func readComponents(from target: String) -> (path: String, query: [HTTPRequest.QueryItem]) {
         let comps = URLComponents(string: target)
         let path = comps?.path ?? ""
-        let query = comps?.queryItems?.map { ($0.name, $0.value ?? "") }
+        let query = comps?.queryItems?.map {
+            HTTPRequest.QueryItem(name: $0.name,
+                                  value: $0.value ?? "")
+        }
         return (path, query ?? [])
     }
 
@@ -74,7 +79,7 @@ struct HTTPRequestDecoder {
         guard comps.count > 1 else { return nil }
         let name = comps[0].trimmingCharacters(in: .whitespacesAndNewlines)
         let value = comps[1].trimmingCharacters(in: .whitespacesAndNewlines)
-        return (HTTPHeader(rawValue: name), value)
+        return (HTTPHeader(name), value)
     }
 
     static func readBody<S: AsyncSequence>(from bytes: S, length: String?) async throws -> Data where S.Element == UInt8 {

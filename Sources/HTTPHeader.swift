@@ -36,6 +36,10 @@ public struct HTTPHeader: RawRepresentable, Hashable {
         self.rawValue = rawValue
     }
 
+    public init(_ rawValue: String) {
+        self.rawValue = rawValue
+    }
+
     public func hash(into hasher: inout Hasher) {
         rawValue.lowercased().hash(into: &hasher)
     }
@@ -46,10 +50,10 @@ public struct HTTPHeader: RawRepresentable, Hashable {
 }
 
 public extension HTTPHeader {
-    static let connection      = HTTPHeader(rawValue: "Connection")
-    static let contentLength   = HTTPHeader(rawValue: "Content-Length")
-    static let contentType     = HTTPHeader(rawValue: "Content-Type")
-    static let contentEncoding = HTTPHeader(rawValue: "Content-Encoding")
-    static let host            = HTTPHeader(rawValue: "Host")
-    static let location        = HTTPHeader(rawValue: "Location")
+    static let connection      = HTTPHeader("Connection")
+    static let contentLength   = HTTPHeader("Content-Length")
+    static let contentType     = HTTPHeader("Content-Type")
+    static let contentEncoding = HTTPHeader("Content-Encoding")
+    static let host            = HTTPHeader("Host")
+    static let location        = HTTPHeader("Location")
 }

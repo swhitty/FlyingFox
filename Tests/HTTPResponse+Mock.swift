@@ -1,8 +1,8 @@
 //
-//  HTTPRequest.swift
+//  HTTPResponse+Mock.swift
 //  FlyingFox
 //
-//  Created by Simon Whitty on 13/02/2022.
+//  Created by Simon Whitty on 17/02/2022.
 //  Copyright © 2022 Simon Whitty. All rights reserved.
 //
 //  Distributed under the permissive MIT license
@@ -29,24 +29,18 @@
 //  SOFTWARE.
 //
 
+import FlyingFox
 import Foundation
 
-public struct HTTPRequest: Equatable {
-    public var method: HTTPMethod
-    public var version: HTTPVersion
-    public var path: String
-    public var query: [QueryItem]
-    public var headers: [HTTPHeader: String]
-    public var body: Data
+extension HTTPResponse {
 
-    public struct QueryItem: Equatable {
-        public var name: String
-        public var value: String
-    }
-}
-
-extension HTTPRequest {
-    var shouldKeepAlive: Bool {
-        headers[.connection]?.caseInsensitiveCompare("keep-alive") == .orderedSame
+    static func make(version: HTTPVersion = .http11,
+                     statusCode: HTTPStatusCode  = .ok,
+                     headers: [HTTPHeader: String] = [:],
+                     body: Data = Data()) -> Self {
+        HTTPResponse(version: version,
+                     statusCode: statusCode,
+                     headers: headers,
+                     body: body)
     }
 }
