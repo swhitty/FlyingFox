@@ -33,7 +33,7 @@ let server = HTTPServer(port: 8080)
 try await server.start()
 ```
 
-The server runs within the the current task. To stop the server, cancel the task;
+The server runs within the the current task. To stop the server, cancel the task:
 
 ```swift
 let task = Task { try await server.start() }
