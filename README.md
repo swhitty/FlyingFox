@@ -88,7 +88,7 @@ await server.appendHandler(for: "GET /fish/*", handler: .redirect(to: "https://p
 
 ### Wildcards
 
-Routes can include wildcards which can be pattern matched against paths:
+Routes can include wildcards which can be [pattern matched](https://docs.swift.org/swift-book/ReferenceManual/Patterns.html#ID426) against paths:
 
 ```swift
 let HTTPRoute("/hello/*/world")
