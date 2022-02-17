@@ -99,7 +99,7 @@ public struct ProxyHTTPHandler: HTTPHandler {
             throw URLError(.badURL)
         }
         if !request.query.isEmpty {
-            comps.queryItems = request.query.map(URLQueryItem.init)
+            comps.queryItems = request.query.map { URLQueryItem(name: $0.name, value: $0.value) }
         }
         guard let url = comps.url else {
             throw URLError(.badURL)
@@ -111,7 +111,7 @@ public struct ProxyHTTPHandler: HTTPHandler {
         var headers = [HTTPHeader: String]()
         for (name, value) in response.allHeaderFields {
             if let name = name as? String {
-                headers[HTTPHeader(rawValue: name)] = value as? String
+                headers[HTTPHeader(name)] = value as? String
             }
         }
         headers[.contentEncoding] = nil

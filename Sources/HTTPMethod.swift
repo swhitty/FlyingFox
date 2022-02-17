@@ -1,8 +1,8 @@
 //
-//  HTTPRequest.swift
+//  HTTPMethod.swift
 //  FlyingFox
 //
-//  Created by Simon Whitty on 13/02/2022.
+//  Created by Simon Whitty on 17/02/2022.
 //  Copyright © 2022 Simon Whitty. All rights reserved.
 //
 //  Distributed under the permissive MIT license
@@ -29,24 +29,26 @@
 //  SOFTWARE.
 //
 
-import Foundation
+public struct HTTPMethod: RawRepresentable, Hashable {
+    public var rawValue: String
 
-public struct HTTPRequest: Equatable {
-    public var method: HTTPMethod
-    public var version: HTTPVersion
-    public var path: String
-    public var query: [QueryItem]
-    public var headers: [HTTPHeader: String]
-    public var body: Data
+    public init(rawValue: String) {
+        self.rawValue = rawValue
+    }
 
-    public struct QueryItem: Equatable {
-        public var name: String
-        public var value: String
+    public init(_ rawValue: String) {
+        self.rawValue = rawValue
     }
 }
 
-extension HTTPRequest {
-    var shouldKeepAlive: Bool {
-        headers[.connection]?.caseInsensitiveCompare("keep-alive") == .orderedSame
-    }
+public extension HTTPMethod {
+    static let GET     = HTTPMethod("GET")
+    static let POST    = HTTPMethod("POST")
+    static let PUT     = HTTPMethod("PUT")
+    static let DELETE  = HTTPMethod("DELETE")
+    static let PATCH   = HTTPMethod("PATCH")
+    static let HEAD    = HTTPMethod("HEAD")
+    static let OPTIONS = HTTPMethod("OPTIONS")
+    static let CONNECT = HTTPMethod("CONNECT")
+    static let TRACE   = HTTPMethod("TRACE")
 }

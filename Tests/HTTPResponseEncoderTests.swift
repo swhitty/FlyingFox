@@ -45,7 +45,7 @@ final class HTTPResponseEncoderTests: XCTestCase {
 
         XCTAssertEqual(
             HTTPResponseEncoder
-                .makeHeaderLines(from: .make(version: HTTPVersion(rawValue: "Fish"),
+                .makeHeaderLines(from: .make(version: HTTPVersion("Fish"),
                                              statusCode: HTTPStatusCode(999, phrase: "Chips")))
                 .first,
             "Fish 999 Chips"
@@ -108,5 +108,5 @@ final class HTTPResponseEncoderTests: XCTestCase {
 }
 
 private extension HTTPVersion {
-    static let http2 = HTTPVersion(rawValue: "HTTP/2")
+    static let http2 = HTTPVersion("HTTP/2")
 }
