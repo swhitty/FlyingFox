@@ -37,7 +37,7 @@ public struct HTTPMethod: Sendable, RawRepresentable, Hashable {
     }
 
     public init(_ rawValue: String) {
-        self.rawValue = rawValue
+        self.init(rawValue: rawValue)
     }
 }
 

@@ -37,7 +37,7 @@ public struct HTTPHeader: Sendable, RawRepresentable, Hashable {
     }
 
     public init(_ rawValue: String) {
-        self.rawValue = rawValue
+        self.init(rawValue: rawValue)
     }
 
     public func hash(into hasher: inout Hasher) {

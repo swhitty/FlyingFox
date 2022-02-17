@@ -53,37 +53,32 @@ public final actor HTTPServer {
     }
 
     public func start() async throws {
-        guard socket == nil else {
-            throw Error("Already started")
-        }
-
         let socket = try Socket()
         try socket.enableOption(.enableLocalAddressReuse)
         try socket.enableOption(.enableNoSIGPIPE)
         try socket.bindIP6(port: port)
         try socket.listen()
 
-        let pool = PollingSocketPool()
-        let asyncSocket = try AsyncSocket(socket: socket, pool: pool)
-        self.socket = asyncSocket
-        print("starting server port:", port)
-
         do {
-            try await start(on: asyncSocket, pool: pool)
+            try await start(on: socket)
         } catch {
             print("server error: ", error.localizedDescription)
-            try? asyncSocket.close()
+            try? socket.close()
             throw error
         }
     }
 
-    private func start(on socket: AsyncSocket, pool: AsyncSocketPool) async throws {
-        try await withThrowingTaskGroup(of: Void.self) { group in
+    private func start(on socket: Socket) async throws {
+        let pool = PollingSocketPool()
+        let asyncSocket = try AsyncSocket(socket: socket, pool: pool)
+        print("starting server port:", port)
+
+        return try await withThrowingTaskGroup(of: Void.self) { group in
             group.addTask {
                 try await pool.run()
             }
             group.addTask {
-                try await self.listenForConnections(on: socket)
+                try await self.listenForConnections(on: asyncSocket)
             }
             try await group.waitForAll()
         }
@@ -135,17 +130,6 @@ public final actor HTTPServer {
         } catch {
             print("handler error", error)
             return HTTPResponse(statusCode: .internalServerError)
-        }
-    }
-}
-
-extension HTTPServer {
-
-    struct Error: LocalizedError {
-        var errorDescription: String?
-
-        init(_ description: String) {
-            self.errorDescription = description
         }
     }
 }
