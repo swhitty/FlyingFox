@@ -43,12 +43,12 @@ public extension HTTPStatusCode {
     // The following codes and phrases are based on:
     // https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
     
-    // 100 Information responses
+    // 1xx Information responses
     static let `continue`                       = HTTPStatusCode(100, phrase: "Continue")
     static let switchingProtocols               = HTTPStatusCode(101, phrase: "Switching Protocols")
     static let earlyHints                       = HTTPStatusCode(103, phrase: "Early Hints")
     
-    // Successful responses
+    // 2xx Successful responses
     static let ok                               = HTTPStatusCode(200, phrase: "OK")
     static let created                          = HTTPStatusCode(201, phrase: "Created")
     static let accepted                         = HTTPStatusCode(202, phrase: "Accepted")
@@ -57,7 +57,7 @@ public extension HTTPStatusCode {
     static let resetContent                     = HTTPStatusCode(205, phrase: "Reset Content")
     static let partialContent                   = HTTPStatusCode(206, phrase: "Partial Content")
     
-    // Redirection messages
+    // 3xx Redirection messages
     static let multipleChoice                   = HTTPStatusCode(300, phrase: "Multiple Choice")
     static let movedPermanently                 = HTTPStatusCode(301, phrase: "Moved Permanently")
     static let found                            = HTTPStatusCode(302, phrase: "Found")
@@ -68,7 +68,7 @@ public extension HTTPStatusCode {
     static let temporaryRedirect                = HTTPStatusCode(307, phrase: "Temporary Redirect")
     static let permanentRedirect                = HTTPStatusCode(308, phrase: "Permanent Redirect")
     
-    // Client error responses
+    // 4xx Client error responses
     static let badRequest                       = HTTPStatusCode(400, phrase: "Bad Request")
     static let unauthorized                     = HTTPStatusCode(401, phrase: "Unauthorized")
     static let paymentRequired                  = HTTPStatusCode(402, phrase: "Payment Required")
@@ -96,7 +96,7 @@ public extension HTTPStatusCode {
     static let requestHeaderFieldsTooLarge      = HTTPStatusCode(431, phrase: "Request Header Fields Too Large")
     static let unavailableForLegalReasons       = HTTPStatusCode(451, phrase: "Unavailable For Legal Reasons")
     
-    // Server error responses
+    // 5xx Server error responses
     static let internalServerError              = HTTPStatusCode(500, phrase: "Internal Server Error")
     static let notImplemented                   = HTTPStatusCode(501, phrase: "Not Implemented")
     static let badGateway                       = HTTPStatusCode(502, phrase: "Bad Gateway")
