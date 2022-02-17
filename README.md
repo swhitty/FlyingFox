@@ -73,7 +73,7 @@ Requests can be proxied via a base URL:
 
 ```swift
 await server.appendHandler(for: "GET *", handler: .proxy(via: "https://pie.dev"))
-// GET /get?fish=chips  ---->  GET https://httpstat.us/get?fish=chips
+// GET /get?fish=chips  ---->  GET https://pie.dev/get?fish=chips
 ```
 
 ### RedirectHTTPHandler
