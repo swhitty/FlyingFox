@@ -31,10 +31,10 @@
 
 final class ConsumingAsyncSequence<Element>: AsyncSequence, AsyncIteratorProtocol {
 
-    private var iterator: Array<Element>.Iterator
+    private var iterator: AnySequence<Element>.Iterator
 
     init<T: Sequence>(_ sequence: T) where T.Element == Element {
-        self.iterator = Array(sequence).makeIterator()
+        self.iterator = AnySequence(sequence).makeIterator()
     }
 
     func makeAsyncIterator() -> ConsumingAsyncSequence<Element> { self }
