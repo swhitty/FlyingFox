@@ -46,15 +46,8 @@ struct HTTPRequestDecoder {
         let version = HTTPVersion(String(comps[2]))
         let (path, query) = Self.readComponents(from: String(comps[1]))
 
-//        let another = try await bytes.takeLine()
-//        print("another", another)
-
         let headers = try await bytes
             .lines
-            .map {
-                print("l", $0.count)
-                return $0
-            }
             .prefix { $0 != "\r" && $0 != "" }
             .compactMap(Self.readHeader)
             .reduce(into: [HTTPHeader: String]()) { $0[$1.header] = $1.value }
