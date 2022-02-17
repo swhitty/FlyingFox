@@ -37,6 +37,7 @@ public struct HTTPRequest: Sendable, Equatable {
     public var path: String
     public var query: [QueryItem]
     public var headers: [HTTPHeader: String]
+    @UncheckedSendable
     public var body: Data
 
     public struct QueryItem: Sendable, Equatable {

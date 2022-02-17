@@ -1,8 +1,8 @@
 //
-//  Task+Timeout.swift
+//  UncheckedSendable.swift
 //  FlyingFox
 //
-//  Created by Simon Whitty on 15/02/2022.
+//  Created by Simon Whitty on 17/02/2022.
 //  Copyright © 2022 Simon Whitty. All rights reserved.
 //
 //  Distributed under the permissive MIT license
@@ -31,31 +31,13 @@
 
 import Foundation
 
-func withThrowingTimeout<T: Sendable>(seconds: TimeInterval, body: @escaping @Sendable () async throws -> T) async throws -> T {
-    try await withThrowingTaskGroup(of: T.self) { group -> T in
-        group.addTask(operation: {
-            try await body()
-        })
-        group.addTask {
-            try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
-            throw TimeoutError()
-        }
-        let success = try await group.next()!
-        group.cancelAll()
-        return success
+@propertyWrapper
+public struct UncheckedSendable<Value>: @unchecked Sendable {
+    public var wrappedValue: Value
+
+    public init(wrappedValue: Value) {
+        self.wrappedValue = wrappedValue
     }
 }
 
-struct TimeoutError: LocalizedError {
-    var errorDescription: String? = "Timed out before completion"
-}
-
-extension Task where Success: Sendable, Failure == Error {
-
-    // Start a new Task with a timeout.
-    init(priority: TaskPriority? = nil, timeout: TimeInterval, operation: @escaping @Sendable () async throws -> Success) {
-        self = Task(priority: priority) {
-            try await withThrowingTimeout(seconds: timeout, body: operation)
-        }
-    }
-}
+extension UncheckedSendable: Equatable where Value: Equatable { }

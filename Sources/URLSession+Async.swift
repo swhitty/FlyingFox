@@ -36,7 +36,6 @@ import Foundation
 extension URLSession {
 
     func data(for request: URLRequest) async throws -> (Data, URLResponse) {
-
         if #available(macOS 12.0, iOS 15.0, *) {
             return try await data(for: request, delegate: nil)
         } else {
@@ -45,7 +44,6 @@ extension URLSession {
     }
 
     private func makeData(for request: URLRequest) async throws -> (Data, URLResponse) {
-
         var dataTask: URLSessionDataTask?
         let onCancel = { dataTask?.cancel() }
 

@@ -64,10 +64,12 @@ public struct RedirectHTTPHandler: HTTPHandler {
     }
 }
 
-public struct ProxyHTTPHandler: HTTPHandler {
+public struct ProxyHTTPHandler: HTTPHandler, Sendable {
 
     private let base: String
-    private let session: URLSession
+
+    @UncheckedSendable
+    private var session: URLSession
 
     public init(base: String, session: URLSession = .shared) {
         self.base = base
@@ -123,7 +125,8 @@ public struct ProxyHTTPHandler: HTTPHandler {
 
 public struct FileHTTPHandler: HTTPHandler {
 
-    private let path: URL?
+    @UncheckedSendable
+    private var path: URL?
     private let contentType: String
 
     public init(path: URL, contentType: String) {

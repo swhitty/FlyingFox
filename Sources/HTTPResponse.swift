@@ -35,6 +35,7 @@ public struct HTTPResponse: Sendable {
     public var version: HTTPVersion
     public var statusCode: HTTPStatusCode
     public var headers: [HTTPHeader: String]
+    @UncheckedSendable
     public var body: Data
 
     public init(version: HTTPVersion = .http11,
