@@ -99,7 +99,7 @@ route ~= "POST hello/dog/world/" // true
 route ~= "/hello/world" // false
 ```
 
-By default routes accept all HTTP methods, but specific methods can be supplied;
+By default routes accept all HTTP methods, but specific methods can be supplied:
 
 ```swift
 let HTTPRoute("GET /hello/world")
