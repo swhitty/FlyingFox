@@ -48,7 +48,7 @@ public final actor HTTPServer {
         handlers.append((route, handler))
     }
 
-    public func appendHandler(for route: HTTPRoute, closure: @escaping (HTTPRequest) async throws -> HTTPResponse) {
+    public func appendHandler(for route: HTTPRoute, closure: @Sendable @escaping (HTTPRequest) async throws -> HTTPResponse) {
         handlers.append((route, ClosureHTTPHandler(closure)))
     }
 

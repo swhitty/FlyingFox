@@ -31,7 +31,7 @@
 
 import Foundation
 
-public struct HTTPResponse {
+public struct HTTPResponse: Sendable {
     public var version: HTTPVersion
     public var statusCode: HTTPStatusCode
     public var headers: [HTTPHeader: String]

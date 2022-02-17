@@ -31,7 +31,7 @@
 
 import Foundation
 
-func withThrowingTimeout<T>(seconds: TimeInterval, body: @escaping @Sendable () async throws -> T) async throws -> T {
+func withThrowingTimeout<T: Sendable>(seconds: TimeInterval, body: @escaping @Sendable () async throws -> T) async throws -> T {
     try await withThrowingTaskGroup(of: T.self) { group -> T in
         group.addTask(operation: {
             try await body()

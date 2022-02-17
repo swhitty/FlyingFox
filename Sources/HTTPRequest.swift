@@ -31,7 +31,7 @@
 
 import Foundation
 
-public struct HTTPRequest: Equatable {
+public struct HTTPRequest: Sendable, Equatable {
     public var method: HTTPMethod
     public var version: HTTPVersion
     public var path: String
@@ -39,7 +39,7 @@ public struct HTTPRequest: Equatable {
     public var headers: [HTTPHeader: String]
     public var body: Data
 
-    public struct QueryItem: Equatable {
+    public struct QueryItem: Sendable, Equatable {
         public var name: String
         public var value: String
     }

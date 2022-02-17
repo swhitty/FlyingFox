@@ -46,7 +46,7 @@ enum SocketError: Error {
     case closeFailed(String)
 }
 
-struct Socket: Hashable {
+struct Socket: Sendable, Hashable {
 
     let file: Int32
 

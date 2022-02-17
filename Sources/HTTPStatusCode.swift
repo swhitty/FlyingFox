@@ -29,7 +29,7 @@
 //  SOFTWARE.
 //
 
-public struct HTTPStatusCode: Hashable {
+public struct HTTPStatusCode: Sendable, Hashable {
     public var code: Int
     public var phrase: String
 

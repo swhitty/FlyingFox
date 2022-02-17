@@ -29,7 +29,7 @@
 //  SOFTWARE.
 //
 
-public struct HTTPHeader: RawRepresentable, Hashable {
+public struct HTTPHeader: Sendable, RawRepresentable, Hashable {
     public var rawValue: String
 
     public init(rawValue: String) {

@@ -29,7 +29,7 @@
 //  SOFTWARE.
 //
 
-public struct HTTPMethod: RawRepresentable, Hashable {
+public struct HTTPMethod: Sendable, RawRepresentable, Hashable {
     public var rawValue: String
 
     public init(rawValue: String) {

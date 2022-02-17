@@ -31,12 +31,12 @@
 
 import Foundation
 
-protocol AsyncSocketPool {
+protocol AsyncSocketPool: Sendable {
     func run() async throws
     func suspend(untilReady socket: Socket) async throws
 }
 
-struct AsyncSocket {
+struct AsyncSocket: Sendable {
 
     let socket: Socket
     let pool: AsyncSocketPool

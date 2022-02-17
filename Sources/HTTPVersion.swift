@@ -31,7 +31,7 @@
 
 import Foundation
 
-public struct HTTPVersion: RawRepresentable, Hashable {
+public struct HTTPVersion: Sendable, RawRepresentable, Hashable {
     public var rawValue: String
 
     public init(rawValue: String) {

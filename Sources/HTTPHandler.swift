@@ -31,15 +31,15 @@
 
 import Foundation
 
-public protocol HTTPHandler {
+public protocol HTTPHandler: Sendable {
     func handleRequest(_ request: HTTPRequest) async throws -> HTTPResponse
 }
 
 public struct ClosureHTTPHandler: HTTPHandler {
 
-    private let closure: (HTTPRequest) async throws -> HTTPResponse
+    private let closure: @Sendable (HTTPRequest) async throws -> HTTPResponse
 
-    public init(_ closure: @escaping (HTTPRequest) async throws -> HTTPResponse) {
+    public init(_ closure: @Sendable @escaping (HTTPRequest) async throws -> HTTPResponse) {
         self.closure = closure
     }
 
