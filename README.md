@@ -72,8 +72,8 @@ await server.appendHandler(for: "GET /mock", handler: .file(named: "mock.json"))
 Requests can be proxied via a base URL:
 
 ```swift
-await server.appendHandler(for: "GET *", handler: .proxy(via: "https://httpstat.us"))
-// GET /202?sleep=1000  ---->  https://httpstat.us/202?sleep=1000
+await server.appendHandler(for: "GET *", handler: .proxy(via: "https://pie.dev"))
+// GET /get?fish=chips  ---->  GET https://httpstat.us/get?fish=chips
 ```
 
 ### RedirectHTTPHandler
