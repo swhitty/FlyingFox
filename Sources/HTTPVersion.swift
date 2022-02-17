@@ -38,5 +38,9 @@ public struct HTTPVersion: RawRepresentable, Hashable {
         self.rawValue = rawValue
     }
 
-    public static let http11 = HTTPVersion(rawValue: "HTTP/1.1")
+    public init(_ rawValue: String) {
+        self.rawValue = rawValue
+    }
+
+    public static let http11 = HTTPVersion("HTTP/1.1")
 }
