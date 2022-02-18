@@ -109,4 +109,42 @@ final class HTTPRouteTests: XCTestCase {
             route ~= "/chips"
         )
     }
+
+    func testWildcardMethod_MatchesRoute() {
+        let route = HTTPRoute("GET /mock")
+
+        XCTAssertFalse(
+            route ~= HTTPRequest.make(method: HTTPMethod("GET"),
+                                      path: "/")
+        )
+
+        XCTAssertTrue(
+            route ~= HTTPRequest.make(method: HTTPMethod("GET"),
+                                      path: "/mock")
+        )
+
+        XCTAssertFalse(
+            route ~= HTTPRequest.make(method: HTTPMethod("GET"),
+                                      path: "/mock/fish")
+        )
+    }
+
+    func testEmptyWildcard_MatchesAllRoutes() {
+        let route = HTTPRoute("*")
+
+        XCTAssertTrue(
+            route ~= HTTPRequest.make(method: HTTPMethod("GET"),
+                                      path: "/")
+        )
+
+        XCTAssertTrue(
+            route ~= HTTPRequest.make(method: HTTPMethod("GET"),
+                                      path: "/mock")
+        )
+
+        XCTAssertTrue(
+            route ~= HTTPRequest.make(method: HTTPMethod("GET"),
+                                      path: "/mock/fish")
+        )
+    }
 }

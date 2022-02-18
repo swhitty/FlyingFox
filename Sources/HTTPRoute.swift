@@ -100,6 +100,10 @@ public extension HTTPRoute {
         guard self.method ~= method else {
             return false
         }
+        guard nodes.count >= self.path.count else {
+            return nodes.isEmpty && self.path.first == .wildcard
+        }
+
         for (idx, node) in nodes.enumerated() {
             guard let comp = pathComponent(for: idx), comp ~= String(node) else {
                 return false
