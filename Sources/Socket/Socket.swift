@@ -72,7 +72,7 @@ struct Socket: Sendable, Hashable {
         }
     }
 
-    func enableOption<O: SocketOption>(_ option: O) throws {
+    func setOption<O: SocketOption>(_ option: O) throws {
         var value = option.value
         if setsockopt(file, SOL_SOCKET, option.option, &value, socklen_t(MemoryLayout<O.Value.Type>.size)) == -1 {
             throw SocketError.optionsFailed(makeErrorMessage())

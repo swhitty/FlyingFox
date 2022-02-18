@@ -54,8 +54,8 @@ public final actor HTTPServer {
 
     public func start() async throws {
         let socket = try Socket()
-        try socket.enableOption(.enableLocalAddressReuse)
-        try socket.enableOption(.enableNoSIGPIPE)
+        try socket.setOption(.enableLocalAddressReuse)
+        try socket.setOption(.enableNoSIGPIPE)
         try socket.bindIP6(port: port)
         try socket.listen()
 
