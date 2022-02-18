@@ -48,36 +48,60 @@ struct AsyncSocket: Sendable {
     }
 
     func accept() async throws -> AsyncSocket {
-        var file = try socket.accept()?.file
-
-        while file == nil {
-            try await pool.suspend(untilReady: socket)
-            file = try socket.accept()?.file
-        }
-
-        let socket = Socket(file: file!)
-        return try AsyncSocket(socket: socket, pool: pool)
+        repeat {
+            do {
+                let file = try socket.accept().file
+                let socket = Socket(file: file)
+                return try AsyncSocket(socket: socket, pool: pool)
+            } catch SocketError.blocked {
+                try await pool.suspend(untilReady: socket)
+            } catch {
+                throw error
+            }
+        } while true
     }
 
     func read() async throws -> UInt8 {
-        var byte = try socket.read()
+        repeat {
+            do {
+                return try socket.read()
+            } catch SocketError.blocked {
+                try await pool.suspend(untilReady: socket)
+            } catch {
+                throw error
+            }
+        } while true
+    }
 
-        while byte == nil {
-            try await pool.suspend(untilReady: socket)
-            byte = try socket.read()
+    func writeData(_ data: Data) async throws {
+        var sent = data.startIndex
+        while sent < data.endIndex {
+            sent = try await writeData(data, from: sent)
         }
-
-        return byte!
     }
 
-    func write(_ data: Data) throws {
-        // can actually block
-        try socket.writeData(data)
+    private func writeData(_ data: Data, from index: Data.Index) async throws -> Data.Index {
+        repeat {
+            do {
+                return try socket.writeData(data, from: index)
+            } catch SocketError.blocked {
+                try await pool.suspend(untilReady: socket)
+            } catch {
+                throw error
+            }
+        } while true
     }
 
-    func close() throws {
-        // can actually block
-        try socket.close()
+    func close() async throws {
+        repeat {
+            do {
+                try socket.close()
+            } catch SocketError.blocked {
+                try await pool.suspend(untilReady: socket)
+            } catch {
+                throw error
+            }
+        } while true
     }
 
     var bytes: ClosureSequence<UInt8> {

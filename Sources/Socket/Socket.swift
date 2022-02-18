@@ -44,6 +44,7 @@ enum SocketError: Error {
     case readFailed(String)
     case writeFailed(String)
     case closeFailed(String)
+    case blocked
 }
 
 struct Socket: Sendable, Hashable {
@@ -125,14 +126,14 @@ struct Socket: Sendable, Hashable {
         return String(cString: hostBuffer)
     }
 
-    func accept() throws -> (file: Int32, addr: sockaddr)? {
+    func accept() throws -> (file: Int32, addr: sockaddr) {
         var addr = sockaddr()
         var len: socklen_t = 0
         let newFile = Darwin.accept(file, &addr, &len)
 
         if newFile == -1 {
             if errno == EWOULDBLOCK {
-                return nil
+                throw SocketError.blocked
             } else {
                 throw SocketError.acceptFailed(makeErrorMessage())
             }
@@ -141,43 +142,49 @@ struct Socket: Sendable, Hashable {
         return (newFile, addr)
     }
 
-    func read() throws -> UInt8? {
+    func read() throws -> UInt8 {
         var byte: UInt8 = 0
         let count = Darwin.read(file, &byte, 1)
         if count == 1 {
             return byte
         } else if errno == EWOULDBLOCK {
-            return nil
+            throw SocketError.blocked
         }
         else {
             throw SocketError.readFailed(makeErrorMessage())
         }
     }
 
-    public func writeData(_ data: Data) throws {
-        guard !data.isEmpty else { return }
+    func writeData(_ data: Data, from index: Data.Index) throws -> Data.Index {
+        guard index < data.endIndex else { return data.endIndex }
         return try data.withUnsafeBytes {
             guard let baseAddress = $0.baseAddress else {
                 throw SocketError.writeFailed("Invalid Buffer")
             }
-            try write(baseAddress, length: data.count)
+            let sent = try write(baseAddress + index, length: data.endIndex - index)
+            return index + sent
         }
     }
 
-    private func write(_ pointer: UnsafeRawPointer, length: Int) throws {
-        var sent = 0
-        while sent < length {
-            let result = Darwin.write(file, pointer + sent, Int(length - sent))
-            if result <= 0 {
+    private func write(_ pointer: UnsafeRawPointer, length: Int) throws -> Int {
+        let sent = Darwin.write(file, pointer, length)
+        guard sent > 0 else {
+            if errno == EWOULDBLOCK {
+                throw SocketError.blocked
+            } else {
                 throw SocketError.writeFailed(makeErrorMessage())
             }
-            sent += result
         }
+        return sent
     }
 
     func close() throws {
         if Darwin.close(file) == -1 {
-            throw SocketError.closeFailed(makeErrorMessage())
+            if errno == EWOULDBLOCK {
+                throw SocketError.blocked
+            } else {
+                throw SocketError.closeFailed(makeErrorMessage())
+            }
         }
     }
 

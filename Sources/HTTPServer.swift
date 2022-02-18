@@ -100,13 +100,13 @@ public final actor HTTPServer {
         do {
             for try await request in connection.requests {
                 let response = await handleRequest(request)
-                try connection.sendResponse(response)
+                try await connection.sendResponse(response)
                 guard response.shouldKeepAlive else { break }
             }
         } catch {
             print("connection error", error)
         }
-        try? connection.close()
+        try? await connection.close()
         print("close connection", connection.hostname)
     }
 

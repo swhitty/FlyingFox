@@ -46,12 +46,12 @@ struct HTTPConnection {
         HTTPRequestSequence(bytes: socket.bytes)
     }
 
-    func sendResponse(_ response: HTTPResponse) throws {
-        try socket.write(HTTPResponseEncoder.encodeResponse(response))
+    func sendResponse(_ response: HTTPResponse) async throws {
+        try await socket.writeData(HTTPResponseEncoder.encodeResponse(response))
     }
 
-    func close() throws {
-        try socket.close()
+    func close() async throws {
+        try await socket.close()
     }
 }
 
