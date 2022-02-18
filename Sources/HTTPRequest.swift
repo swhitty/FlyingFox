@@ -43,6 +43,25 @@ public struct HTTPRequest: Sendable, Equatable {
     public struct QueryItem: Sendable, Equatable {
         public var name: String
         public var value: String
+
+        public init(name: String, value: String) {
+            self.name = name
+            self.value = value
+        }
+    }
+
+    public init(method: HTTPMethod,
+                version: HTTPVersion,
+                path: String,
+                query: [QueryItem],
+                headers: [HTTPHeader: String],
+                body: Data) {
+        self.method = method
+        self.version = version
+        self.path = path
+        self.query = query
+        self.headers = headers
+        self.body = body
     }
 }
 
