@@ -39,8 +39,8 @@ struct Socket: Sendable, Hashable {
         self.file = file
     }
 
-    init() throws {
-        self.file = Socket.socket(AF_INET6, Socket.stream, 0)
+    init(domain: Int32, type: Int32) throws {
+        self.file = Socket.socket(domain, type, 0)
         if file == -1 {
             throw SocketError.makeFailed("CreateSocket")
         }

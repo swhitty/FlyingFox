@@ -58,7 +58,7 @@ public final actor HTTPServer {
     }
 
     public func start() async throws {
-        let socket = try Socket()
+        let socket = try Socket(domain: AF_INET6, type: Socket.stream)
         try socket.setOption(.enableLocalAddressReuse)
         #if canImport(Darwin)
         try socket.setOption(.enableNoSIGPIPE)
