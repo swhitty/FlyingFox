@@ -1,4 +1,5 @@
-[![Platforms](https://img.shields.io/badge/platforms-iOS%20|%20Mac%20-lightgray.svg)]()
+[![Build](https://github.com/swhitty/FlyingFox/actions/workflows/build.yml/badge.svg)](https://github.com/swhitty/FlyingFox/actions/workflows/build.yml)
+[![Platforms](https://img.shields.io/badge/platforms-iOS%20|%20Mac%20|%20tvOS%20|%20Linux-lightgray.svg)]()
 [![Swift 5.5](https://img.shields.io/badge/swift-5.5-red.svg?style=flat)](https://developer.apple.com/swift)
 [![License](https://img.shields.io/badge/license-MIT-lightgrey.svg)](https://opensource.org/licenses/MIT)
 [![Twitter](https://img.shields.io/badge/twitter-@simonwhitty-blue.svg)](http://twitter.com/simonwhitty)
@@ -14,7 +15,7 @@
 
 FlyingFox can be installed by using Swift Package Manager.
 
-**Note:** FlyingFox requires Xcode 13+ to build, and runs on iOS 13+ or macOS 10.15+.
+**Note:** FlyingFox requires Swift 5.5 on Xcode 13+ or Linux to build. It runs on iOS 13+, tvOS 13+ pr macOS 10.15+.
 
 To install using Swift Package Manager, add this to the `dependencies:` section in your Package.swift file:
 
