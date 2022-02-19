@@ -121,6 +121,10 @@ protocol AsyncSocketPool {
 
 `PollingSocketPool` is currently the only pool available. It uses a continuous loop of [`poll(2)`](https://www.freebsd.org/cgi/man.cgi?poll) / [`Task.yield()`](https://developer.apple.com/documentation/swift/task/3814840-yield) to check all sockets awaiting data at a supplied interval.  All sockets share the same pool.
 
+## Commandline App
+
+An example command line app FlyingFoxCLI is available [here](https://github.com/swhitty/FlyingFoxCLI).
+
 # Credits
 
 FlyingFox is primarily the work of [Simon Whitty](https://github.com/swhitty).
