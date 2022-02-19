@@ -95,7 +95,7 @@ struct AsyncSocket: Sendable {
     func close() async throws {
         repeat {
             do {
-                try socket.close()
+                return try socket.close()
             } catch SocketError.blocked {
                 try await pool.suspend(untilReady: socket)
             } catch {
