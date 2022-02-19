@@ -33,17 +33,6 @@ import Foundation
 
 enum SocketError: LocalizedError {
     case failed(type: StaticString, errno: Int32, message: String)
-//    case optionsFailed(String)
-//    case flagsFailed(String)
-//    case bindFailed(String)
-//    case peerNameFailed(String)
-//    case nameInfoFailed(String)
-//    case addressFailed(String)
-//    case listenFailed(String)
-//    case acceptFailed(String)
-//    case readFailed(String)
-//    case writeFailed(String)
-//    case closeFailed(String)
     case blocked
 
     var errorDescription: String? {
