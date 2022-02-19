@@ -36,11 +36,16 @@ public final actor HTTPServer {
     private let port: UInt16
     private let timeout: TimeInterval
     private var socket: AsyncSocket?
+    private let logger: HTTPLogging?
     private var handlers: [(route: HTTPRoute, handler: HTTPHandler)]
 
-    public init(port: UInt16, timeout: TimeInterval = 15, handlers: [(route: HTTPRoute, handler: HTTPHandler)] = []) {
+    public init(port: UInt16,
+                timeout: TimeInterval = 15,
+                logger: HTTPLogging? = defaultLogger(),
+                handlers: [(route: HTTPRoute, handler: HTTPHandler)] = []) {
         self.port = port
         self.timeout = timeout
+        self.logger = logger
         self.handlers = []
     }
 
@@ -62,7 +67,7 @@ public final actor HTTPServer {
         do {
             try await start(on: socket)
         } catch {
-            print("server error: ", error.localizedDescription)
+            logger?.logError("server error: \(error.localizedDescription)")
             try? socket.close()
             throw error
         }
@@ -71,7 +76,7 @@ public final actor HTTPServer {
     private func start(on socket: Socket) async throws {
         let pool = PollingSocketPool()
         let asyncSocket = try AsyncSocket(socket: socket, pool: pool)
-        print("starting server port:", port)
+        logger?.logInfo("starting server port: \(port)")
 
         return try await withThrowingTaskGroup(of: Void.self) { group in
             group.addTask {
@@ -96,7 +101,7 @@ public final actor HTTPServer {
     }
 
     private func handleConnection(_ connection: HTTPConnection) async {
-        print("open connection", connection.hostname)
+        logger?.logInfo("open connection: \(connection.hostname)")
         do {
             for try await request in connection.requests {
                 let response = await handleRequest(request)
@@ -104,10 +109,10 @@ public final actor HTTPServer {
                 guard response.shouldKeepAlive else { break }
             }
         } catch {
-            print("connection error", error)
+            logger?.logError("connection error: \(error.localizedDescription)")
         }
         try? await connection.close()
-        print("close connection", connection.hostname)
+        logger?.logInfo("close connection: \(connection.hostname)")
     }
 
     private func handleRequest(_ request: HTTPRequest) async -> HTTPResponse {
@@ -128,7 +133,7 @@ public final actor HTTPServer {
                 try await handler.handleRequest(request)
             }
         } catch {
-            print("handler error", error)
+            logger?.logError("handler error: \(error.localizedDescription)")
             return HTTPResponse(statusCode: .internalServerError)
         }
     }

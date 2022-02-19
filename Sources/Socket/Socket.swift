@@ -31,22 +31,6 @@
 
 import Foundation
 
-enum SocketError: Error {
-    case createFailed(String)
-    case optionsFailed(String)
-    case flagsFailed(String)
-    case bindFailed(String)
-    case peerNameFailed(String)
-    case nameInfoFailed(String)
-    case addressFailed(String)
-    case listenFailed(String)
-    case acceptFailed(String)
-    case readFailed(String)
-    case writeFailed(String)
-    case closeFailed(String)
-    case blocked
-}
-
 struct Socket: Sendable, Hashable {
 
     let file: Int32
@@ -58,7 +42,7 @@ struct Socket: Sendable, Hashable {
     init() throws {
         self.file = socket(AF_INET6, SOCK_STREAM, 0)
         if file == -1 {
-            throw SocketError.createFailed(makeErrorMessage())
+            throw SocketError.makeFailed("CreateSocket")
         }
     }
 
@@ -68,14 +52,14 @@ struct Socket: Sendable, Hashable {
 
     func setFlags(_ flags: Flags) throws {
         if fcntl(file, F_SETFL, flags.rawValue) == -1 {
-            throw SocketError.flagsFailed(makeErrorMessage())
+            throw SocketError.makeFailed("SetFlags")
         }
     }
 
     func setOption<O: SocketOption>(_ option: O) throws {
         var value = option.value
         if setsockopt(file, SOL_SOCKET, option.option, &value, socklen_t(MemoryLayout<O.Value.Type>.size)) == -1 {
-            throw SocketError.optionsFailed(makeErrorMessage())
+            throw SocketError.makeFailed("SetOption")
         }
     }
 
@@ -90,7 +74,7 @@ struct Socket: Sendable, Hashable {
 
         if let address = listenAddress {
             guard address.withCString({ cstring in inet_pton(AF_INET6, cstring, &addr.sin6_addr) }) == 1 else {
-                throw SocketError.bindFailed(makeErrorMessage())
+                throw SocketError.makeFailed("BindAddr")
             }
         }
 
@@ -99,17 +83,17 @@ struct Socket: Sendable, Hashable {
         }
 
         if result == -1 {
-            let message = makeErrorMessage()
+            let error = SocketError.makeFailed("Bind")
             try close()
-            throw SocketError.bindFailed(message)
+            throw error
         }
     }
 
     func listen(maxPendingConnection: Int32 = SOMAXCONN) throws {
         if Darwin.listen(file, maxPendingConnection) == -1 {
-            let message = makeErrorMessage()
+            let error = SocketError.makeFailed("Listen")
             try close()
-            throw SocketError.listenFailed(message)
+            throw error
         }
     }
 
@@ -117,11 +101,11 @@ struct Socket: Sendable, Hashable {
         var addr = sockaddr()
         var len = socklen_t(MemoryLayout<sockaddr>.size)
         if getpeername(file, &addr, &len) != 0 {
-            throw SocketError.peerNameFailed(makeErrorMessage())
+            throw SocketError.makeFailed("GetPeerName")
         }
         var hostBuffer = [CChar](repeating: 0, count: Int(NI_MAXHOST))
         if getnameinfo(&addr, len, &hostBuffer, socklen_t(hostBuffer.count), nil, 0, NI_NUMERICHOST) != 0 {
-            throw SocketError.nameInfoFailed(makeErrorMessage())
+            throw SocketError.makeFailed("GetNameInfo")
         }
         return String(cString: hostBuffer)
     }
@@ -135,7 +119,7 @@ struct Socket: Sendable, Hashable {
             if errno == EWOULDBLOCK {
                 throw SocketError.blocked
             } else {
-                throw SocketError.acceptFailed(makeErrorMessage())
+                throw SocketError.makeFailed("Accept")
             }
         }
 
@@ -151,7 +135,7 @@ struct Socket: Sendable, Hashable {
             throw SocketError.blocked
         }
         else {
-            throw SocketError.readFailed(makeErrorMessage())
+            throw SocketError.makeFailed("Read")
         }
     }
 
@@ -159,7 +143,7 @@ struct Socket: Sendable, Hashable {
         guard index < data.endIndex else { return data.endIndex }
         return try data.withUnsafeBytes {
             guard let baseAddress = $0.baseAddress else {
-                throw SocketError.writeFailed("Invalid Buffer")
+                throw SocketError.makeFailed("WriteBuffer")
             }
             let sent = try write(baseAddress + index, length: data.endIndex - index)
             return index + sent
@@ -172,7 +156,7 @@ struct Socket: Sendable, Hashable {
             if errno == EWOULDBLOCK {
                 throw SocketError.blocked
             } else {
-                throw SocketError.writeFailed(makeErrorMessage())
+                throw SocketError.makeFailed("Write")
             }
         }
         return sent
@@ -183,13 +167,9 @@ struct Socket: Sendable, Hashable {
             if errno == EWOULDBLOCK {
                 throw SocketError.blocked
             } else {
-                throw SocketError.closeFailed(makeErrorMessage())
+                throw SocketError.makeFailed("Close")
             }
         }
-    }
-
-    private func makeErrorMessage() -> String {
-        String(cString: strerror(errno))
     }
 }
 

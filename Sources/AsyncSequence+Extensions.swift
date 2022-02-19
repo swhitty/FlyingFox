@@ -97,7 +97,7 @@ extension AsyncSequence where Element == UInt8 {
         let buffer = collectUntil(buffer: { $0.suffix(bytes.count) == bytes })
         return buffer.map {
             guard let string = String(bytes: $0.dropLast(bytes.count), encoding: .utf8) else {
-                throw SocketError.readFailed("Invalid String Conversion")
+                throw AsyncSequenceError("Invalid String Conversion")
             }
             return string
         }
