@@ -32,7 +32,7 @@
 #if canImport(OSLog)
 import OSLog
 
-@available(macOS 11.0, iOS 14.0, *)
+@available(macOS 11.0, iOS 14.0, tvOS 14.0, *)
 public struct OSLogHTTPLogging: HTTPLogging {
 
     private let logger: Logger
@@ -50,7 +50,7 @@ public struct OSLogHTTPLogging: HTTPLogging {
     }
 }
 
-@available(macOS 11.0, iOS 14.0, *)
+@available(macOS 11.0, iOS 14.0, tvOS 14.0, *)
 public extension HTTPLogging where Self == OSLogHTTPLogging {
 
     static func oslog(bundle: Bundle = .main, category: String = "FlyingFox") -> Self {

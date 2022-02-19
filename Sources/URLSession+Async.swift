@@ -35,6 +35,7 @@ import FoundationNetworking
 #endif
 
 @available(iOS, deprecated: 15.0, message: "use data(for request: URLRequest) directly")
+@available(tvOS, deprecated: 15.0, message: "use data(for request: URLRequest) directly")
 @available(macOS, deprecated: 12.0, message: "use data(for request: URLRequest) directly")
 extension URLSession {
 
@@ -42,7 +43,7 @@ extension URLSession {
     #if canImport(FoundationNetworking)
         return try await makeData(for: request)
     #else
-        if #available(macOS 12.0, iOS 15.0, *) {
+        if #available(macOS 12.0, iOS 15.0, tvOS 15.0, *) {
             return try await data(for: request, delegate: nil)
         } else {
             return try await makeData(for: request)

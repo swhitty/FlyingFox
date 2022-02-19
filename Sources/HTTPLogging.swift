@@ -62,7 +62,7 @@ public extension HTTPServer {
 
 #if canImport(OSLog)
     static func defaultLogger() -> HTTPLogging {
-        guard #available(macOS 11.0, *) else {
+        guard #available(macOS 11.0, iOS 14.0, tvOS 14.0, *) else {
             return .print()
         }
         return .oslog()
