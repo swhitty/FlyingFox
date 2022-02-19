@@ -31,8 +31,8 @@
 
 import Foundation
 
-enum SocketError: LocalizedError {
-    case failed(type: StaticString, errno: Int32, message: String)
+enum SocketError: LocalizedError, Equatable {
+    case failed(type: String, errno: Int32, message: String)
     case blocked
 
     var errorDescription: String? {
@@ -45,7 +45,7 @@ enum SocketError: LocalizedError {
     }
 
     static func makeFailed(_ type: StaticString) -> Self {
-        .failed(type: type,
+        .failed(type: String(describing: type),
                 errno: errno,
                 message: String(cString: strerror(errno)))
     }
