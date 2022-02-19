@@ -40,7 +40,7 @@ struct Socket: Sendable, Hashable {
     }
 
     init() throws {
-        self.file = Socket.socket(AF_INET6, SOCK_STREAM, 0)
+        self.file = Socket.socket(AF_INET6, Socket.stream, 0)
         if file == -1 {
             throw SocketError.makeFailed("CreateSocket")
         }
@@ -64,13 +64,7 @@ struct Socket: Sendable, Hashable {
     }
 
     func bindIP6(port: UInt16, listenAddress: String? = nil) throws {
-        var addr = sockaddr_in6(
-            sin6_len: UInt8(MemoryLayout<sockaddr_in6>.stride),
-            sin6_family: UInt8(AF_INET6),
-            sin6_port: port.bigEndian,
-            sin6_flowinfo: 0,
-            sin6_addr: in6addr_any,
-            sin6_scope_id: 0)
+        var addr = Socket.sockaddr_in6(port: port)
 
         if let address = listenAddress {
             guard address.withCString({ cstring in inet_pton(AF_INET6, cstring, &addr.sin6_addr) }) == 1 else {

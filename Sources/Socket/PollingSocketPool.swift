@@ -84,7 +84,7 @@ final actor PollingSocketPool: AsyncSocketPool {
                 pollfd(fd: $0, events: Int16(POLLIN), revents: 0)
             }
 
-            Darwin.poll(&buffer, nfds_t(buffer.count), interval.milliseconds)
+            Socket.poll(&buffer, nfds_t(buffer.count), interval.milliseconds)
 
             for file in buffer {
                 if (file.revents & Int16(POLLIN) != 0) {

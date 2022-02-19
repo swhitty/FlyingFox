@@ -30,17 +30,24 @@
 //
 
 import Foundation
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#endif
 
 @available(iOS, deprecated: 15.0, message: "use data(for request: URLRequest) directly")
 @available(macOS, deprecated: 12.0, message: "use data(for request: URLRequest) directly")
 extension URLSession {
 
     func data(for request: URLRequest) async throws -> (Data, URLResponse) {
+    #if canImport(FoundationNetworking)
+        return try await makeData(for: request)
+    #else
         if #available(macOS 12.0, iOS 15.0, *) {
             return try await data(for: request, delegate: nil)
         } else {
             return try await makeData(for: request)
         }
+    #endif
     }
 
     private func makeData(for request: URLRequest) async throws -> (Data, URLResponse) {

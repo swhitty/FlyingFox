@@ -34,6 +34,8 @@ import Darwin
 
 extension Socket {
 
+    static let stream = Int32(SOCK_STREAM)
+
     static func socket(_ domain: Int32, _ type: Int32, _ protocol: Int32) -> Int32 {
         Darwin.socket(domain, type, `protocol`)
     }
@@ -49,6 +51,17 @@ extension Socket {
     static func setsockopt(_ fd: Int32, _ level: Int32, _ name: Int32,
                            _ value: UnsafeRawPointer!, _ len: socklen_t) -> Int32 {
         Darwin.setsockopt(fd, level, name, value, len)
+    }
+
+    static func sockaddr_in6(port: UInt16) -> sockaddr_in6 {
+        Darwin.sockaddr_in6(
+            sin6_len: UInt8(MemoryLayout<sockaddr_in6>.stride),
+            sin6_family: sa_family_t(AF_INET6),
+            sin6_port: port.bigEndian,
+            sin6_flowinfo: 0,
+            sin6_addr: in6addr_any,
+            sin6_scope_id: 0
+        )
     }
 
     static func bind(_ fd: Int32, _ addr: UnsafePointer<sockaddr>!, _ len: socklen_t) -> Int32 {
@@ -73,6 +86,10 @@ extension Socket {
 
     static func close(_ fd: Int32) -> Int32 {
         Darwin.close(fd)
+    }
+
+    static func poll(_ fds: UnsafeMutablePointer<pollfd>!, _ nfds: nfds_t, _ tmo_p: Int32) {
+        Darwin.poll(fds, nfds, tmo_p)
     }
 }
 

@@ -30,6 +30,9 @@
 //
 
 import Foundation
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#endif
 
 public protocol HTTPHandler: Sendable {
     func handleRequest(_ request: HTTPRequest) async throws -> HTTPResponse
