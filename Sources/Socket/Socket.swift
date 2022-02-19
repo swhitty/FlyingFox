@@ -40,25 +40,25 @@ struct Socket: Sendable, Hashable {
     }
 
     init() throws {
-        self.file = socket(AF_INET6, SOCK_STREAM, 0)
+        self.file = Socket.socket(AF_INET6, SOCK_STREAM, 0)
         if file == -1 {
             throw SocketError.makeFailed("CreateSocket")
         }
     }
 
     var flags: Flags {
-        Flags(rawValue: fcntl(file, F_GETFL))
+        Flags(rawValue: Socket.fcntl(file, F_GETFL))
     }
 
     func setFlags(_ flags: Flags) throws {
-        if fcntl(file, F_SETFL, flags.rawValue) == -1 {
+        if Socket.fcntl(file, F_SETFL, flags.rawValue) == -1 {
             throw SocketError.makeFailed("SetFlags")
         }
     }
 
     func setOption<O: SocketOption>(_ option: O) throws {
         var value = option.value
-        if setsockopt(file, SOL_SOCKET, option.option, &value, socklen_t(MemoryLayout<O.Value.Type>.size)) == -1 {
+        if Socket.setsockopt(file, SOL_SOCKET, option.option, &value, socklen_t(MemoryLayout<O.Value.Type>.size)) == -1 {
             throw SocketError.makeFailed("SetOption")
         }
     }
@@ -79,7 +79,7 @@ struct Socket: Sendable, Hashable {
         }
 
         let result = withUnsafePointer(to: &addr) {
-            bind(file, UnsafePointer<sockaddr>(OpaquePointer($0)), socklen_t(MemoryLayout<sockaddr_in6>.size))
+            Socket.bind(file, UnsafePointer<sockaddr>(OpaquePointer($0)), socklen_t(MemoryLayout<sockaddr_in6>.size))
         }
 
         if result == -1 {
@@ -90,7 +90,7 @@ struct Socket: Sendable, Hashable {
     }
 
     func listen(maxPendingConnection: Int32 = SOMAXCONN) throws {
-        if Darwin.listen(file, maxPendingConnection) == -1 {
+        if Socket.listen(file, maxPendingConnection) == -1 {
             let error = SocketError.makeFailed("Listen")
             try close()
             throw error
@@ -113,7 +113,7 @@ struct Socket: Sendable, Hashable {
     func accept() throws -> (file: Int32, addr: sockaddr) {
         var addr = sockaddr()
         var len: socklen_t = 0
-        let newFile = Darwin.accept(file, &addr, &len)
+        let newFile = Socket.accept(file, &addr, &len)
 
         if newFile == -1 {
             if errno == EWOULDBLOCK {
@@ -128,7 +128,7 @@ struct Socket: Sendable, Hashable {
 
     func read() throws -> UInt8 {
         var byte: UInt8 = 0
-        let count = Darwin.read(file, &byte, 1)
+        let count = Socket.read(file, &byte, 1)
         if count == 1 {
             return byte
         } else if errno == EWOULDBLOCK {
@@ -151,7 +151,7 @@ struct Socket: Sendable, Hashable {
     }
 
     private func write(_ pointer: UnsafeRawPointer, length: Int) throws -> Int {
-        let sent = Darwin.write(file, pointer, length)
+        let sent = Socket.write(file, pointer, length)
         guard sent > 0 else {
             if errno == EWOULDBLOCK {
                 throw SocketError.blocked
@@ -163,7 +163,7 @@ struct Socket: Sendable, Hashable {
     }
 
     func close() throws {
-        if Darwin.close(file) == -1 {
+        if Socket.close(file) == -1 {
             if errno == EWOULDBLOCK {
                 throw SocketError.blocked
             } else {
@@ -193,10 +193,12 @@ extension SocketOption where Self == Int32SocketOption {
         Int32SocketOption(option: SO_REUSEADDR)
     }
 
-    // Apple platforms only. Prevents crash when app is paused / running in background.
+    #if canImport(Darwin)
+    // Prevents SIG_TRAP when app is paused / running in background.
     static var enableNoSIGPIPE: Self {
         Int32SocketOption(option: SO_NOSIGPIPE)
     }
+    #endif
 }
 
 struct Int32SocketOption: SocketOption {

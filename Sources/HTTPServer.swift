@@ -60,7 +60,9 @@ public final actor HTTPServer {
     public func start() async throws {
         let socket = try Socket()
         try socket.setOption(.enableLocalAddressReuse)
+        #if canImport(Darwin)
         try socket.setOption(.enableNoSIGPIPE)
+        #endif
         try socket.bindIP6(port: port)
         try socket.listen()
 
