@@ -103,18 +103,18 @@ public final actor HTTPServer {
     }
 
     private func handleConnection(_ connection: HTTPConnection) async {
-        logger?.logInfo("open connection: \(connection.hostname)")
+        logger?.logOpenConnection(connection)
         do {
             for try await request in connection.requests {
+                logger?.logRequest(request, on: connection)
                 let response = await handleRequest(request)
                 try await connection.sendResponse(response)
-                guard response.shouldKeepAlive else { break }
             }
         } catch {
-            logger?.logError("connection error: \(error.localizedDescription)")
+            logger?.logError(error, on: connection)
         }
         try? await connection.close()
-        logger?.logInfo("close connection: \(connection.hostname)")
+        logger?.logCloseConnection(connection)
     }
 
     private func handleRequest(_ request: HTTPRequest) async -> HTTPResponse {
@@ -138,5 +138,30 @@ public final actor HTTPServer {
             logger?.logError("handler error: \(error.localizedDescription)")
             return HTTPResponse(statusCode: .internalServerError)
         }
+    }
+}
+
+extension HTTPLogging {
+
+    func logOpenConnection(_ connection: HTTPConnection) {
+        logInfo("\(connection.identifer) open connection")
+    }
+
+    func logCloseConnection(_ connection: HTTPConnection) {
+        logInfo("\(connection.identifer) close connection")
+    }
+
+    func logRequest(_ request: HTTPRequest, on connection: HTTPConnection) {
+        logInfo("\(connection.identifer) request: \(request.method.rawValue) \(request.path)")
+    }
+
+    func logError(_ error: Error, on connection: HTTPConnection) {
+        logError("\(connection.identifer) error: \(error.localizedDescription)")
+    }
+}
+
+private extension HTTPConnection {
+    var identifer: String {
+        "<\(hostname)>"
     }
 }

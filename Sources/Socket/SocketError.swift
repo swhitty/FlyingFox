@@ -34,6 +34,7 @@ import Foundation
 enum SocketError: LocalizedError, Equatable {
     case failed(type: String, errno: Int32, message: String)
     case blocked
+    case disconnected
 
     var errorDescription: String? {
         switch self {
@@ -41,6 +42,8 @@ enum SocketError: LocalizedError, Equatable {
             return "SocketError. \(type)(\(errno)): \(message)"
         case .blocked:
             return "SocketError. Blocked"
+        case .disconnected:
+            return "SocketError. Disconnected"
         }
     }
 

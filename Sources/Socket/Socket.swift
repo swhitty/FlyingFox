@@ -125,6 +125,8 @@ struct Socket: Sendable, Hashable {
         let count = Socket.read(file, &byte, 1)
         if count == 1 {
             return byte
+        } else if count == 0 {
+            throw SocketError.disconnected
         } else if errno == EWOULDBLOCK {
             throw SocketError.blocked
         }
