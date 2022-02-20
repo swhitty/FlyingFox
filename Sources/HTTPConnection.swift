@@ -42,7 +42,7 @@ struct HTTPConnection {
     }
 
     // some AsyncSequence<HTTPRequest>
-    var requests: HTTPRequestSequence<ClosureSequence<UInt8>> {
+    var requests: HTTPRequestSequence<ByteSequence> {
         HTTPRequestSequence(bytes: socket.bytes)
     }
 
@@ -55,7 +55,7 @@ struct HTTPConnection {
     }
 }
 
-struct HTTPRequestSequence<S: AsyncSequence>: AsyncSequence, AsyncIteratorProtocol where S.Element == UInt8 {
+struct HTTPRequestSequence<S: ChuckedAsyncSequence>: AsyncSequence, AsyncIteratorProtocol where S.Element == UInt8 {
     typealias Element = HTTPRequest
     private let bytes: S
 

@@ -73,6 +73,21 @@ struct AsyncSocket: Sendable {
         } while true
     }
 
+    func read(bytes: Int) async throws -> [UInt8] {
+        var buffer = [UInt8]()
+        while buffer.count < bytes {
+            let toRead = min(bytes - buffer.count, 8192)
+            do {
+                try buffer.append(contentsOf: socket.read(atMost: toRead))
+            } catch SocketError.blocked {
+                try await pool.suspend(untilReady: socket)
+            } catch {
+                throw error
+            }
+        }
+        return buffer
+    }
+
     func write(_ data: Data) async throws {
         var sent = data.startIndex
         while sent < data.endIndex {
@@ -104,11 +119,27 @@ struct AsyncSocket: Sendable {
         } while true
     }
 
-    var bytes: ClosureSequence<UInt8> {
-        ClosureSequence(closure: read)
+    var bytes: ByteSequence {
+        ByteSequence(socket: self)
     }
 
     var sockets: ClosureSequence<AsyncSocket> {
         ClosureSequence(closure: accept)
+    }
+}
+
+struct ByteSequence: ChuckedAsyncSequence, AsyncIteratorProtocol {
+    typealias Element = UInt8
+
+    let socket: AsyncSocket
+
+    func makeAsyncIterator() -> ByteSequence { self }
+
+    mutating func next() async throws -> UInt8? {
+        try await socket.read()
+    }
+
+    func next(count: Int) async throws -> [UInt8]? {
+        try await socket.read(bytes: count)
     }
 }

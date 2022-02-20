@@ -33,7 +33,7 @@ import Foundation
 
 struct HTTPRequestDecoder {
 
-    static func decodeRequest<S>(from bytes: S) async throws -> HTTPRequest where S: AsyncSequence, S.Element == UInt8 {
+    static func decodeRequest<S>(from bytes: S) async throws -> HTTPRequest where S: ChuckedAsyncSequence, S.Element == UInt8 {
         let status = try await bytes.takeLine()
         let comps = status
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -82,15 +82,16 @@ struct HTTPRequestDecoder {
         return (HTTPHeader(name), value)
     }
 
-    static func readBody<S: AsyncSequence>(from bytes: S, length: String?) async throws -> Data where S.Element == UInt8 {
+    static func readBody<S: ChuckedAsyncSequence>(from bytes: S, length: String?) async throws -> Data where S.Element == UInt8 {
         guard let length = length.flatMap(Int.init) else {
             return Data()
         }
 
-        return try await bytes
-            .collectUntil { $0.count == length }
-            .map { Data($0) }
-            .first()
+        guard let buffer = try await bytes.next(count: length) else {
+            throw Error("ChuckedAsyncSequence prematurely ended")
+        }
+
+        return Data(buffer)
     }
 }
 

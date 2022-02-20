@@ -1,8 +1,8 @@
 //
-//  ConsumingAsyncSequence.swift
+//  ChunkedAsyncSequence.swift
 //  FlyingFox
 //
-//  Created by Simon Whitty on 17/02/2022.
+//  Created by Simon Whitty on 20/02/2022.
 //  Copyright © 2022 Simon Whitty. All rights reserved.
 //
 //  Distributed under the permissive MIT license
@@ -29,19 +29,28 @@
 //  SOFTWARE.
 //
 
-@testable import FlyingFox
+protocol ChuckedAsyncSequence: AsyncSequence {
 
-final class ConsumingAsyncSequence<Element>: ChuckedAsyncSequence, AsyncIteratorProtocol {
+    /// Retrieve next n elements can be requested from an AsyncSequence.
+    /// - Parameter count: Number of elements to be read from the sequence
+    /// - Returns: Returns all the requested number or elements or nil when the
+    /// sequence ends before all of requested elements are retrieved.
+    func next(count: Int) async throws -> [Element]?
+}
 
-    private var iterator: AnySequence<Element>.Iterator
+extension ChuckedAsyncSequence {
 
-    init<T: Sequence>(_ sequence: T) where T.Element == Element {
-        self.iterator = AnySequence(sequence).makeIterator()
-    }
+    /// Default implementation that does not read elements in chunks, but slowly
+    /// reads the chunk one element at a time.
+    func next(count: Int) async throws -> [Element]? {
+        var buffer = [Element]()
+        var iterator = makeAsyncIterator()
 
-    func makeAsyncIterator() -> ConsumingAsyncSequence<Element> { self }
+        while buffer.count < count,
+              let element = try await iterator.next() {
+            buffer.append(element)
+        }
 
-    func next() async throws -> Element? {
-        iterator.next()
+        return buffer.count == count ? buffer : nil
     }
 }
