@@ -76,7 +76,7 @@ struct AsyncSocket: Sendable {
     func read(bytes: Int) async throws -> [UInt8] {
         var buffer = [UInt8]()
         while buffer.count < bytes {
-            let toRead = min(bytes - buffer.count, 8192)
+            let toRead = min(bytes - buffer.count, 4096)
             do {
                 try buffer.append(contentsOf: socket.read(atMost: toRead))
             } catch SocketError.blocked {
