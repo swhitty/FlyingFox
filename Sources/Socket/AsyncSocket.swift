@@ -73,17 +73,17 @@ struct AsyncSocket: Sendable {
         } while true
     }
 
-    func writeData(_ data: Data) async throws {
+    func write(_ data: Data) async throws {
         var sent = data.startIndex
         while sent < data.endIndex {
-            sent = try await writeData(data, from: sent)
+            sent = try await write(data, from: sent)
         }
     }
 
-    private func writeData(_ data: Data, from index: Data.Index) async throws -> Data.Index {
+    private func write(_ data: Data, from index: Data.Index) async throws -> Data.Index {
         repeat {
             do {
-                return try socket.writeData(data, from: index)
+                return try socket.write(data, from: index)
             } catch SocketError.blocked {
                 try await pool.suspend(untilReady: socket)
             } catch {

@@ -133,7 +133,7 @@ struct Socket: Sendable, Hashable {
         }
     }
 
-    func writeData(_ data: Data, from index: Data.Index) throws -> Data.Index {
+    func write(_ data: Data, from index: Data.Index) throws -> Data.Index {
         guard index < data.endIndex else { return data.endIndex }
         return try data.withUnsafeBytes {
             guard let baseAddress = $0.baseAddress else {

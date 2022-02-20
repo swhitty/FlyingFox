@@ -47,7 +47,7 @@ struct HTTPConnection {
     }
 
     func sendResponse(_ response: HTTPResponse) async throws {
-        try await socket.writeData(HTTPResponseEncoder.encodeResponse(response))
+        try await socket.write(HTTPResponseEncoder.encodeResponse(response))
     }
 
     func close() async throws {
