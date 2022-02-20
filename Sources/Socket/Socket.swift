@@ -122,27 +122,23 @@ struct Socket: Sendable, Hashable {
 
     func read() throws -> UInt8 {
         var byte: UInt8 = 0
-        let count = Socket.read(file, &byte, 1)
-        if count == 1 {
-            return byte
-        } else if count == 0 {
-            throw SocketError.disconnected
-        } else if errno == EWOULDBLOCK {
-            throw SocketError.blocked
+        _ = try withUnsafeMutablePointer(to: &byte) { buffer in
+            try read(into: buffer, length: 1)
         }
-        else {
-            throw SocketError.makeFailed("Read")
-        }
+        return byte
     }
 
     func read(atMost length: Int) throws -> [UInt8] {
         try [UInt8](unsafeUninitializedCapacity: length) { buffer, count in
-            count = try read(into: &buffer, length: length)
+            guard let baseAddress = buffer.baseAddress else {
+                throw SocketError.makeFailed("Read Buffer")
+            }
+            count = try read(into: baseAddress, length: length)
         }
     }
 
-    private func read(into buffer: inout UnsafeMutableBufferPointer<UInt8>, length: Int) throws -> Int {
-        let count = Socket.read(file, buffer.baseAddress, length)
+    private func read(into buffer: UnsafeMutablePointer<UInt8>, length: Int) throws -> Int {
+        let count = Socket.read(file, buffer, length)
         if count == 0 {
             throw SocketError.disconnected
         } else if count > 0 {
