@@ -117,7 +117,7 @@ public final actor HTTPServer {
         logger?.logCloseConnection(connection)
     }
 
-    private func handleRequest(_ request: HTTPRequest) async -> HTTPResponse {
+    func handleRequest(_ request: HTTPRequest) async -> HTTPResponse {
         var response = await handleRequest(request, timeout: timeout)
         if request.shouldKeepAlive {
             response.headers[.connection] = request.headers[.connection]
@@ -125,7 +125,7 @@ public final actor HTTPServer {
         return response
     }
 
-    private func handleRequest(_ request: HTTPRequest, timeout: TimeInterval) async -> HTTPResponse {
+    func handleRequest(_ request: HTTPRequest, timeout: TimeInterval) async -> HTTPResponse {
         guard let handler = handlers.first(where: { $0.route ~= request })?.handler else {
             return HTTPResponse(statusCode: .notFound)
         }
