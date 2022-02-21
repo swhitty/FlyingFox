@@ -21,7 +21,10 @@ let package = Package(
         .testTarget(
             name: "FlyingFoxTests",
             dependencies: ["FlyingFox"],
-            path: "Tests"
+            path: "Tests",
+            resources: [
+                .process("Stubs")
+            ]
         )
     ]
 )

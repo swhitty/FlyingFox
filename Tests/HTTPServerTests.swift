@@ -2,7 +2,7 @@
 //  HTTPServerTests.swift
 //  FlyingFox
 //
-//  Created by Simon Whitty on 23/02/2022.
+//  Created by Simon Whitty on 22/02/2022.
 //  Copyright © 2022 Simon Whitty. All rights reserved.
 //
 //  Distributed under the permissive MIT license
@@ -31,10 +31,6 @@
 
 @testable import FlyingFox
 import XCTest
-import Foundation
-#if canImport(FoundationNetworking)
-import FoundationNetworking
-#endif
 
 final class HTTPSearcherTests: XCTestCase {
 

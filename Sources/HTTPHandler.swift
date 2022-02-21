@@ -60,9 +60,12 @@ public struct RedirectHTTPHandler: HTTPHandler {
     }
 
     public func handleRequest(_ request: HTTPRequest) async throws -> HTTPResponse {
-        HTTPResponse(
+        guard let url = URL(string: location) else {
+            throw URLError(.badURL)
+        }
+        return HTTPResponse(
             statusCode: .movedPermanently,
-            headers: [.location: location]
+            headers: [.location: url.absoluteString]
         )
     }
 }
