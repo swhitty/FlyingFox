@@ -4,24 +4,24 @@ import PackageDescription
 
 let package = Package(
     name: "FlyingFox",
-	  platforms: [
+    platforms: [
         .macOS(.v10_15), .iOS(.v13), .tvOS(.v13)
-	    ],
+    ],
     products: [
-		.library(
+        .library(
             name: "FlyingFox",
             targets: ["FlyingFox"]
-		)
+        )
     ],
     targets: [
         .target(
             name: "FlyingFox",
-			path: "Sources"
-		),
+            path: "Sources"
+        ),
         .testTarget(
             name: "FlyingFoxTests",
-			dependencies: ["FlyingFox"],
-			path: "Tests"
-		)
+            dependencies: ["FlyingFox"],
+            path: "Tests"
+        )
     ]
 )
