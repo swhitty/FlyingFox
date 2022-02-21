@@ -130,7 +130,7 @@ struct AsyncSocket: Sendable {
     }
 }
 
-struct ByteSequence: ChuckedAsyncSequence, AsyncIteratorProtocol {
+struct ByteSequence: ChuckedAsyncSequence, ChuckedAsyncIteratorProtocol {
     typealias Element = UInt8
 
     let socket: AsyncSocket
@@ -138,10 +138,22 @@ struct ByteSequence: ChuckedAsyncSequence, AsyncIteratorProtocol {
     func makeAsyncIterator() -> ByteSequence { self }
 
     mutating func next() async throws -> UInt8? {
-        try await socket.read()
+        do {
+            return try await socket.read()
+        } catch SocketError.disconnected {
+            return nil
+        } catch {
+            throw error
+        }
     }
 
-    func next(count: Int) async throws -> [UInt8]? {
-        try await socket.read(bytes: count)
+    mutating func nextChunk(count: Int) async throws -> [Element]? {
+        do {
+            return try await socket.read(bytes: count)
+        } catch SocketError.disconnected {
+            return nil
+        } catch {
+            throw error
+        }
     }
 }

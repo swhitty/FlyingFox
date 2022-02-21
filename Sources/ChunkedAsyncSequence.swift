@@ -29,28 +29,14 @@
 //  SOFTWARE.
 //
 
-protocol ChuckedAsyncSequence: AsyncSequence {
+/// AsyncSequence that is able to also receive elements in chunks, instead of just one-at-a-time.
+protocol ChuckedAsyncSequence: AsyncSequence where AsyncIterator: ChuckedAsyncIteratorProtocol {
 
-    /// Retrieve next n elements can be requested from an AsyncSequence.
-    /// - Parameter count: Number of elements to be read from the sequence
-    /// - Returns: Returns all the requested number or elements or nil when the
-    /// sequence ends before all of requested elements are retrieved.
-    func next(count: Int) async throws -> [Element]?
 }
 
-extension ChuckedAsyncSequence {
+protocol ChuckedAsyncIteratorProtocol: AsyncIteratorProtocol {
 
-    /// Default implementation that does not read elements in chunks, but slowly
-    /// reads the chunk one element at a time.
-    func next(count: Int) async throws -> [Element]? {
-        var buffer = [Element]()
-        var iterator = makeAsyncIterator()
-
-        while buffer.count < count,
-              let element = try await iterator.next() {
-            buffer.append(element)
-        }
-
-        return buffer.count == count ? buffer : nil
-    }
+    /// Retrieves n elements from sequence in a single array.
+    /// - Returns: Array with the number of elements that was requested. Or Nil.
+    mutating func nextChunk(count: Int) async throws -> [Element]?
 }

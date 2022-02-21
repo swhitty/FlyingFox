@@ -87,7 +87,8 @@ struct HTTPRequestDecoder {
             return Data()
         }
 
-        guard let buffer = try await bytes.next(count: length) else {
+        var iterator = bytes.makeAsyncIterator()
+        guard let buffer = try await iterator.nextChunk(count: length) else {
             throw Error("ChuckedAsyncSequence prematurely ended")
         }
 

@@ -31,7 +31,7 @@
 
 @testable import FlyingFox
 
-final class ConsumingAsyncSequence<Element>: ChuckedAsyncSequence, AsyncIteratorProtocol {
+final class ConsumingAsyncSequence<Element>: ChuckedAsyncSequence, ChuckedAsyncIteratorProtocol {
 
     private var iterator: AnySequence<Element>.Iterator
 
@@ -43,5 +43,15 @@ final class ConsumingAsyncSequence<Element>: ChuckedAsyncSequence, AsyncIterator
 
     func next() async throws -> Element? {
         iterator.next()
+    }
+
+    func nextChunk(count: Int) async throws -> [Element]? {
+        var buffer = [Element]()
+        while buffer.count < count,
+              let element = iterator.next() {
+            buffer.append(element)
+        }
+
+        return buffer.count == count ? buffer : nil
     }
 }
