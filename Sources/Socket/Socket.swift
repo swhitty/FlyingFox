@@ -139,12 +139,12 @@ struct Socket: Sendable, Hashable {
 
     private func read(into buffer: UnsafeMutablePointer<UInt8>, length: Int) throws -> Int {
         let count = Socket.read(file, buffer, length)
-        if count == 0 {
-            throw SocketError.disconnected
-        } else if count > 0 {
+        if count > 0 {
             return count
         } else if errno == EWOULDBLOCK {
             throw SocketError.blocked
+        } else if errno == EBADF || count == 0 {
+            throw SocketError.disconnected
         } else {
             throw SocketError.makeFailed("Read")
         }
@@ -166,6 +166,8 @@ struct Socket: Sendable, Hashable {
         guard sent > 0 else {
             if errno == EWOULDBLOCK {
                 throw SocketError.blocked
+            } else if errno == EBADF {
+                throw SocketError.disconnected
             } else {
                 throw SocketError.makeFailed("Write")
             }
