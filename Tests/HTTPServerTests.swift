@@ -32,7 +32,7 @@
 @testable import FlyingFox
 import XCTest
 
-final class HTTPSearcherTests: XCTestCase {
+final class HTTPServerTests: XCTestCase {
 
     func testRequests_AreMatchedToHandlers_ViaRoute() async throws {
         let server = HTTPServer(port: 8008)
