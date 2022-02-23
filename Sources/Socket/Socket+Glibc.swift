@@ -68,6 +68,17 @@ extension Socket {
         )
     }
 
+    static func getpeername(_ fd: Int32, _ addr: UnsafeMutablePointer<sockaddr>!, _ len: UnsafeMutablePointer<socklen_t>!) -> Int32 {
+        Glibc.getpeername(fd, addr, len)
+    }
+
+    static func getnameinfo(_ addr: UnsafePointer<sockaddr>!, _ addrLen: socklen_t,
+                            _ buffer: UnsafeMutablePointer<CChar>!, _ bufferLen: socklen_t,
+                            _ serv: UnsafeMutablePointer<CChar>!, _ servLen: socklen_t,
+                            _ flags: Int32) -> Int32 {
+        Glibc.getnameinfo(addr, addrLen, buffer, bufferLen, serv, servLen, flags)
+    }
+
     static func bind(_ fd: Int32, _ addr: UnsafePointer<sockaddr>!, _ len: socklen_t) -> Int32 {
         Glibc.bind(fd, addr, len)
     }

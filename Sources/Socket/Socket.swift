@@ -104,11 +104,12 @@ struct Socket: Sendable, Hashable {
     func remoteHostname() throws -> String {
         var addr = sockaddr()
         var len = socklen_t(MemoryLayout<sockaddr>.size)
-        if getpeername(file, &addr, &len) != 0 {
+        if Socket.getpeername(file, &addr, &len) != 0 {
             throw SocketError.makeFailed("GetPeerName")
         }
-        var hostBuffer = [CChar](repeating: 0, count: Int(NI_MAXHOST))
-        if getnameinfo(&addr, len, &hostBuffer, socklen_t(hostBuffer.count), nil, 0, NI_NUMERICHOST) != 0 {
+        let capacity = Int(NI_MAXHOST)
+        let hostBuffer = UnsafeMutablePointer<CChar>.allocate(capacity: capacity)
+        if Socket.getnameinfo(&addr, len, hostBuffer, socklen_t(capacity), nil, 0, NI_NUMERICHOST) != 0 {
             throw SocketError.makeFailed("GetNameInfo")
         }
         return String(cString: hostBuffer)
