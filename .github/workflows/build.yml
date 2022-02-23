@@ -6,19 +6,26 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
-    name: Swift ${{ matrix.swift }} on ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-        swift: ["5.5.2"]
-    runs-on: ${{ matrix.os }}
+  macos:
+    runs-on: macos-latest
     steps:
-      - uses: fwal/setup-swift@v1
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Build and Test
+        run: swift test --enable-code-coverage -v
+      - name: Gather code coverage
+        run: xcrun llvm-cov export -format="lcov" .build/debug/FlyingFoxPackageTests.xctest/Contents/MacOS/FlyingFoxPackageTests -instr-profile .build/debug/codecov/default.profdata > coverage_report.lcov
+      - name: Upload Coverage
+        uses: codecov/codecov-action@v2
         with:
-          swift-version: ${{ matrix.swift }}
-      - uses: actions/checkout@v2
-      - name: Build
-        run: swift build
-      - name: Run tests
+          fail_ci_if_error: true
+          files: ./coverage_report.lcov
+
+  linux:
+    runs-on: ubuntu-latest
+    container: swift:5.5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Build and Test
         run: swift test
