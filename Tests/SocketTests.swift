@@ -94,6 +94,20 @@ final class SocketTests: XCTestCase {
         try socket.setFlags(.append)
         XCTAssertTrue(socket.flags.contains(.append))
     }
+
+    func testSocketAccept_ThrowsError_WhenInvalid() throws {
+        let socket = Socket(file: -1)
+        XCTAssertThrowsError(
+            try socket.accept()
+        )
+    }
+
+    func testSocketClose_ThrowsError_WhenInvalid() throws {
+        let socket = Socket(file: -1)
+        XCTAssertThrowsError(
+            try socket.close()
+        )
+    }
 }
 
 extension Socket.Flags {
