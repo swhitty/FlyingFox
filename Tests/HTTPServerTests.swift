@@ -31,6 +31,10 @@
 
 @testable import FlyingFox
 import XCTest
+import Foundation
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#endif
 
 final class HTTPServerTests: XCTestCase {
 
