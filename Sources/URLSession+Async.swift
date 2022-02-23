@@ -51,7 +51,7 @@ extension URLSession {
     #endif
     }
 
-    private func makeData(for request: URLRequest) async throws -> (Data, URLResponse) {
+    func makeData(for request: URLRequest) async throws -> (Data, URLResponse) {
         var dataTask: URLSessionDataTask?
         let onCancel = { dataTask?.cancel() }
 
