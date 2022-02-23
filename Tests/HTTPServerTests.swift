@@ -111,6 +111,39 @@ final class HTTPServerTests: XCTestCase {
             response.shouldKeepAlive
         )
     }
+
+    func testServer_ReturnsFile_WhenFileHandlerIsMatched() async throws {
+        let server = HTTPServer(port: 8009)
+        await server.appendHandler(for: "*", handler: .file(named: "fish.json", in: .module))
+        let task = Task { try await server.start() }
+
+        let request = URLRequest(url: URL(string: "http://localhost:8009")!)
+        let (data, _) = try await URLSession.shared.makeData(for: request)
+
+        XCTAssertEqual(
+            data,
+            #"{"fish": "cakes"}"#.data(using: .utf8)
+        )
+        task.cancel()
+    }
+
+    func testServer_Returns500_WhenHandlerTimesout() async throws {
+        let server = HTTPServer(port: 8008, timeout: 0.1)
+        await server.appendHandler(for: "*") { _ in
+            try await Task.sleep(nanoseconds: 5_000_000_000)
+            return .make(statusCode: .ok)
+        }
+        let task = Task { try await server.start() }
+
+        let request = URLRequest(url: URL(string: "http://localhost:8008")!)
+        let (_, response) = try await URLSession.shared.makeData(for: request)
+
+        XCTAssertEqual(
+            (response as? HTTPURLResponse)?.statusCode,
+            500
+        )
+        task.cancel()
+    }
 }
 
 
