@@ -64,4 +64,24 @@ final class SocketTests: XCTestCase {
             XCTAssertEqual($0, .disconnected)
         }
     }
+
+    func testSocket_Sets_And_Gets_Int32Option() throws {
+        let socket = try Socket(domain: AF_UNIX, type: Socket.stream)
+
+        try socket.setValue(4096, for: .receiveBufferSize)
+        XCTAssertEqual(try socket.getValue(for: .receiveBufferSize), Int32(4096))
+
+        try socket.setValue(8192, for: .receiveBufferSize)
+        XCTAssertEqual(try socket.getValue(for: .receiveBufferSize), Int32(8192))
+    }
+
+    func testSocket_Sets_And_Gets_BoolOption() throws {
+        let socket = try Socket(domain: AF_UNIX, type: Socket.stream)
+
+        try socket.setValue(true, for: .localAddressReuse)
+        XCTAssertEqual(try socket.getValue(for: .localAddressReuse), true)
+
+        try socket.setValue(false, for: .localAddressReuse)
+        XCTAssertEqual(try socket.getValue(for: .localAddressReuse), false)
+    }
 }

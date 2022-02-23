@@ -53,6 +53,11 @@ extension Socket {
         Darwin.setsockopt(fd, level, name, value, len)
     }
 
+    static func getsockopt(_ fd: Int32, _ level: Int32, _ name: Int32,
+                           _ value: UnsafeMutableRawPointer!, _ len: UnsafeMutablePointer<socklen_t>!) -> Int32 {
+        Darwin.getsockopt(fd, level, name, value, len)
+    }
+
     static func sockaddr_in6(port: UInt16) -> sockaddr_in6 {
         Darwin.sockaddr_in6(
             sin6_len: UInt8(MemoryLayout<sockaddr_in6>.stride),

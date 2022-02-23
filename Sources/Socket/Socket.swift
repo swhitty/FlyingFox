@@ -56,11 +56,21 @@ struct Socket: Sendable, Hashable {
         }
     }
 
-    func setOption<O: SocketOption>(_ option: O) throws {
-        var value = option.value
-        if Socket.setsockopt(file, SOL_SOCKET, option.option, &value, socklen_t(MemoryLayout<O.Value.Type>.size)) == -1 {
+    func setValue<O: SocketOption>(_ value: O.Value, for option: O) throws {
+        var value = option.makeSocketValue(from: value)
+        let length = socklen_t(MemoryLayout<O.SocketValue>.size)
+        guard Socket.setsockopt(file, SOL_SOCKET, option.name, &value, length) >= 0 else {
             throw SocketError.makeFailed("SetOption")
         }
+    }
+
+    func getValue<O: SocketOption>(for option: O) throws -> O.Value {
+        let valuePtr = UnsafeMutablePointer<O.SocketValue>.allocate(capacity: 1)
+        var length = socklen_t(MemoryLayout<O.SocketValue>.size)
+        guard Socket.getsockopt(file, SOL_SOCKET, option.name, valuePtr, &length) >= 0 else {
+            throw SocketError.makeFailed("GetOption")
+        }
+        return option.makeValue(from: valuePtr.pointee)
     }
 
     func bindIP6(port: UInt16, listenAddress: String? = nil) throws {
@@ -196,25 +206,56 @@ extension Socket {
 
 protocol SocketOption {
     associatedtype Value
+    associatedtype SocketValue
 
-    var option: Int32 { get }
-    var value: Value { get }
+    var name: Int32 { get }
+    func makeValue(from socketValue: SocketValue) -> Value
+    func makeSocketValue(from value: Value) -> SocketValue
 }
 
-extension SocketOption where Self == Int32SocketOption {
-    static var enableLocalAddressReuse: Self {
-        Int32SocketOption(option: SO_REUSEADDR)
+struct BoolSocketOption: SocketOption {
+    var name: Int32
+
+    func makeValue(from socketValue: Int32) -> Bool {
+        socketValue > 0
+    }
+
+    func makeSocketValue(from value: Bool) -> Int32 {
+        value ? 1 : 0
+    }
+}
+
+struct Int32SocketOption: SocketOption {
+    var name: Int32
+
+    func makeValue(from socketValue: Int32) -> Int32 {
+        socketValue
+    }
+
+    func makeSocketValue(from value: Int32) -> Int32 {
+        value
+    }
+}
+
+extension SocketOption where Self == BoolSocketOption {
+    static var localAddressReuse: Self {
+        BoolSocketOption(name: SO_REUSEADDR)
     }
 
     #if canImport(Darwin)
     // Prevents SIG_TRAP when app is paused / running in background.
-    static var enableNoSIGPIPE: Self {
-        Int32SocketOption(option: SO_NOSIGPIPE)
+    static var noSIGPIPE: Self {
+        BoolSocketOption(name: SO_NOSIGPIPE)
     }
     #endif
 }
 
-struct Int32SocketOption: SocketOption {
-    var option: Int32
-    var value: Int32 = 1
+extension SocketOption where Self == Int32SocketOption {
+    static var sendBufferSize: Self {
+        Int32SocketOption(name: SO_SNDBUF)
+    }
+
+    static var receiveBufferSize: Self {
+        Int32SocketOption(name: SO_RCVBUF)
+    }
 }
