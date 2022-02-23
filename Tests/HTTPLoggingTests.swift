@@ -1,8 +1,8 @@
 //
-//  HTTPLogging.swift
+//  HTTPLoggingTests.swift
 //  FlyingFox
 //
-//  Created by Simon Whitty on 19/02/2022.
+//  Created by Simon Whitty on 23/02/2022.
 //  Copyright © 2022 Simon Whitty. All rights reserved.
 //
 //  Distributed under the permissive MIT license
@@ -29,48 +29,27 @@
 //  SOFTWARE.
 //
 
-public protocol HTTPLogging {
-    func logInfo(_ info: String)
-    func logError(_ error: String)
-}
+@testable import FlyingFox
+import Foundation
+import XCTest
 
-public struct PrintHTTPLogger: HTTPLogging {
+final class HTTPLoggingTests: XCTestCase {
 
-    let category: String
+    func testPrintLogger_DefaultCategory() {
+        let logger = PrintHTTPLogger.print()
 
-    public init(category: String) {
-        self.category = category
+        XCTAssertEqual(
+            logger.category,
+            "FlyingFox"
+        )
     }
 
-    public func logInfo(_ info: String) {
-        Swift.print("[\(category)] info: \(info)")
+    func testPrintLogger_SetsCategory() {
+        let logger = PrintHTTPLogger.print(category: "Fish")
+
+        XCTAssertEqual(
+            logger.category,
+            "Fish"
+        )
     }
-
-    public func logError(_ error: String) {
-        Swift.print("[\(category)] error: \(error)")
-    }
-}
-
-public extension HTTPLogging where Self == PrintHTTPLogger {
-
-    static func print(category: String = "FlyingFox") -> Self {
-        return PrintHTTPLogger(category: category)
-    }
-}
-
-public extension HTTPServer {
-
-#if canImport(OSLog)
-    static func defaultLogger() -> HTTPLogging {
-        guard #available(macOS 11.0, iOS 14.0, tvOS 14.0, *) else {
-            return .print()
-        }
-        return .oslog()
-    }
-#else
-    static func defaultLogger() -> HTTPLogging {
-        return .print()
-    }
-#endif
-
 }
