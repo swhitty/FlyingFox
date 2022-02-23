@@ -86,4 +86,16 @@ final class SocketTests: XCTestCase {
         try socket.setValue(false, for: .localAddressReuse)
         XCTAssertEqual(try socket.getValue(for: .localAddressReuse), false)
     }
+
+    func testSocket_Sets_And_Gets_Flags() throws {
+        let socket = try Socket(domain: AF_UNIX, type: Socket.stream)
+        XCTAssertFalse(socket.flags.contains(.append))
+
+        try socket.setFlags(.append)
+        XCTAssertTrue(socket.flags.contains(.append))
+    }
+}
+
+extension Socket.Flags {
+    static let append = Socket.Flags(rawValue: O_APPEND)
 }
