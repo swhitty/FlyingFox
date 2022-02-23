@@ -56,7 +56,9 @@ final class HTTPConnectionTests: XCTestCase {
         try await s2.writeString(
             """
             GET /hello/world HTTP/1.1\r
+            Content-Length: 5
             \r
+            Hello
 
             """
         )
@@ -64,7 +66,11 @@ final class HTTPConnectionTests: XCTestCase {
         let request = try await connection.requests.first()
         XCTAssertEqual(
             request,
-            .make(method: .GET, version: .http11, path: "/hello/world")
+            .make(method: .GET,
+                  version: .http11,
+                  path: "/hello/world",
+                  headers: [.contentLength: "5"],
+                  body: "Hello".data(using: .utf8)!)
         )
 
         try await s1.close()
