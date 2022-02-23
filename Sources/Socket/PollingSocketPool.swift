@@ -63,18 +63,16 @@ final actor PollingSocketPool: AsyncSocketPool {
     private var isPolling: Bool = false
 
     func run() async throws {
-        guard !isPolling else {
-            throw Error("Already Polling")
-        }
+        guard !isPolling else { throw Error("Already Polling") }
         isPolling = true
 
-        do {
-            try await poll()
-        } catch {
+        defer {
             for continuation in waiting.values.flatMap({ $0 }) {
                 continuation.cancel()
             }
         }
+
+        try await poll()
     }
 
     private func poll() async throws {
