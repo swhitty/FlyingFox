@@ -70,4 +70,72 @@ final class HTTPConnectionTests: XCTestCase {
         try await s1.close()
         try await s2.close()
     }
+
+    func testConnectionRequestsAreReceived_WhileConnectionIsKeptAlive() async throws {
+        let (s1, s2) = try AsyncSocket.makePair(pool: pool)
+
+        let connection = HTTPConnection(socket: s1)
+        try await s2.writeString(
+            """
+            GET /hello HTTP/1.1\r
+            Connection: Keep-Alive\r
+            \r
+            GET /hello HTTP/1.1\r
+            Connection: Keep-Alive\r
+            \r
+            GET /hello HTTP/1.1\r
+            \r
+
+            """
+        )
+
+        let count = try await connection.requests.reduce(0, { count, _ in count + 1 })
+        XCTAssertEqual(count, 3)
+
+        try await s1.close()
+        try await s2.close()
+    }
+
+    func testConnectionResponse_IsSent() async throws {
+        let (s1, s2) = try AsyncSocket.makePair(pool: pool)
+
+        let connection = HTTPConnection(socket: s1)
+
+        try await connection.sendResponse(
+            .make(version: .http11,
+                  statusCode: .gone)
+        )
+
+        let response = try await s2.readString(length: 40)
+        XCTAssertEqual(
+            response,
+            """
+            HTTP/1.1 410 Gone\r
+            Content-Length: 0\r
+            \r
+
+            """
+        )
+    }
+
+    func testConnectionDisconnects_WhenErrorIsReceived() async throws {
+        let (s1, s2) = try AsyncSocket.makePair(pool: pool)
+
+        try await s2.close()
+        let connection = HTTPConnection(socket: s1)
+
+        let count = try await connection.requests.reduce(0, { count, _ in count + 1 })
+        XCTAssertEqual(count, 0)
+
+        try await connection.close()
+    }
+}
+
+extension AsyncSequence {
+    func first() async throws -> Element {
+        guard let next = try await first(where: { _ in true }) else {
+            throw AsyncSequenceError("Premature termination")
+        }
+        return next
+    }
 }

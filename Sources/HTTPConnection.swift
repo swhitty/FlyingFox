@@ -58,16 +58,24 @@ struct HTTPConnection {
 struct HTTPRequestSequence<S: ChuckedAsyncSequence>: AsyncSequence, AsyncIteratorProtocol where S.Element == UInt8 {
     typealias Element = HTTPRequest
     private let bytes: S
+    private var isComplete: Bool
 
     init(bytes: S) {
         self.bytes = bytes
+        self.isComplete = false
     }
 
     func makeAsyncIterator() -> HTTPRequestSequence { self }
 
     mutating func next() async throws -> HTTPRequest? {
+        guard !isComplete else { return nil }
+
         do {
-            return try await HTTPRequestDecoder.decodeRequest(from: bytes)
+            let request = try await HTTPRequestDecoder.decodeRequest(from: bytes)
+            if !request.shouldKeepAlive {
+                isComplete = true
+            }
+            return request
         } catch SocketError.disconnected {
             return nil
         } catch {

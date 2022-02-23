@@ -32,19 +32,8 @@
 import Foundation
 
 extension AsyncSequence {
-    func collectUntil(element: @escaping (Element) -> Bool) -> CollectUntil<Self> {
-        CollectUntil(sequence: self, until: element)
-    }
-
     func collectUntil(buffer: @escaping ([Element]) -> Bool) -> CollectUntil<Self> {
         CollectUntil(sequence: self, until: buffer)
-    }
-
-    func first() async throws -> Element {
-        guard let next = try await first(where: { _ in true }) else {
-            throw AsyncSequenceError("Premature termination")
-        }
-        return next
     }
 }
 
@@ -64,11 +53,6 @@ struct CollectUntil<S>: AsyncSequence, AsyncIteratorProtocol where S: AsyncSeque
 
     let until: ([S.Element]) -> Bool
 
-    init(sequence: S, until: @escaping (S.Element) -> Bool) {
-        self.sequence = sequence
-        self.until = { until($0.last!) }
-    }
-
     init(sequence: S, until: @escaping ([S.Element]) -> Bool) {
         self.sequence = sequence
         self.until = until
@@ -85,7 +69,7 @@ struct CollectUntil<S>: AsyncSequence, AsyncIteratorProtocol where S: AsyncSeque
                 break
             }
         }
-        return buffer
+        return buffer.isEmpty ? nil : buffer
     }
 }
 

@@ -115,6 +115,10 @@ private extension AsyncSequence where Element == UInt8 {
     }
 
     func takeLine() async throws -> String {
-        try await lines.first()
+        var iterator = lines.makeAsyncIterator()
+        guard let line = try await iterator.next() else {
+            throw SocketError.disconnected
+        }
+        return line
     }
 }
