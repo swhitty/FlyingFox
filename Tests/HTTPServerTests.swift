@@ -131,6 +131,7 @@ final class HTTPServerTests: XCTestCase {
         task.cancel()
     }
 
+#if canImport(Darwin)
     func testServer_Returns500_WhenHandlerTimesout() async throws {
         let server = HTTPServer(port: 8008, timeout: 0.1)
         await server.appendHandler(for: "*") { _ in
@@ -148,6 +149,7 @@ final class HTTPServerTests: XCTestCase {
         )
         task.cancel()
     }
+#endif
 }
 
 
