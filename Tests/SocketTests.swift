@@ -68,11 +68,13 @@ final class SocketTests: XCTestCase {
     func testSocket_Sets_And_Gets_Int32Option() throws {
         let socket = try Socket(domain: AF_UNIX, type: Socket.stream)
 
-        try socket.setValue(4096, for: .receiveBufferSize)
+        try socket.setValue(2048, for: .receiveBufferSize)
+#if canImport(Darwin)
+        XCTAssertEqual(try socket.getValue(for: .receiveBufferSize), Int32(2048))
+#else
+        // Linux kernel doubles this value (to allow space for bookkeeping overhead
         XCTAssertEqual(try socket.getValue(for: .receiveBufferSize), Int32(4096))
-
-        try socket.setValue(8192, for: .receiveBufferSize)
-        XCTAssertEqual(try socket.getValue(for: .receiveBufferSize), Int32(8192))
+#endif
     }
 
     func testSocket_Sets_And_Gets_BoolOption() throws {
