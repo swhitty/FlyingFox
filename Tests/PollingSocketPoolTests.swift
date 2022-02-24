@@ -64,6 +64,32 @@ final class PollingSocketPoolTests: XCTestCase {
             1000
         )
     }
+
+    func testSuspendedSockets_ThrowError_WhenCancelled() async throws {
+        let pool = PollingSocketPool()
+
+        let task = Task {
+            let socket = try Socket(domain: AF_UNIX, type: Socket.stream)
+            try await pool.suspend(untilReady: socket)
+        }
+
+        task.cancel()
+
+        await XCTAssertThrowsError(try await task.value, of: CancellationError.self)
+    }
+
+    func testCancellingPollingPool_CancelsSockets() async throws {
+        let pool = PollingSocketPool()
+
+        let task = Task {
+            let socket = try Socket(domain: AF_UNIX, type: Socket.stream)
+            try await pool.suspend(untilReady: socket)
+        }
+
+        _ = Task(timeout: 0.5) {
+            try await pool.run()
+        }
+
+        await XCTAssertThrowsError(try await task.value, of: CancellationError.self)
+    }
 }
-
-

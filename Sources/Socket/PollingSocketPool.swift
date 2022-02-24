@@ -45,9 +45,12 @@ final actor PollingSocketPool: AsyncSocketPool {
     }
 
     func suspend(untilReady socket: Socket) async throws {
-        try Task.checkCancellation()
-        try await withCheckedThrowingContinuation {
-            appendContinuation(Continuation($0), for: socket)
+        try await withCancellingContinuation(returning: Void.self) { continuation, handler in
+            let continuation = Continuation(continuation)
+            appendContinuation(continuation, for: socket)
+            handler.onCancel {
+                self.removeContinuation(continuation, for: socket)
+            }
         }
     }
 
@@ -55,21 +58,43 @@ final actor PollingSocketPool: AsyncSocketPool {
     private var waiting: [Int32: Set<Continuation>] = [:]
 
     private func appendContinuation(_ continuation: Continuation, for socket: Socket) {
+        guard state != .complete else {
+            continuation.cancel()
+            return
+        }
         var existing = waiting[socket.file] ?? []
         existing.insert(continuation)
         waiting[socket.file] = existing
     }
 
-    private var isPolling: Bool = false
+    private func _removeContinuation(_ continuation: Continuation, for socket: Socket) {
+        guard waiting[socket.file]?.contains(continuation) == true else { return }
+        waiting[socket.file]?.remove(continuation)
+        continuation.cancel()
+    }
+
+    nonisolated private func removeContinuation(_ continuation: Continuation, for socket: Socket) {
+        Task { await _removeContinuation(continuation, for: socket) }
+    }
+
+    private var state: State = .ready
+
+    private enum State {
+        case ready
+        case running
+        case complete
+    }
 
     func run() async throws {
-        guard !isPolling else { throw Error("Already Polling") }
-        isPolling = true
+        guard state == .ready else { throw Error("Not Ready") }
+        state = .running
 
         defer {
             for continuation in waiting.values.flatMap({ $0 }) {
                 continuation.cancel()
             }
+            waiting = [:]
+            state = .complete
         }
 
         try await poll()
