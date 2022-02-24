@@ -88,6 +88,19 @@ await server.appendHandler(for: "GET /fish/*", handler: .redirect(to: "https://p
 //                        Location: https://pie.dev/get
 ```
 
+### CompositeHTTPHandler
+
+Multiple handlers can be grouped with requests matched against `HTTPRoute` using `CompositeHTTPHandler`.
+
+```swift
+var handlers = CompositeHTTPHandler()
+handlers.appendHandler(for: "GET /fish/chips", handler: .file(named: "chips.json"))
+handlers.appendHandler(for: "GET /fish/mushy_peas", handler: .file(named: "mushy_peas.json"))
+await server.appendHandler(for: "GET /fish/*", handler: handlers)
+```
+
+`HTTPUnhandledError` is thrown if `CompositeHTTPHandler` is unable to handle the request with any of its registered handlers.  `HTTP 404` is returned as the response.
+
 ### Wildcards
 
 Routes can include wildcards which can be [pattern matched](https://docs.swift.org/swift-book/ReferenceManual/Patterns.html#ID426) against paths:
