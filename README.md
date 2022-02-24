@@ -39,19 +39,31 @@ The server runs within the the current task. To stop the server, cancel the task
 
 ```swift
 let task = Task { try await server.start() }
-
 task.cancel()
 ```
 
 ## Handlers
 
-Handlers can be added to the server for a corresponding route:
+Handlers can be added to the server by implementing `HTTPHandler`:
 
 ```swift
-await server.appendHandler(for: "/hello") { request in 
-    try await Task.sleep(nanoseconds: 1_000_000_000)
-    return HTTPResponse(statusCode: .ok,
-                        body: "Hello World!".data(using: .utf8)!)
+public protocol HTTPHandler: Sendable {
+    func handleRequest(_ request: HTTPRequest) async throws -> HTTPResponse
+}
+```
+
+Handlers can be added to the server against a corresponding route:
+
+```swift
+await server.appendHandler(for: "/hello", handler: handler)
+```
+
+Closures can be added to the server to handle requests:
+
+```swift
+await server.appendHandler(for: "/hello") { request in
+  try await Task.sleep(nanoseconds: 1_000_000_000)
+  return HTTPResponse(statusCode: .ok)
 }
 ```
 
