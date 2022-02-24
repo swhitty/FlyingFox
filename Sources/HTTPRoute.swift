@@ -32,7 +32,7 @@
 import Foundation
 
 
-public struct HTTPRoute {
+public struct HTTPRoute: Sendable {
     public var method: Component
     public var path: [Component]
 
@@ -52,7 +52,7 @@ public struct HTTPRoute {
             .map { Component(String($0)) }
     }
 
-    public enum Component: Equatable {
+    public enum Component: Equatable, Sendable {
         case wildcard
         case caseInsensitive(String)
 
