@@ -33,6 +33,8 @@ public struct CompositeHTTPHandler: HTTPHandler, Sendable {
 
     private var handlers: [(route: HTTPRoute, handler: HTTPHandler)] = []
 
+    public init() { }
+
     public mutating func appendHandler(for route: HTTPRoute, handler: HTTPHandler) {
         handlers.append((route, handler))
     }
