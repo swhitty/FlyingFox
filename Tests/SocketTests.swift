@@ -72,7 +72,7 @@ final class SocketTests: XCTestCase {
 #if canImport(Darwin)
         XCTAssertEqual(try socket.getValue(for: .receiveBufferSize), Int32(2048))
 #else
-        // Linux kernel doubles this value (to allow space for bookkeeping overhead
+        // Linux kernel doubles this value (to allow space for bookkeeping overhead)
         XCTAssertEqual(try socket.getValue(for: .receiveBufferSize), Int32(4096))
 #endif
     }
@@ -106,6 +106,20 @@ final class SocketTests: XCTestCase {
         let socket = Socket(file: -1)
         XCTAssertThrowsError(
             try socket.close()
+        )
+    }
+
+    func testSocketListen_ThrowsError_WhenInvalid() throws {
+        let socket = Socket(file: -1)
+        XCTAssertThrowsError(
+            try socket.listen()
+        )
+    }
+
+    func testSocketBindIP6_ThrowsError_WhenInvalid() throws {
+        let socket = Socket(file: -1)
+        XCTAssertThrowsError(
+            try socket.bindIP6(port: 8080)
         )
     }
 }

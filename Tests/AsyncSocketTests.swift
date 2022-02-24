@@ -61,43 +61,89 @@ final class AsyncSocketTests: XCTestCase {
         let (s1, s2) = try AsyncSocket.makePair(pool: pool)
 
         async let d2 = s2.readString(length: 12)
-        try await s1.writeString("Fish & Chips")
+        Task {
+            try await s1.writeString("Fish & Chips")
+        }
+
         let text = try await d2
         XCTAssertEqual(text, "Fish & Chips")
     }
 
     func testSocketReadByte_ThrowsDisconnected_WhenSocketIsClosed() async throws {
-        let (s1, s2) = try AsyncSocket.makePair(pool: pool)
+        let s1 = try AsyncSocket.make(pool: pool)
         try await s1.close()
-        try await s2.close()
-    
+
         await XCTAssertThrowsError(try await s1.read(), of: SocketError.self) {
             XCTAssertEqual($0, .disconnected)
         }
     }
 
+    func testSocketRead0Byte_ReturnsEmptyArray() async throws {
+        let s1 = try AsyncSocket.make(pool: pool)
+
+        let bytes = try await s1.read(bytes: 0)
+        XCTAssertEqual(bytes, [])
+    }
+
+    func testSocketReadByte_Throws_WhenSocketIsNotOpen() async throws {
+        let s1 = try AsyncSocket.make(pool: pool)
+
+        await XCTAssertThrowsError(try await s1.read(), of: SocketError.self)
+    }
+
     func testSocketReadChunk_ThrowsDisconnected_WhenSocketIsClosed() async throws {
-        let (s1, s2) = try AsyncSocket.makePair(pool: pool)
+        let s1 = try AsyncSocket.make(pool: pool)
         try await s1.close()
-        try await s2.close()
 
         await XCTAssertThrowsError(try await s1.read(bytes: 5), of: SocketError.self) {
             XCTAssertEqual($0, .disconnected)
         }
     }
 
-    func testSocketWrite_ThrowsDisconnected_WhenSocketIsClosed() async throws {
-        let (s1, s2) = try AsyncSocket.makePair(pool: pool)
+    func testSocketReadChunk_Throws_WhenSocketIsNotOpen() async throws {
+        let s1 = try AsyncSocket.make(pool: pool)
+
+        await XCTAssertThrowsError(try await s1.read(bytes: 5), of: SocketError.self)
+    }
+
+    func testSocketBytesReadChunk_ReturnsNil_WhenSocketIsClosed() async throws {
+        let s1 = try AsyncSocket.make(pool: pool)
         try await s1.close()
-        try await s2.close()
+
+        var bytes = s1.bytes
+        let chunk = try await bytes.nextChunk(count: 1)
+        XCTAssertNil(chunk)
+    }
+
+    func testSocketBytesReadChunk_Throws_WhenSocketIsClosed() async throws {
+        let s1 = try AsyncSocket.make(pool: pool)
+
+        var bytes = s1.bytes
+        await XCTAssertThrowsError(try await bytes.nextChunk(count: 1), of: SocketError.self)
+    }
+
+    func testSocketWrite_ThrowsDisconnected_WhenSocketIsClosed() async throws {
+        let s1 = try AsyncSocket.make(pool: pool)
+        try await s1.close()
 
         await XCTAssertThrowsError(try await s1.writeString("Fish"), of: SocketError.self) {
             XCTAssertEqual($0, .disconnected)
         }
     }
+
+    func testSocketAccept_Throws_WhenSocketIsClosed() async throws {
+        let s1 = try AsyncSocket.make(pool: pool)
+
+        await XCTAssertThrowsError(try await s1.accept(), of: SocketError.self)
+    }
 }
 
 extension AsyncSocket {
+
+    static func make(pool: AsyncSocketPool) throws -> AsyncSocket {
+        let socket = try Socket(domain: AF_UNIX, type: Socket.stream)
+        return try AsyncSocket(socket: socket, pool: pool)
+    }
 
     static func makePair(pool: AsyncSocketPool) throws -> (AsyncSocket, AsyncSocket) {
         let (file1, file2) = Socket.socketpair(AF_UNIX, Socket.stream, 0)
