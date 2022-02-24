@@ -61,7 +61,7 @@ await server.appendHandler(for: "/hello", handler: handler)
 Closures can be added to the server to handle requests:
 
 ```swift
-await server.appendHandler(for: "GET /hello") { request in
+await server.appendHandler(for: "/hello") { request in
   try await Task.sleep(nanoseconds: 1_000_000_000)
   return HTTPResponse(statusCode: .ok)
 }
