@@ -67,7 +67,9 @@ await server.appendHandler(for: "/hello") { request in
 }
 ```
 
-Incoming requests are routed to the first handler with a matching route. Handlers can throw `HTTPUnhandledError` if after inspecting the request, they cannot handle it. The next matched handler is then used to handle the request.
+Incoming requests are routed to the first handler with a matching route.
+
+Handlers can throw `HTTPUnhandledError` if after inspecting the request, they cannot handle it, the next matched handler is then used.
 
 Unhandled requests receive `HTTP 404`.
 
