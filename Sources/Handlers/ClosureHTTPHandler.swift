@@ -1,5 +1,5 @@
 //
-//  HTTPHandler.swift
+//  ClosureHTTPHandler.swift
 //  FlyingFox
 //
 //  Created by Simon Whitty on 14/02/2022.
@@ -29,37 +29,16 @@
 //  SOFTWARE.
 //
 
-import Foundation
 
-public protocol HTTPHandler: Sendable {
-    func handleRequest(_ request: HTTPRequest) async throws -> HTTPResponse
-}
+public struct ClosureHTTPHandler: HTTPHandler {
 
-public struct HTTPUnhandledError: LocalizedError {
-    public let errorDescription: String? = "HTTPHandler can not handle the request."
-    public init() { }
-}
+    private let closure: @Sendable (HTTPRequest) async throws -> HTTPResponse
 
-public extension HTTPHandler where Self == FileHTTPHandler {
-    static func file(named: String, in bundle: Bundle = .main) -> FileHTTPHandler {
-        FileHTTPHandler(named: named, in: bundle)
+    public init(_ closure: @Sendable @escaping (HTTPRequest) async throws -> HTTPResponse) {
+        self.closure = closure
     }
-}
 
-public extension HTTPHandler where Self == RedirectHTTPHandler {
-    static func redirect(to location: String) -> RedirectHTTPHandler {
-        RedirectHTTPHandler(location: location)
-    }
-}
-
-public extension HTTPHandler where Self == ProxyHTTPHandler {
-    static func proxy(via url: String) -> ProxyHTTPHandler {
-        ProxyHTTPHandler(base: url)
-    }
-}
-
-public extension HTTPHandler where Self == ClosureHTTPHandler {
-    static func unhandled() -> ClosureHTTPHandler {
-        ClosureHTTPHandler { _ in throw HTTPUnhandledError() }
+    public func handleRequest(_ request: HTTPRequest) async throws -> HTTPResponse {
+        try await closure(request)
     }
 }

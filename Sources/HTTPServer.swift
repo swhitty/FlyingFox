@@ -37,24 +37,34 @@ public final actor HTTPServer {
     private let timeout: TimeInterval
     private var socket: AsyncSocket?
     private let logger: HTTPLogging?
-    private var handlers: [(route: HTTPRoute, handler: HTTPHandler)]
+    private var handlers: CompositeHTTPHandler
 
     public init(port: UInt16,
                 timeout: TimeInterval = 15,
                 logger: HTTPLogging? = defaultLogger(),
-                handlers: [(route: HTTPRoute, handler: HTTPHandler)] = []) {
+                handler: HTTPHandler? = nil) {
         self.port = port
         self.timeout = timeout
         self.logger = logger
-        self.handlers = []
+        self.handlers = Self.makeCompositeHandler(root: handler)
+    }
+
+    public convenience init(port: UInt16,
+                            timeout: TimeInterval = 15,
+                            logger: HTTPLogging? = defaultLogger(),
+                            handler: @Sendable @escaping (HTTPRequest) async throws -> HTTPResponse) {
+        self.init(port: port,
+                  timeout: timeout,
+                  logger: logger,
+                  handler: ClosureHTTPHandler(handler))
     }
 
     public func appendHandler(for route: HTTPRoute, handler: HTTPHandler) {
-        handlers.append((route, handler))
+        handlers.appendHandler(for: route, handler: handler)
     }
 
     public func appendHandler(for route: HTTPRoute, closure: @Sendable @escaping (HTTPRequest) async throws -> HTTPResponse) {
-        handlers.append((route, ClosureHTTPHandler(closure)))
+        handlers.appendHandler(for: route, closure: closure)
     }
 
     public func start() async throws {
@@ -126,18 +136,26 @@ public final actor HTTPServer {
     }
 
     func handleRequest(_ request: HTTPRequest, timeout: TimeInterval) async -> HTTPResponse {
-        guard let handler = handlers.first(where: { $0.route ~= request })?.handler else {
+        do {
+            return try await withThrowingTimeout(seconds: timeout) { [handlers] in
+                try await handlers.handleRequest(request)
+            }
+        } catch is HTTPUnhandledError {
+            logger?.logError("unhandled request")
             return HTTPResponse(statusCode: .notFound)
         }
-
-        do {
-            return try await withThrowingTimeout(seconds: timeout) {
-                try await handler.handleRequest(request)
-            }
-        } catch {
+        catch {
             logger?.logError("handler error: \(error.localizedDescription)")
             return HTTPResponse(statusCode: .internalServerError)
         }
+    }
+
+    private static func makeCompositeHandler(root: HTTPHandler?) -> CompositeHTTPHandler {
+        var composite = CompositeHTTPHandler()
+        if let handler = root {
+            composite.appendHandler(for: "*", handler: handler)
+        }
+        return composite
     }
 }
 

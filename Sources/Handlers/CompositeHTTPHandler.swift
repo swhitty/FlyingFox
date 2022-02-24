@@ -1,8 +1,8 @@
 //
-//  HTTPHandler.swift
+//  CompositeHTTPHandler.swift
 //  FlyingFox
 //
-//  Created by Simon Whitty on 14/02/2022.
+//  Created by Simon Whitty on 25/02/2022.
 //  Copyright © 2022 Simon Whitty. All rights reserved.
 //
 //  Distributed under the permissive MIT license
@@ -29,37 +29,29 @@
 //  SOFTWARE.
 //
 
-import Foundation
+public struct CompositeHTTPHandler: HTTPHandler, Sendable {
 
-public protocol HTTPHandler: Sendable {
-    func handleRequest(_ request: HTTPRequest) async throws -> HTTPResponse
-}
+    private var handlers: [(route: HTTPRoute, handler: HTTPHandler)] = []
 
-public struct HTTPUnhandledError: LocalizedError {
-    public let errorDescription: String? = "HTTPHandler can not handle the request."
-    public init() { }
-}
-
-public extension HTTPHandler where Self == FileHTTPHandler {
-    static func file(named: String, in bundle: Bundle = .main) -> FileHTTPHandler {
-        FileHTTPHandler(named: named, in: bundle)
+    public mutating func appendHandler(for route: HTTPRoute, handler: HTTPHandler) {
+        handlers.append((route, handler))
     }
-}
 
-public extension HTTPHandler where Self == RedirectHTTPHandler {
-    static func redirect(to location: String) -> RedirectHTTPHandler {
-        RedirectHTTPHandler(location: location)
+    public mutating func appendHandler(for route: HTTPRoute,
+                                       closure: @Sendable @escaping (HTTPRequest) async throws -> HTTPResponse) {
+        handlers.append((route, ClosureHTTPHandler(closure)))
     }
-}
 
-public extension HTTPHandler where Self == ProxyHTTPHandler {
-    static func proxy(via url: String) -> ProxyHTTPHandler {
-        ProxyHTTPHandler(base: url)
-    }
-}
-
-public extension HTTPHandler where Self == ClosureHTTPHandler {
-    static func unhandled() -> ClosureHTTPHandler {
-        ClosureHTTPHandler { _ in throw HTTPUnhandledError() }
+    public func handleRequest(_ request: HTTPRequest) async throws -> HTTPResponse {
+        for entry in handlers where entry.route ~= request {
+            do {
+                return try await entry.handler.handleRequest(request)
+            } catch is HTTPUnhandledError {
+                continue
+            } catch {
+                throw error
+            }
+        }
+        throw HTTPUnhandledError()
     }
 }

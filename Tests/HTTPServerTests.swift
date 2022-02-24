@@ -72,8 +72,7 @@ final class HTTPServerTests: XCTestCase {
     }
 
     func testHandlerErrors_Return500() async throws {
-        let server = HTTPServer(port: 8008)
-        await server.appendHandler(for: "*") { _ in
+        let server = HTTPServer(port: 8008) { _ in
             throw SocketError.disconnected
         }
 
@@ -85,8 +84,7 @@ final class HTTPServerTests: XCTestCase {
     }
 
     func testHandlerTimeout_Returns500() async throws {
-        let server = HTTPServer(port: 8008, timeout: 0.1)
-        await server.appendHandler(for: "*") { _ in
+        let server = HTTPServer(port: 8008, timeout: 0.1) { _ in
             try await Task.sleep(nanoseconds: 1_000_000_000)
             return HTTPResponse.make(statusCode: .accepted)
         }

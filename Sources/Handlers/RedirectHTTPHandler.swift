@@ -1,8 +1,8 @@
 //
-//  HTTPHandler.swift
+//  RedirectHTTPHandler.swift
 //  FlyingFox
 //
-//  Created by Simon Whitty on 14/02/2022.
+//  Created by Simon Whitty on 15/02/2022.
 //  Copyright © 2022 Simon Whitty. All rights reserved.
 //
 //  Distributed under the permissive MIT license
@@ -31,35 +31,21 @@
 
 import Foundation
 
-public protocol HTTPHandler: Sendable {
-    func handleRequest(_ request: HTTPRequest) async throws -> HTTPResponse
-}
+public struct RedirectHTTPHandler: HTTPHandler {
 
-public struct HTTPUnhandledError: LocalizedError {
-    public let errorDescription: String? = "HTTPHandler can not handle the request."
-    public init() { }
-}
+    private let location: String
 
-public extension HTTPHandler where Self == FileHTTPHandler {
-    static func file(named: String, in bundle: Bundle = .main) -> FileHTTPHandler {
-        FileHTTPHandler(named: named, in: bundle)
+    public init(location: String) {
+        self.location = location
     }
-}
 
-public extension HTTPHandler where Self == RedirectHTTPHandler {
-    static func redirect(to location: String) -> RedirectHTTPHandler {
-        RedirectHTTPHandler(location: location)
-    }
-}
-
-public extension HTTPHandler where Self == ProxyHTTPHandler {
-    static func proxy(via url: String) -> ProxyHTTPHandler {
-        ProxyHTTPHandler(base: url)
-    }
-}
-
-public extension HTTPHandler where Self == ClosureHTTPHandler {
-    static func unhandled() -> ClosureHTTPHandler {
-        ClosureHTTPHandler { _ in throw HTTPUnhandledError() }
+    public func handleRequest(_ request: HTTPRequest) async throws -> HTTPResponse {
+        guard let url = URL(string: location) else {
+            throw URLError(.badURL)
+        }
+        return HTTPResponse(
+            statusCode: .movedPermanently,
+            headers: [.location: url.absoluteString]
+        )
     }
 }
