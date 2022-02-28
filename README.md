@@ -155,7 +155,7 @@ route ~= HTTPRequest(method: .GET, path: "/hello/fish/sea") // false
 Trailing wildcards match all trailing path components:
 
 ```swift
-let route = HTTPRoute("GET /hello/*")
+let route = HTTPRoute("/hello/*")
 
 route ~= HTTPRequest(method: .GET, path: "/hello/fish/world") // true
 route ~= HTTPRequest(method: .GET, path: "/hello/dog/world") // true
