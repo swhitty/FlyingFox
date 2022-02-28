@@ -86,7 +86,7 @@ final actor PollingSocketPool: AsyncSocketPool {
     }
 
     func run() async throws {
-        guard state == .ready else { throw Error("Not Ready") }
+        guard state != .running else { throw Error("Not Ready") }
         state = .running
 
         defer {
