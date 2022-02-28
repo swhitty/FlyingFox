@@ -115,26 +115,45 @@ await server.appendRoute(for: "GET /fish/*", to: routes)
 
 `HTTPUnhandledError` is thrown if `RoutedHTTPHandler` is unable to handle the request with any of its registered handlers.  `HTTP 404` is returned as the response.
 
-### Wildcards
+### HTTPRoute
 
-Routes can include wildcards which can be [pattern matched](https://docs.swift.org/swift-book/ReferenceManual/Patterns.html#ID426) against paths:
+Routes allow requests to be identified by `HTTPMethod` and path and can be [pattern matched](https://docs.swift.org/swift-book/ReferenceManual/Patterns.html#ID426) against requests:
 
 ```swift
-let HTTPRoute("/hello/*/world")
+let HTTPRoute("/hello/world")
 
-route ~= "/hello/fish/world" // true
-route ~= "GET /hello/fish/world" // true
-route ~= "POST hello/dog/world/" // true
-route ~= "/hello/world" // false
+route ~= HTTPRequest(method: .GET, path: "/hello/world") // true
+route ~= HTTPRequest(method: .POST, path: "/hello/world") // true
+route ~= HTTPRequest(method: .GET, path: "/hello/") // false
 ```
 
-By default routes accept all HTTP methods, but specific methods can be supplied:
+Routes can include specific methods to match against:
 
 ```swift
 let HTTPRoute("GET /hello/world")
 
-route ~= "GET /hello/world" // true
-route ~= "PUT /hello/world" // false
+route ~= HTTPRequest(method: .GET, path: "/hello/world") // true
+route ~= HTTPRequest(method: .POST, path: "/hello/world") // false
+```
+
+And can use wildcards within the path
+
+```swift
+let HTTPRoute("GET /hello/*/world")
+
+route ~= HTTPRequest(method: .GET, path: "/hello/fish/world") // true
+route ~= HTTPRequest(method: .POST, path: "/hello/dog/world") // true
+route ~= HTTPRequest(method: .POST, path: "/hello/fish/sea") // false
+```
+
+Trailing wildcards match all trailing path components:
+
+```swift
+let HTTPRoute("GET /hello/*")
+
+route ~= HTTPRequest(method: .GET, path: "/hello/fish/world") // true
+route ~= HTTPRequest(method: .POST, path: "/hello/dog/world") // true
+route ~= HTTPRequest(method: .POST, path: "/hello/fish/deep/blue/sea") // true
 ```
 
 ## AsyncSocket / PollingSocketPool
