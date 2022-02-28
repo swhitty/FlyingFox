@@ -61,6 +61,34 @@ final class HTTPServerTests: XCTestCase {
         )
     }
 
+    func testRequests_AreMatchedToHandlers_ViaMultipleRouters() async throws {
+        let server = HTTPServer(port: 8010)
+
+        await server.appendRoutes([
+            "/fish/accepted" => ClosureHTTPHandler { _ in
+                HTTPResponse.make(statusCode: .accepted)
+            },
+            "/fish/*" => .file(named: "fish.json", in: .module)
+        ])
+
+        let task = Task { try await server.start() }
+        defer { task.cancel() }
+
+        let response = await server.handleRequest(.make(method: .GET, path: "/fish/accepted"))
+        XCTAssertEqual(
+            response.statusCode,
+            .accepted
+        )
+
+        let request = URLRequest(url: URL(string: "http://localhost:8010/fish/chips")!)
+        let (data, _) = try await URLSession.shared.makeData(for: request)
+
+        XCTAssertEqual(
+            data,
+            #"{"fish": "cakes"}"#.data(using: .utf8)
+        )
+    }
+
     func testUnmatchedRequests_Return404() async throws {
         let server = HTTPServer(port: 8008)
 

@@ -39,6 +39,10 @@ public struct RoutedHTTPHandler: HTTPHandler, Sendable {
         handlers.append((route, handler))
     }
 
+    public mutating func appendRoutes(_ newHandlers: [(HTTPRoute, HTTPHandler)]) {
+        handlers.append(contentsOf: newHandlers)
+    }
+
     public mutating func appendRoute(_ route: HTTPRoute,
                                      handler: @Sendable @escaping (HTTPRequest) async throws -> HTTPResponse) {
         handlers.append((route, ClosureHTTPHandler(handler)))

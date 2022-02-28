@@ -67,6 +67,10 @@ public final actor HTTPServer {
         handlers.appendRoute(route, handler: handler)
     }
 
+    public func appendRoutes(_ newHandlers: [(HTTPRoute, HTTPHandler)]) {
+        handlers.appendRoutes(newHandlers)
+    }
+
     public func start() async throws {
         let socket = try Socket(domain: AF_INET6, type: Socket.stream)
         try socket.setValue(true, for: .localAddressReuse)
@@ -197,4 +201,18 @@ public extension HTTPServer {
     func appendHandler(for route: HTTPRoute, closure: @Sendable @escaping (HTTPRequest) async throws -> HTTPResponse) {
         appendRoute(route, handler: closure)
     }
+}
+
+// MARK: Custom Operator
+
+precedencegroup RouteHandlerPrecedence {
+
+    lowerThan: BitwiseShiftPrecedence, MultiplicationPrecedence, AdditionPrecedence, RangeFormationPrecedence, CastingPrecedence, NilCoalescingPrecedence, ComparisonPrecedence, LogicalConjunctionPrecedence, LogicalDisjunctionPrecedence, TernaryPrecedence
+    higherThan: AssignmentPrecedence
+}
+
+infix operator => : RouteHandlerPrecedence
+
+public func => (route: HTTPRoute, handler: HTTPHandler) -> (HTTPRoute, HTTPHandler) {
+    (route, handler)
 }
