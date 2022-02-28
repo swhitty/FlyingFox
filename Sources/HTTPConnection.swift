@@ -55,7 +55,7 @@ struct HTTPConnection {
     }
 }
 
-struct HTTPRequestSequence<S: ChuckedAsyncSequence>: AsyncSequence, AsyncIteratorProtocol where S.Element == UInt8 {
+struct HTTPRequestSequence<S: ChunckedAsyncSequence>: AsyncSequence, AsyncIteratorProtocol where S.Element == UInt8 {
     typealias Element = HTTPRequest
     private let bytes: S
     private var isComplete: Bool
