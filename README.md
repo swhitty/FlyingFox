@@ -120,17 +120,23 @@ await server.appendRoute(for: "GET /fish/*", to: routes)
 Routes allow requests to be identified by `HTTPMethod` and path and can be [pattern matched](https://docs.swift.org/swift-book/ReferenceManual/Patterns.html#ID426) against requests:
 
 ```swift
-let HTTPRoute("/hello/world")
+let route = HTTPRoute("/hello/world")
 
 route ~= HTTPRequest(method: .GET, path: "/hello/world") // true
 route ~= HTTPRequest(method: .POST, path: "/hello/world") // true
 route ~= HTTPRequest(method: .GET, path: "/hello/") // false
 ```
 
+Routes are `ExpressibleByStringLiteral`, so literals will be automatically converted to `HTTPRoute`:
+
+```swift
+let route: HTTPRoute = "/hello/world"
+```
+
 Routes can include specific methods to match against:
 
 ```swift
-let HTTPRoute("GET /hello/world")
+let route = HTTPRoute("GET /hello/world")
 
 route ~= HTTPRequest(method: .GET, path: "/hello/world") // true
 route ~= HTTPRequest(method: .POST, path: "/hello/world") // false
@@ -139,7 +145,7 @@ route ~= HTTPRequest(method: .POST, path: "/hello/world") // false
 And can use wildcards within the path
 
 ```swift
-let HTTPRoute("GET /hello/*/world")
+let route = HTTPRoute("GET /hello/*/world")
 
 route ~= HTTPRequest(method: .GET, path: "/hello/fish/world") // true
 route ~= HTTPRequest(method: .POST, path: "/hello/dog/world") // true
@@ -149,7 +155,7 @@ route ~= HTTPRequest(method: .POST, path: "/hello/fish/sea") // false
 Trailing wildcards match all trailing path components:
 
 ```swift
-let HTTPRoute("GET /hello/*")
+let route = HTTPRoute("GET /hello/*")
 
 route ~= HTTPRequest(method: .GET, path: "/hello/fish/world") // true
 route ~= HTTPRequest(method: .POST, path: "/hello/dog/world") // true
