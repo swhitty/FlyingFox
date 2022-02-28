@@ -73,6 +73,8 @@ final actor PollingSocketPool: AsyncSocketPool {
         continuation.cancel()
     }
 
+    // Careful not to escape non-isolated method
+    // https://bugs.swift.org/browse/SR-15745
     nonisolated private func removeContinuation(_ continuation: Continuation, for socket: Socket) {
         Task { await _removeContinuation(continuation, for: socket) }
     }
