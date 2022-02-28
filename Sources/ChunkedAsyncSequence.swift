@@ -30,11 +30,11 @@
 //
 
 /// AsyncSequence that is able to also receive elements in chunks, instead of just one-at-a-time.
-protocol ChuckedAsyncSequence: AsyncSequence where AsyncIterator: ChuckedAsyncIteratorProtocol {
+protocol ChunkedAsyncSequence: AsyncSequence where AsyncIterator: ChunkedAsyncIteratorProtocol {
 
 }
 
-protocol ChuckedAsyncIteratorProtocol: AsyncIteratorProtocol {
+protocol ChunkedAsyncIteratorProtocol: AsyncIteratorProtocol {
 
     /// Retrieves n elements from sequence in a single array.
     /// - Returns: Array with the number of elements that was requested. Or Nil.

@@ -31,7 +31,7 @@
 
 @testable import FlyingFox
 
-final class ConsumingAsyncSequence<Element>: ChuckedAsyncSequence, ChuckedAsyncIteratorProtocol {
+final class ConsumingAsyncSequence<Element>: ChunkedAsyncSequence, ChunkedAsyncIteratorProtocol {
 
     private var iterator: AnySequence<Element>.Iterator
 

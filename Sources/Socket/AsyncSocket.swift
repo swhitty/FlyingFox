@@ -130,7 +130,7 @@ struct AsyncSocket: Sendable {
     }
 }
 
-struct ByteSequence: ChuckedAsyncSequence, ChuckedAsyncIteratorProtocol {
+struct ByteSequence: ChunkedAsyncSequence, ChunkedAsyncIteratorProtocol {
     typealias Element = UInt8
 
     let socket: AsyncSocket
