@@ -58,7 +58,7 @@ Routes can be added to the server delegating requests to a handler:
 await server.appendRoute("/hello", to: handler)
 ```
 
-Routes can also be added to closures:
+They can also be added to closures:
 
 ```swift
 await server.appendRoute("/hello") { request in
