@@ -29,7 +29,7 @@
 //  SOFTWARE.
 //
 
-public struct RouteHTTPHandler: HTTPHandler, Sendable {
+public struct RoutedHTTPHandler: HTTPHandler, Sendable {
 
     private var handlers: [(route: HTTPRoute, handler: HTTPHandler)] = []
 
@@ -58,11 +58,11 @@ public struct RouteHTTPHandler: HTTPHandler, Sendable {
     }
 }
 
-@available(*, deprecated, renamed: "RouteHTTPHandler")
-public typealias CompositeHTTPHandler = RouteHTTPHandler
+@available(*, deprecated, renamed: "RoutedHTTPHandler")
+public typealias CompositeHTTPHandler = RoutedHTTPHandler
 
 
-public extension RouteHTTPHandler {
+public extension RoutedHTTPHandler {
 
     @available(*, deprecated, renamed: "RouteHTTPHandler")
 

@@ -37,7 +37,7 @@ public final actor HTTPServer {
     private let timeout: TimeInterval
     private var socket: AsyncSocket?
     private let logger: HTTPLogging?
-    private var handlers: RouteHTTPHandler
+    private var handlers: RoutedHTTPHandler
 
     public init(port: UInt16,
                 timeout: TimeInterval = 15,
@@ -150,8 +150,8 @@ public final actor HTTPServer {
         }
     }
 
-    private static func makeCompositeHandler(root: HTTPHandler?) -> RouteHTTPHandler {
-        var composite = RouteHTTPHandler()
+    private static func makeCompositeHandler(root: HTTPHandler?) -> RoutedHTTPHandler {
+        var composite = RoutedHTTPHandler()
         if let handler = root {
             composite.appendRoute("*", to: handler)
         }
