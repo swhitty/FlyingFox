@@ -29,19 +29,19 @@
 //  SOFTWARE.
 //
 
-public struct CompositeHTTPHandler: HTTPHandler, Sendable {
+public struct RouteHTTPHandler: HTTPHandler, Sendable {
 
     private var handlers: [(route: HTTPRoute, handler: HTTPHandler)] = []
 
     public init() { }
 
-    public mutating func appendHandler(for route: HTTPRoute, handler: HTTPHandler) {
+    public mutating func appendRoute(_ route: HTTPRoute, to handler: HTTPHandler) {
         handlers.append((route, handler))
     }
 
-    public mutating func appendHandler(for route: HTTPRoute,
-                                       closure: @Sendable @escaping (HTTPRequest) async throws -> HTTPResponse) {
-        handlers.append((route, ClosureHTTPHandler(closure)))
+    public mutating func appendRoute(_ route: HTTPRoute,
+                                     handler: @Sendable @escaping (HTTPRequest) async throws -> HTTPResponse) {
+        handlers.append((route, ClosureHTTPHandler(handler)))
     }
 
     public func handleRequest(_ request: HTTPRequest) async throws -> HTTPResponse {
@@ -55,5 +55,27 @@ public struct CompositeHTTPHandler: HTTPHandler, Sendable {
             }
         }
         throw HTTPUnhandledError()
+    }
+}
+
+@available(*, deprecated, renamed: "RouteHTTPHandler")
+public typealias CompositeHTTPHandler = RouteHTTPHandler
+
+
+public extension RouteHTTPHandler {
+
+    @available(*, deprecated, renamed: "RouteHTTPHandler")
+
+
+    @available(*, deprecated, renamed: "appendRoute(_:to:)")
+    mutating func appendHandler(for route: HTTPRoute, handler: HTTPHandler) {
+        appendRoute(route, to: handler)
+
+    }
+
+    @available(*, deprecated, renamed: "appendRoute(_:to:)")
+    mutating func appendHandler(for route: HTTPRoute,
+                                closure: @Sendable @escaping (HTTPRequest) async throws -> HTTPResponse) {
+        appendRoute(route, handler: closure)
     }
 }

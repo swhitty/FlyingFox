@@ -41,10 +41,10 @@ final class HTTPServerTests: XCTestCase {
     func testRequests_AreMatchedToHandlers_ViaRoute() async throws {
         let server = HTTPServer(port: 8008)
 
-        await server.appendHandler(for: "/accepted") { _ in
+        await server.appendRoute("/accepted") { _ in
             HTTPResponse.make(statusCode: .accepted)
         }
-        await server.appendHandler(for: "/gone") { _ in
+        await server.appendRoute("/gone") { _ in
             HTTPResponse.make(statusCode: .gone)
         }
 
@@ -116,7 +116,7 @@ final class HTTPServerTests: XCTestCase {
 
     func testServer_ReturnsFile_WhenFileHandlerIsMatched() async throws {
         let server = HTTPServer(port: 8009)
-        await server.appendHandler(for: "*", handler: .file(named: "fish.json", in: .module))
+        await server.appendRoute("*", to: .file(named: "fish.json", in: .module))
         let task = Task { try await server.start() }
 
         let request = URLRequest(url: URL(string: "http://localhost:8009")!)
@@ -132,7 +132,7 @@ final class HTTPServerTests: XCTestCase {
 #if canImport(Darwin)
     func testServer_Returns500_WhenHandlerTimesout() async throws {
         let server = HTTPServer(port: 8008, timeout: 0.1)
-        await server.appendHandler(for: "*") { _ in
+        await server.appendRoute("*") { _ in
             try await Task.sleep(nanoseconds: 5_000_000_000)
             return .make(statusCode: .ok)
         }

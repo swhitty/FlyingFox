@@ -37,7 +37,7 @@ public final actor HTTPServer {
     private let timeout: TimeInterval
     private var socket: AsyncSocket?
     private let logger: HTTPLogging?
-    private var handlers: CompositeHTTPHandler
+    private var handlers: RouteHTTPHandler
 
     public init(port: UInt16,
                 timeout: TimeInterval = 15,
@@ -59,12 +59,12 @@ public final actor HTTPServer {
                   handler: ClosureHTTPHandler(handler))
     }
 
-    public func appendHandler(for route: HTTPRoute, handler: HTTPHandler) {
-        handlers.appendHandler(for: route, handler: handler)
+    public func appendRoute(_ route: HTTPRoute, to handler: HTTPHandler) {
+        handlers.appendRoute(route, to: handler)
     }
 
-    public func appendHandler(for route: HTTPRoute, closure: @Sendable @escaping (HTTPRequest) async throws -> HTTPResponse) {
-        handlers.appendHandler(for: route, closure: closure)
+    public func appendRoute(_ route: HTTPRoute, handler: @Sendable @escaping (HTTPRequest) async throws -> HTTPResponse) {
+        handlers.appendRoute(route, handler: handler)
     }
 
     public func start() async throws {
@@ -150,10 +150,10 @@ public final actor HTTPServer {
         }
     }
 
-    private static func makeCompositeHandler(root: HTTPHandler?) -> CompositeHTTPHandler {
-        var composite = CompositeHTTPHandler()
+    private static func makeCompositeHandler(root: HTTPHandler?) -> RouteHTTPHandler {
+        var composite = RouteHTTPHandler()
         if let handler = root {
-            composite.appendHandler(for: "*", handler: handler)
+            composite.appendRoute("*", to: handler)
         }
         return composite
     }
@@ -181,5 +181,20 @@ extension HTTPLogging {
 private extension HTTPConnection {
     var identifer: String {
         "<\(hostname)>"
+    }
+}
+
+
+public extension HTTPServer {
+
+    @available(*, deprecated, renamed: "appendRoute(_:to:)")
+    func appendHandler(for route: HTTPRoute, handler: HTTPHandler) {
+        appendRoute(route, to: handler)
+
+    }
+
+    @available(*, deprecated, renamed: "appendRoute(_:to:)")
+    func appendHandler(for route: HTTPRoute, closure: @Sendable @escaping (HTTPRequest) async throws -> HTTPResponse) {
+        appendRoute(route, handler: closure)
     }
 }
