@@ -149,7 +149,7 @@ let route = HTTPRoute("GET /hello/*/world")
 
 route ~= HTTPRequest(method: .GET, path: "/hello/fish/world") // true
 route ~= HTTPRequest(method: .GET, path: "/hello/dog/world") // true
-route ~= HTTPRequest(method: .POST, path: "/hello/fish/sea") // false
+route ~= HTTPRequest(method: .GET, path: "/hello/fish/sea") // false
 ```
 
 Trailing wildcards match all trailing path components:
