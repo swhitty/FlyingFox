@@ -52,33 +52,33 @@ public protocol HTTPHandler: Sendable {
 }
 ```
 
-Handlers can be added to the server against a corresponding route:
+Routes can be added to the server delegating requests to a handler:
 
 ```swift
-await server.appendHandler(for: "/hello", handler: handler)
+await server.appendRoute("/hello", to: handler)
 ```
 
-Closures can be added to the server to handle requests:
+Routes can also be added to closures:
 
 ```swift
-await server.appendHandler(for: "/hello") { request in
+await server.appendRoute("/hello") { request in
   try await Task.sleep(nanoseconds: 1_000_000_000)
   return HTTPResponse(statusCode: .ok)
 }
 ```
 
-Incoming requests are routed to the first handler with a matching route.
+Incoming requests are routed to the handler of the first matching route.
 
-Handlers can throw `HTTPUnhandledError` if after inspecting the request, they cannot handle it.  The next matched handler is then used.
+Handlers can throw `HTTPUnhandledError` if after inspecting the request, they cannot handle it.  The next matching route is then used.
 
-Unhandled requests receive `HTTP 404`.
+Requests that do not match any handled route receive `HTTP 404`.
 
 ### FileHTTPHandler
 
-Requests can be routed to static files via `FileHTTPHandler`:
+Requests can be routed to static files with `FileHTTPHandler`:
 
 ```swift
-await server.appendHandler(for: "GET /mock", handler: .file(named: "mock.json"))
+await server.appendRoute("GET /mock", to: .file(named: "mock.json"))
 ```
 
 `FileHTTPHandler` will return `HTTP 404` if the file does not exist.
@@ -88,7 +88,7 @@ await server.appendHandler(for: "GET /mock", handler: .file(named: "mock.json"))
 Requests can be proxied via a base URL:
 
 ```swift
-await server.appendHandler(for: "GET *", handler: .proxy(via: "https://pie.dev"))
+await server.appendRoute("GET *", to: .proxy(via: "https://pie.dev"))
 // GET /get?fish=chips  ---->  GET https://pie.dev/get?fish=chips
 ```
 
@@ -97,23 +97,23 @@ await server.appendHandler(for: "GET *", handler: .proxy(via: "https://pie.dev")
 Requests can be redirected to a URL:
 
 ```swift
-await server.appendHandler(for: "GET /fish/*", handler: .redirect(to: "https://pie.dev/get"))
+await server.appendRoute("GET /fish/*", to: .redirect(to: "https://pie.dev/get"))
 // GET /fish/chips  --->  HTTP 301
 //                        Location: https://pie.dev/get
 ```
 
-### CompositeHTTPHandler
+### RoutedHTTPHandler
 
-Multiple handlers can be grouped with requests matched against `HTTPRoute` using `CompositeHTTPHandler`.
+Multiple handlers can be grouped with requests and matched against `HTTPRoute` using `RoutedHTTPHandler`.
 
 ```swift
-var handlers = CompositeHTTPHandler()
-handlers.appendHandler(for: "GET /fish/chips", handler: .file(named: "chips.json"))
-handlers.appendHandler(for: "GET /fish/mushy_peas", handler: .file(named: "mushy_peas.json"))
-await server.appendHandler(for: "GET /fish/*", handler: handlers)
+var routes = RoutedHTTPHandler()
+routes.appendRoute("GET /fish/chips", to: .file(named: "chips.json"))
+routes.appendRoute("GET /fish/mushy_peas", to: .file(named: "mushy_peas.json"))
+await server.appendRoute(for: "GET /fish/*", to: routes)
 ```
 
-`HTTPUnhandledError` is thrown if `CompositeHTTPHandler` is unable to handle the request with any of its registered handlers.  `HTTP 404` is returned as the response.
+`HTTPUnhandledError` is thrown if `RoutedHTTPHandler` is unable to handle the request with any of its registered handlers.  `HTTP 404` is returned as the response.
 
 ### Wildcards
 
