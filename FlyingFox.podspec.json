@@ -1,6 +1,6 @@
 {
   "name": "FlyingFox",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "summary": "Lightweight, HTTP server written in Swift using async/await",
   "homepage": "https://github.com/swhitty/FlyingFox",
   "authors": "Simon Whitty",
