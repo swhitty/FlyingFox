@@ -113,7 +113,7 @@ routes.appendRoute("GET /fish/mushy_peas", to: .file(named: "mushy_peas.json"))
 await server.appendRoute(for: "GET /fish/*", to: routes)
 ```
 
-`HTTPUnhandledError` is thrown if `RoutedHTTPHandler` is unable to handle the request with any of its registered handlers.
+`HTTPUnhandledError` is thrown when it's unable to handle the request with any of its registered handlers.
 
 ### HTTPRoute
 
@@ -127,13 +127,13 @@ route ~= HTTPRequest(method: .POST, path: "/hello/world") // true
 route ~= HTTPRequest(method: .GET, path: "/hello/") // false
 ```
 
-Routes are `ExpressibleByStringLiteral`, so literals will be automatically converted to `HTTPRoute`:
+Routes are `ExpressibleByStringLiteral` allowing literals to be automatically converted to `HTTPRoute`:
 
 ```swift
 let route: HTTPRoute = "/hello/world"
 ```
 
-Routes can include specific methods to match against:
+Routes can include a specific method to match against:
 
 ```swift
 let route = HTTPRoute("GET /hello/world")
@@ -142,7 +142,7 @@ route ~= HTTPRequest(method: .GET, path: "/hello/world") // true
 route ~= HTTPRequest(method: .POST, path: "/hello/world") // false
 ```
 
-And can use wildcards within the path
+They can also use wildcards within the path
 
 ```swift
 let route = HTTPRoute("GET /hello/*/world")
