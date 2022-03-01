@@ -113,11 +113,11 @@ routes.appendRoute("GET /fish/mushy_peas", to: .file(named: "mushy_peas.json"))
 await server.appendRoute(for: "GET /fish/*", to: routes)
 ```
 
-`HTTPUnhandledError` is thrown if `RoutedHTTPHandler` is unable to handle the request with any of its registered handlers.  `HTTP 404` is returned as the response.
+`HTTPUnhandledError` is thrown if `RoutedHTTPHandler` is unable to handle the request with any of its registered handlers.
 
 ### HTTPRoute
 
-Routes allow requests to be identified by `HTTPMethod` and path and can be [pattern matched](https://docs.swift.org/swift-book/ReferenceManual/Patterns.html#ID426) against requests:
+Routes allow requests to be identified by the method and path. Routes can be [pattern matched](https://docs.swift.org/swift-book/ReferenceManual/Patterns.html#ID426) against requests:
 
 ```swift
 let route = HTTPRoute("/hello/world")
