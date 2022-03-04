@@ -121,7 +121,7 @@ public extension HTTPRoute {
         return (method: String(comps[0]), path: String(comps[1]))
     }
 
-    @available(*, deprecated)
+    @available(*, deprecated, message: "Pattern match against HTTPRequest instead")
     static func ~= (route: HTTPRoute, target: String) -> Bool {
         let comps = HTTPRoute.components(for: target)
         return route.patternMatch(method: comps.method, path: comps.path)
