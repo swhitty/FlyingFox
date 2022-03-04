@@ -35,7 +35,7 @@ import XCTest
 final class HTTPHandlerTests: XCTestCase {
 
     func testRedirectHandler_Returns301WithSuppliedLocation() async throws {
-        let handler = RedirectHTTPHandler(location: "http://fish.com/cakes")
+        let handler = RedirectHTTPHandler.redirect(to: "http://fish.com/cakes")
 
         let response = try await handler.handleRequest(.make())
         XCTAssertEqual(response.statusCode, .movedPermanently)
@@ -146,7 +146,7 @@ final class HTTPHandlerTests: XCTestCase {
     }
 
     func testProxyHandler_DoesNotFowardSomeHeaders() throws {
-        let handler = ProxyHTTPHandler(base: "fish.com")
+        let handler = ProxyHTTPHandler.proxy(via: "fish.com")
 
         let request = try handler.makeURLRequest(
             for: .make(headers: [.connection: "json",
@@ -165,6 +165,12 @@ final class HTTPHandlerTests: XCTestCase {
         XCTAssertNil(
             request.allHTTPHeaderFields?["Content-Length"]
         )
+    }
+
+    func testUnhandledHandler_ThrowsError() async {
+        let handler: HTTPHandler = .unhandled()
+
+        await XCTAssertThrowsError(try await handler.handleRequest(.make()), of: HTTPUnhandledError.self)
     }
 }
 
