@@ -233,6 +233,12 @@ final class HTTPRouteTests: XCTestCase {
                                       query: [.init(name: "cat", value: "dog"),
                                               .init(name: "fish", value: "squid")])
         )
+        
+         XCTAssertFalse(
+             route ~= HTTPRequest.make(method: .GET,
+                                       path: "/mock",
+                                       query: [.init(name: "cat", value: "dog")])
+         )
     }
 
     func testWildcardPathWithQueryItem_MatchesRoute() {
