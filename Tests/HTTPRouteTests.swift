@@ -147,4 +147,92 @@ final class HTTPRouteTests: XCTestCase {
                                       path: "/mock/fish")
         )
     }
+
+    func testQueryItem_MatchesRoute() {
+        let route = HTTPRoute("GET /mock?fish=chips")
+
+        XCTAssertTrue(
+            route ~= HTTPRequest.make(method: .GET,
+                                      path: "/mock",
+                                      query: [.init(name: "fish", value: "chips")])
+        )
+
+        XCTAssertTrue(
+            route ~= HTTPRequest.make(method: .GET,
+                                      path: "/mock",
+                                      query: [.init(name: "cat", value: "dog"),
+                                              .init(name: "fish", value: "squid"),
+                                              .init(name: "fish", value: "chips")])
+        )
+
+        XCTAssertFalse(
+            route ~= HTTPRequest.make(method: .GET,
+                                      path: "/mock",
+                                      query: [.init(name: "cat", value: "dog"),
+                                              .init(name: "fish", value: "squid")])
+        )
+    }
+
+    func testMultipleQueryItems_MatchesRoute() {
+        let route = HTTPRoute("GET /mock?fish=squid&cats=dogs")
+
+        XCTAssertFalse(
+            route ~= HTTPRequest.make(method: .GET,
+                                      path: "/mock",
+                                      query: [.init(name: "fish", value: "chips")])
+        )
+
+        XCTAssertFalse(
+            route ~= HTTPRequest.make(method: .GET,
+                                      path: "/mock",
+                                      query: [.init(name: "cat", value: "dog"),
+                                              .init(name: "fish", value: "squid")])
+        )
+    }
+
+    func testQueryItemWildcard_MatchesRoute() {
+        let route = HTTPRoute("GET /mock?fish=*")
+
+        XCTAssertTrue(
+            route ~= HTTPRequest.make(method: .GET,
+                                      path: "/mock",
+                                      query: [.init(name: "fish", value: "chips")])
+        )
+
+        XCTAssertTrue(
+            route ~= HTTPRequest.make(method: .GET,
+                                      path: "/mock",
+                                      query: [.init(name: "cat", value: "dog"),
+                                              .init(name: "fish", value: "squid"),
+                                              .init(name: "fish", value: "chips")])
+        )
+
+        XCTAssertTrue(
+            route ~= HTTPRequest.make(method: .GET,
+                                      path: "/mock",
+                                      query: [.init(name: "cat", value: "dog"),
+                                              .init(name: "fish", value: "squid")])
+        )
+    }
+
+    func testWildcardPathWithQueryIte_MatchesRoute() {
+        let route = HTTPRoute("/mock/*?fish=*")
+
+        XCTAssertTrue(
+            route ~= HTTPRequest.make(method: .GET,
+                                      path: "/mock/anemone",
+                                      query: [.init(name: "fish", value: "chips")])
+        )
+
+        XCTAssertTrue(
+            route ~= HTTPRequest.make(method: .POST,
+                                      path: "/mock/crabs",
+                                      query: [.init(name: "fish", value: "shrimp")])
+        )
+
+        XCTAssertFalse(
+            route ~= HTTPRequest.make(method: .GET,
+                                      path: "/mock/anemone")
+        )
+    }
 }
