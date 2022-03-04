@@ -50,6 +50,7 @@ public struct HTTPHeader: Sendable, RawRepresentable, Hashable {
 }
 
 public extension HTTPHeader {
+    static let authorization   = HTTPHeader("Authorization")
     static let connection      = HTTPHeader("Connection")
     static let contentLength   = HTTPHeader("Content-Length")
     static let contentType     = HTTPHeader("Content-Type")

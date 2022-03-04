@@ -183,6 +183,25 @@ route ~= HTTPRequest(method: .GET, path: "/hello?time=afternoon") // true
 route ~= HTTPRequest(method: .GET, path: "/hello") // false
 ```
 
+HTTP headers can be matched:
+
+```swift
+let route = HTTPRoute("*", headers: [.contentType: "application/json"])
+
+route ~= HTTPRequest(headers: [.contentType: "application/json"]) // true
+route ~= HTTPRequest(headers: [.contentType: "application/xml"]) // false
+```
+
+Header values can be wildcards:
+
+```swift
+let route = HTTPRoute("*", headers: [.authorization: "*"])
+
+route ~= HTTPRequest(headers: [.authorization: "abc"]) // true
+route ~= HTTPRequest(headers: [.authorization: "xyz"]) // true
+route ~= HTTPRequest(headers: [:]) // false
+```
+
 ## AsyncSocket / PollingSocketPool
 
 Internally, FlyingFox uses standard BSD sockets configured with the flag `O_NONBLOCK`. When data is unavailable for a socket (`EWOULDBLOCK`) the task is suspended using the current `AsyncSocketPool` until data is available:
