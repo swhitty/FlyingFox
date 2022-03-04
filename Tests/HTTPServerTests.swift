@@ -115,7 +115,7 @@ final class HTTPServerTests: XCTestCase {
     }
 
     func testServer_ReturnsFile_WhenFileHandlerIsMatched() async throws {
-        let server = HTTPServer(port: 8009)
+        let server = HTTPServer(port: 8009, logger: .print())
         await server.appendRoute("*", to: .file(named: "fish.json", in: .module))
         let task = Task { try await server.start() }
 

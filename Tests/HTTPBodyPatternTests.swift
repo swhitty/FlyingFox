@@ -63,6 +63,12 @@ final class HTTPBodyPatternTests: XCTestCase {
               """#.data(using: .utf8)!
             )
         )
+
+        XCTAssertFalse(
+            pattern.evaluate(
+                Data([0x01, 0x02])
+            )
+        )
     }
 #endif
 }
