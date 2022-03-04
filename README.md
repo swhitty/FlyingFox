@@ -117,7 +117,7 @@ await server.appendRoute(for: "GET /fish/*", to: routes)
 
 ### HTTPRoute
 
-Routes allow requests to be identified by the method and path. Routes can be [pattern matched](https://docs.swift.org/swift-book/ReferenceManual/Patterns.html#ID426) against requests:
+Routes allow requests to be identified by some or all of its properties. Routes are designed to be [pattern matched](https://docs.swift.org/swift-book/ReferenceManual/Patterns.html#ID426) against requests:
 
 ```swift
 let route = HTTPRoute("/hello/world")
