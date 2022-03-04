@@ -18,7 +18,6 @@ jobs:
       - name: Upload Coverage
         uses: codecov/codecov-action@v2
         with:
-          fail_ci_if_error: true
           files: ./coverage_report.lcov
 
   linux:
