@@ -174,12 +174,32 @@ final class HTTPRouteTests: XCTestCase {
     }
 
     func testMultipleQueryItems_MatchesRoute() {
-        let route = HTTPRoute("GET /mock?fish=squid&cats=dogs")
+        let route = HTTPRoute("GET /mock?fish=chips&cats=dogs")
+
+        XCTAssertTrue(
+            route ~= HTTPRequest.make(method: .GET,
+                                      path: "/mock",
+                                      query: [.init(name: "fish", value: "chips"),
+                                              .init(name: "cats", value: "dogs")])
+        )
+
+        XCTAssertTrue(
+            route ~= HTTPRequest.make(method: .GET,
+                                      path: "/mock",
+                                      query: [.init(name: "cats", value: "dogs"),
+                                              .init(name: "fish", value: "chips")])
+        )
 
         XCTAssertFalse(
             route ~= HTTPRequest.make(method: .GET,
                                       path: "/mock",
                                       query: [.init(name: "fish", value: "chips")])
+        )
+
+        XCTAssertFalse(
+            route ~= HTTPRequest.make(method: .GET,
+                                      path: "/mock",
+                                      query: [.init(name: "cats", value: "dogs")])
         )
 
         XCTAssertFalse(
