@@ -31,23 +31,23 @@
 
 import Foundation
 
-
 public struct HTTPRoute: Sendable {
     public var method: Component
     public var path: [Component]
     public var query: [QueryItem]
     public var headers: [HTTPHeader: Component]
+    public var body: HTTPBodyPattern?
 
-    public init(_ string: String, headers: [HTTPHeader: String] = [:]) {
+    public init(_ string: String, headers: [HTTPHeader: String] = [:], body: HTTPBodyPattern? = nil) {
         let comps = Self.components(for: string)
-        self.init(method: comps.method, path: comps.path, headers: headers)
+        self.init(method: comps.method, path: comps.path, headers: headers, body: body)
     }
 
-    public init(method: HTTPMethod, path: String, headers: [HTTPHeader: String] = [:]) {
-        self.init(method: method.rawValue, path: path, headers: headers)
+    public init(method: HTTPMethod, path: String, headers: [HTTPHeader: String] = [:], body: HTTPBodyPattern? = nil) {
+        self.init(method: method.rawValue, path: path, headers: headers, body: body)
     }
 
-    init(method: String, path: String, headers: [HTTPHeader: String]) {
+    init(method: String, path: String, headers: [HTTPHeader: String], body: HTTPBodyPattern?) {
         self.method = Component(method)
         let comps = HTTPRequestDecoder.readComponents(from: path)
         self.path = comps.path
@@ -57,6 +57,7 @@ public struct HTTPRoute: Sendable {
             QueryItem(name: $0.name, value: Component($0.value))
         }
         self.headers = headers.mapValues(Component.init)
+        self.body = body
     }
 
     public enum Component: Equatable, Sendable {
@@ -118,7 +119,8 @@ public extension HTTPRoute {
 
     private func patternMatch(request: HTTPRequest) -> Bool {
         guard patternMatch(query: request.query),
-              patternMatch(headers: request.headers) else { return false }
+              patternMatch(headers: request.headers),
+              patternMatch(body: request.body) else { return false }
 
         let nodes = request.path.split(separator: "/", omittingEmptySubsequences: true)
         guard self.method ~= request.method.rawValue else {
@@ -150,6 +152,11 @@ public extension HTTPRoute {
         return headers.allSatisfy { header, value in
             value ~= request[header]
         }
+    }
+
+    private func patternMatch(body request: Data) -> Bool {
+        guard let body = body else { return true }
+        return body.evaluate(request)
     }
 
     private static func components(for target: String) -> (method: String, path: String) {

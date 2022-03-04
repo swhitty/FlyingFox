@@ -344,6 +344,27 @@ final class HTTPRouteTests: XCTestCase {
                                       headers: [.contentType: "xml"])
         )
     }
+
+#if canImport(Darwin)
+    func testBody_MatchesRoute() {
+        let route = HTTPRoute("GET /mock", body: .json(where: "food == 'fish'"))
+
+        XCTAssertTrue(
+            route ~= HTTPRequest.make(path: "/mock",
+                                      body: #"{"age": 45, "food": "fish"}"#.data(using: .utf8)!)
+        )
+
+        XCTAssertTrue(
+            route ~= HTTPRequest.make(path: "/mock",
+                                      body: #"{"food": "fish"}"#.data(using: .utf8)!)
+        )
+
+        XCTAssertFalse(
+            route ~= HTTPRequest.make(path: "/mock",
+                                      body: #"{"age": 45}"#.data(using: .utf8)!)
+        )
+    }
+#endif
 }
 
 extension HTTPRouteTests {
