@@ -35,6 +35,7 @@ import Foundation
 public struct HTTPRoute: Sendable {
     public var method: Component
     public var path: [Component]
+    public var query: [QueryItem]
 
     public init(_ string: String) {
         let comps = Self.components(for: string)
@@ -47,9 +48,13 @@ public struct HTTPRoute: Sendable {
 
     init(method: String, path: String) {
         self.method = Component(method)
-        self.path = path
+        let comps = HTTPRequestDecoder.readComponents(from: path)
+        self.path = comps.path
             .split(separator: "/", omittingEmptySubsequences: true)
             .map { Component(String($0)) }
+        self.query = comps.query.map {
+            QueryItem(name: $0.name, value: Component($0.value))
+        }
     }
 
     public enum Component: Equatable, Sendable {
@@ -63,6 +68,20 @@ public struct HTTPRoute: Sendable {
             default:
                 self = .caseInsensitive(string)
             }
+        }
+    }
+
+    public struct QueryItem: Sendable, Equatable {
+        public var name: String
+        public var value: Component
+
+        public init(name: String, value: Component) {
+            self.name = name
+            self.value = value
+        }
+
+        public static func ~= (item: QueryItem, requestItem: HTTPRequest.QueryItem) -> Bool {
+            item.name == requestItem.name && item.value ~= requestItem.value
         }
     }
 }
@@ -95,7 +114,9 @@ public extension HTTPRoute {
         return nil
     }
 
-    private func patternMatch(method: String, path: String) -> Bool {
+    private func patternMatch(method: String, path: String, query: [HTTPRequest.QueryItem]) -> Bool {
+        guard patternMatch(query: query) else { return false }
+
         let nodes = path.split(separator: "/", omittingEmptySubsequences: true)
         guard self.method ~= method else {
             return false
@@ -113,6 +134,15 @@ public extension HTTPRoute {
         return true
     }
 
+    private func patternMatch(query items: [HTTPRequest.QueryItem]) -> Bool {
+        for routeItem in query {
+            guard let _ = items.first(where: { routeItem ~= $0 }) else {
+                return false
+            }
+        }
+        return true
+    }
+
     private static func components(for target: String) -> (method: String, path: String) {
         let comps = target.split(separator: " ", maxSplits: 2, omittingEmptySubsequences: true)
         guard comps.count > 1 else {
@@ -124,11 +154,12 @@ public extension HTTPRoute {
     @available(*, deprecated, message: "Pattern match against HTTPRequest instead")
     static func ~= (route: HTTPRoute, target: String) -> Bool {
         let comps = HTTPRoute.components(for: target)
-        return route.patternMatch(method: comps.method, path: comps.path)
+        let pathComps = HTTPRequestDecoder.readComponents(from: comps.path)
+        return route.patternMatch(method: comps.method, path: pathComps.path, query: pathComps.query)
     }
 
     static func ~= (route: HTTPRoute, request: HTTPRequest) -> Bool {
-        route.patternMatch(method: request.method.rawValue, path: request.path)
+        route.patternMatch(method: request.method.rawValue, path: request.path, query: request.query)
     }
 
 }
