@@ -62,15 +62,15 @@ final class HTTPRouteTests: XCTestCase {
         let route = HTTPRoute("/fish/*")
 
         XCTAssertTrue(
-            route ~= "/fish/chips"
+            route ~= HTTPRequest.make(path: "/fish/chips")
         )
 
         XCTAssertTrue(
-            route ~= "/fish/chips/mushy/peas"
+            route ~= HTTPRequest.make(path: "/fish/chips/mushy/peas")
         )
 
         XCTAssertFalse(
-            route ~= "/chips"
+            route ~= HTTPRequest.make(path: "/chips")
         )
     }
 
@@ -78,15 +78,15 @@ final class HTTPRouteTests: XCTestCase {
         let route = HTTPRoute("POST /fish/chips")
 
         XCTAssertTrue(
-            route ~= "POST /fish/chips"
+            route ~= HTTPRequest.make(method: .POST, path: "/fish/chips")
         )
 
         XCTAssertTrue(
-            route ~= "post  /fish/chips/"
+            route ~= HTTPRequest.make(method: .init(rawValue: "post"), path: "/fish/chips/")
         )
 
         XCTAssertFalse(
-            route ~= "GET /fish/chips"
+            route ~= HTTPRequest.make(method: .GET, path: "/fish/chips")
         )
     }
 
@@ -94,19 +94,19 @@ final class HTTPRouteTests: XCTestCase {
         let route = HTTPRoute("/fish/chips")
 
         XCTAssertTrue(
-            route ~= "/fish/chips/"
+            route ~= HTTPRequest.make(method: .POST, path: "/fish/chips")
         )
 
         XCTAssertTrue(
-            route ~= "GET /fish/chips"
+            route ~= HTTPRequest.make(method: .GET, path: "/fish/chips/")
         )
 
         XCTAssertTrue(
-            route ~= "ANY /fish/chips"
+            route ~= HTTPRequest.make(method: .init("ANY"), path: "/fish/chips")
         )
 
         XCTAssertFalse(
-            route ~= "/chips"
+            route ~= HTTPRequest.make(method: .GET, path: "/chips/")
         )
     }
 
