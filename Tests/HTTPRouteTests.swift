@@ -235,7 +235,7 @@ final class HTTPRouteTests: XCTestCase {
         )
     }
 
-    func testWildcardPathWithQueryIte_MatchesRoute() {
+    func testWildcardPathWithQueryItem_MatchesRoute() {
         let route = HTTPRoute("/mock/*?fish=*")
 
         XCTAssertTrue(
