@@ -262,3 +262,22 @@ final class HTTPRouteTests: XCTestCase {
         )
     }
 }
+
+extension HTTPRouteTests {
+
+    func testDeprecatedTargetMatching() {
+        let route = HTTPRoute("GET /mock")
+
+        XCTAssertFalse(
+            route ~= "GET /"
+        )
+
+        XCTAssertTrue(
+            route ~= "GET /mock"
+        )
+
+        XCTAssertFalse(
+            route ~= "GET /fish/mock"
+        )
+    }
+}

@@ -114,11 +114,11 @@ public extension HTTPRoute {
         return nil
     }
 
-    private func patternMatch(method: String, path: String, query: [HTTPRequest.QueryItem]) -> Bool {
-        guard patternMatch(query: query) else { return false }
+    private func patternMatch(request: HTTPRequest) -> Bool {
+        guard patternMatch(query: request.query) else { return false }
 
-        let nodes = path.split(separator: "/", omittingEmptySubsequences: true)
-        guard self.method ~= method else {
+        let nodes = request.path.split(separator: "/", omittingEmptySubsequences: true)
+        guard self.method ~= request.method.rawValue else {
             return false
         }
         guard nodes.count >= self.path.count else {
@@ -155,13 +155,18 @@ public extension HTTPRoute {
     static func ~= (route: HTTPRoute, target: String) -> Bool {
         let comps = HTTPRoute.components(for: target)
         let pathComps = HTTPRequestDecoder.readComponents(from: comps.path)
-        return route.patternMatch(method: comps.method, path: pathComps.path, query: pathComps.query)
+        let request = HTTPRequest(method: .init(comps.method),
+                                  version: .http11,
+                                  path: pathComps.path,
+                                  query: pathComps.query,
+                                  headers: [:],
+                                  body: Data())
+        return route.patternMatch(request: request)
     }
 
     static func ~= (route: HTTPRoute, request: HTTPRequest) -> Bool {
-        route.patternMatch(method: request.method.rawValue, path: request.path, query: request.query)
+        route.patternMatch(request: request)
     }
-
 }
 
 extension HTTPRoute: ExpressibleByStringLiteral {
