@@ -202,6 +202,23 @@ route ~= HTTPRequest(headers: [.authorization: "xyz"]) // true
 route ~= HTTPRequest(headers: [:]) // false
 ```
 
+Body patterns can be created to match the request body data:
+
+```swift
+public protocol HTTPBodyPattern: Sendable {
+  func evaluate(_ body: Data) -> Bool
+}
+```
+
+Darwin platforms can pattern match a JSON body with an `NSPredicate`:
+
+```swift
+let route = HTTPRoute("POST *", body: .json(where: "food == 'fish'"))
+```
+```json
+{"side": "chips", "food": "fish"}
+```
+
 ## AsyncSocket / PollingSocketPool
 
 Internally, FlyingFox uses standard BSD sockets configured with the flag `O_NONBLOCK`. When data is unavailable for a socket (`EWOULDBLOCK`) the task is suspended using the current `AsyncSocketPool` until data is available:
