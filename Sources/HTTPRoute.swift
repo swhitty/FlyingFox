@@ -36,17 +36,18 @@ public struct HTTPRoute: Sendable {
     public var method: Component
     public var path: [Component]
     public var query: [QueryItem]
+    public var headers: [HTTPHeader: Component]
 
-    public init(_ string: String) {
+    public init(_ string: String, headers: [HTTPHeader: String] = [:]) {
         let comps = Self.components(for: string)
-        self.init(method: comps.method, path: comps.path)
+        self.init(method: comps.method, path: comps.path, headers: headers)
     }
 
-    public init(method: HTTPMethod, path: String) {
-        self.init(method: method.rawValue, path: path)
+    public init(method: HTTPMethod, path: String, headers: [HTTPHeader: String] = [:]) {
+        self.init(method: method.rawValue, path: path, headers: headers)
     }
 
-    init(method: String, path: String) {
+    init(method: String, path: String, headers: [HTTPHeader: String]) {
         self.method = Component(method)
         let comps = HTTPRequestDecoder.readComponents(from: path)
         self.path = comps.path
@@ -55,6 +56,7 @@ public struct HTTPRoute: Sendable {
         self.query = comps.query.map {
             QueryItem(name: $0.name, value: Component($0.value))
         }
+        self.headers = headers.mapValues(Component.init)
     }
 
     public enum Component: Equatable, Sendable {
@@ -97,11 +99,11 @@ public extension HTTPRoute.Component {
         }
     }
 
-    static func ~= (component: HTTPRoute.Component, node: String) -> Bool {
-        component.patternMatch(to: node)
+    static func ~= (component: HTTPRoute.Component, node: String?) -> Bool {
+        guard let node = node else { return false }
+        return component.patternMatch(to: node)
     }
 }
-
 
 public extension HTTPRoute {
 
@@ -115,7 +117,8 @@ public extension HTTPRoute {
     }
 
     private func patternMatch(request: HTTPRequest) -> Bool {
-        guard patternMatch(query: request.query) else { return false }
+        guard patternMatch(query: request.query),
+              patternMatch(headers: request.headers) else { return false }
 
         let nodes = request.path.split(separator: "/", omittingEmptySubsequences: true)
         guard self.method ~= request.method.rawValue else {
@@ -141,6 +144,12 @@ public extension HTTPRoute {
             }
         }
         return true
+    }
+
+    private func patternMatch(headers request: [HTTPHeader: String]) -> Bool {
+        return headers.allSatisfy { header, value in
+            value ~= request[header]
+        }
     }
 
     private static func components(for target: String) -> (method: String, path: String) {

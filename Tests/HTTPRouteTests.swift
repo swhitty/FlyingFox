@@ -261,6 +261,89 @@ final class HTTPRouteTests: XCTestCase {
                                       path: "/mock/anemone")
         )
     }
+
+    func testHeader_MatchesRoute() {
+        let route = HTTPRoute("GET /mock", headers: [.contentType: "json"])
+
+        XCTAssertTrue(
+            route ~= HTTPRequest.make(method: .GET,
+                                      path: "/mock",
+                                      headers: [.contentType: "json"])
+        )
+
+        XCTAssertTrue(
+            route ~= HTTPRequest.make(method: .GET,
+                                      path: "/mock",
+                                      headers: [.contentEncoding: "xml",
+                                                .contentType: "json"])
+        )
+
+        XCTAssertFalse(
+            route ~= HTTPRequest.make(method: .GET,
+                                      path: "/mock",
+                                      headers: [.contentType: "xml"])
+        )
+    }
+
+    func testMultipleHeaders_MatchesRoute() {
+        let route = HTTPRoute("GET /mock", headers: [.host: "fish",
+                                                     .contentType: "json"])
+
+        XCTAssertTrue(
+            route ~= HTTPRequest.make(method: .GET,
+                                      path: "/mock",
+                                      headers: [.host: "fish",
+                                                .contentType: "json"])
+        )
+
+        XCTAssertTrue(
+            route ~= HTTPRequest.make(method: .GET,
+                                      path: "/mock",
+                                      headers: [.contentType: "json",
+                                                .host: "fish"])
+        )
+
+        XCTAssertFalse(
+            route ~= HTTPRequest.make(method: .GET,
+                                      path: "/mock",
+                                      headers: [.host: "fish"])
+        )
+
+        XCTAssertFalse(
+            route ~= HTTPRequest.make(method: .GET,
+                                      path: "/mock",
+                                      headers: [.contentType: "json"])
+        )
+
+        XCTAssertFalse(
+            route ~= HTTPRequest.make(method: .GET,
+                                      path: "/mock",
+                                      headers: [.contentType: "xml",
+                                                .host: "fish"])
+        )
+    }
+
+    func testHeaderWildcard_MatchesRoute() {
+        let route = HTTPRoute("GET /mock", headers: [.authorization: "*"])
+
+        XCTAssertTrue(
+            route ~= HTTPRequest.make(method: .GET,
+                                      path: "/mock",
+                                      headers: [.authorization: "Bearer abc"])
+        )
+
+        XCTAssertTrue(
+            route ~= HTTPRequest.make(method: .GET,
+                                      path: "/mock",
+                                      headers: [.authorization: "Bearer xyz"])
+        )
+
+        XCTAssertFalse(
+            route ~= HTTPRequest.make(method: .GET,
+                                      path: "/mock",
+                                      headers: [.contentType: "xml"])
+        )
+    }
 }
 
 extension HTTPRouteTests {
