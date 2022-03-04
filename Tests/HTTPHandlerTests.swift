@@ -115,6 +115,57 @@ final class HTTPHandlerTests: XCTestCase {
             of: URLError.self
         )
     }
+
+    func testProxyHandler_MakesRequestWithQuery() throws {
+        let handler = ProxyHTTPHandler(base: "fish.com")
+
+        let request = try handler.makeURLRequest(
+            for: .make(path: "/chips/squid",
+                       query: [.init(name: "mushy", value: "peas")])
+        )
+
+        XCTAssertEqual(
+            request.url,
+            URL(string: "fish.com/chips/squid?mushy=peas")
+        )
+    }
+
+    func testProxyHandler_MakesRequestWithHeaders() throws {
+        let handler = ProxyHTTPHandler(base: "fish.com")
+
+        let request = try handler.makeURLRequest(
+            for: .make(headers: [.contentType: "json",
+                                 HTTPHeader("Fish"): "chips"])
+        )
+
+        XCTAssertEqual(
+            request.allHTTPHeaderFields,
+            ["Content-Type": "json",
+             "Fish": "chips"]
+        )
+    }
+
+    func testProxyHandler_DoesNotFowardSomeHeaders() throws {
+        let handler = ProxyHTTPHandler(base: "fish.com")
+
+        let request = try handler.makeURLRequest(
+            for: .make(headers: [.connection: "json",
+                                 .host: "fish.com",
+                                 .contentLength: "20"])
+        )
+
+        XCTAssertNil(
+            request.allHTTPHeaderFields?["Host"]
+        )
+
+        XCTAssertNil(
+            request.allHTTPHeaderFields?["Connetion"]
+        )
+
+        XCTAssertNil(
+            request.allHTTPHeaderFields?["Content-Length"]
+        )
+    }
 }
 
 

@@ -58,11 +58,16 @@ public struct ProxyHTTPHandler: HTTPHandler, Sendable {
         req.httpMethod = request.method.rawValue
         req.httpBody = request.body
         req.allHTTPHeaderFields = request.headers.reduce(into: [:]) {
-            if $1.key != .host {
+            if shouldForwardHeader($1.key) {
                 $0![$1.key.rawValue] = $1.value
             }
         }
         return req
+    }
+
+    func shouldForwardHeader(_ header: HTTPHeader) -> Bool {
+        let headers: Set<HTTPHeader> = [.host, .connection, .contentLength]
+        return !headers.contains(header)
     }
 
     func makeURL(for request: HTTPRequest) throws -> URL {
