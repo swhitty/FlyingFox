@@ -42,7 +42,7 @@ let task = Task { try await server.start() }
 task.cancel()
 ```
 
-> Note: On iOS it is recommended to stop the server when entering the background.
+> Note: On iOS it is recommended to stop the server before the app is suspended in the background.
 
 ## Handlers
 
