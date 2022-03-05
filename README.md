@@ -42,6 +42,8 @@ let task = Task { try await server.start() }
 task.cancel()
 ```
 
+> Note: On iOS it is recommended to stop the server when entering the background.
+
 ## Handlers
 
 Handlers can be added to the server by implementing `HTTPHandler`:
