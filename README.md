@@ -16,12 +16,12 @@
 
 FlyingFox can be installed by using Swift Package Manager.
 
-**Note:** FlyingFox requires Swift 5.5 on Xcode 13.2+ or Linux to build. It runs on iOS 13+, tvOS 13+ or macOS 10.15+.
+**Note:** FlyingFox requires Swift 5.5 on Xcode 13.2+. It runs on iOS 13+, tvOS 13+, macOS 10.15+ and Linux.
 
 To install using Swift Package Manager, add this to the `dependencies:` section in your Package.swift file:
 
 ```swift
-.package(url: "https://github.com/swhitty/FlyingFox.git", .upToNextMajor(from: "0.3.1"))
+.package(url: "https://github.com/swhitty/FlyingFox.git", .upToNextMajor(from: "0.4.0"))
 ```
 
 # Usage

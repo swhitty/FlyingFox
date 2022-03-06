@@ -60,7 +60,7 @@ public struct HTTPRoute: Sendable {
         self.body = body
     }
 
-    public enum Component: Equatable, Sendable {
+    public enum Component: Sendable, Equatable {
         case wildcard
         case caseInsensitive(String)
 
