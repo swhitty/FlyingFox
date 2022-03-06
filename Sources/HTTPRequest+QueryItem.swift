@@ -1,8 +1,8 @@
 //
-//  HTTPRequest.swift
+//  HTTPRequest+QueryItem.swift
 //  FlyingFox
 //
-//  Created by Simon Whitty on 13/02/2022.
+//  Created by Simon Whitty on 6/03/2022.
 //  Copyright © 2022 Simon Whitty. All rights reserved.
 //
 //  Distributed under the permissive MIT license
@@ -29,34 +29,45 @@
 //  SOFTWARE.
 //
 
+
 import Foundation
 
-public struct HTTPRequest: Sendable, Equatable {
-    public var method: HTTPMethod
-    public var version: HTTPVersion
-    public var path: String
-    public var query: [QueryItem]
-    public var headers: [HTTPHeader: String]
-    @UncheckedSendable
-    public var body: Data
+public extension HTTPRequest {
 
-    public init(method: HTTPMethod,
-                version: HTTPVersion,
-                path: String,
-                query: [QueryItem],
-                headers: [HTTPHeader: String],
-                body: Data) {
-        self.method = method
-        self.version = version
-        self.path = path
-        self.query = query
-        self.headers = headers
-        self.body = body
+    struct QueryItem: Sendable, Equatable {
+        public var name: String
+        public var value: String
+
+        public init(name: String, value: String) {
+            self.name = name
+            self.value = value
+        }
     }
+
 }
 
-extension HTTPRequest {
-    var shouldKeepAlive: Bool {
-        headers[.connection]?.caseInsensitiveCompare("keep-alive") == .orderedSame
+public extension Array where Element == HTTPRequest.QueryItem {
+
+    subscript(_ name: String) -> String? {
+        get {
+            first { $0.name == name }?.value
+        }
+        set {
+            let item = newValue.map {
+                HTTPRequest.QueryItem(name: name, value: $0)
+            }
+            guard let idx = firstIndex(where: { $0.name == name }) else {
+                if let item = item {
+                    append(item)
+                }
+                return
+            }
+
+            if let item = item {
+                self[idx] = item
+            } else {
+                remove(at: idx)
+            }
+        }
     }
 }
