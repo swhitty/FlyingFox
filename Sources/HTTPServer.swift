@@ -79,7 +79,7 @@ public final actor HTTPServer {
         do {
             try await start(on: socket)
         } catch {
-            logger?.logError("server error: \(error.localizedDescription)")
+            logger?.logCritical("server error: \(error.localizedDescription)")
             try? socket.close()
             throw error
         }

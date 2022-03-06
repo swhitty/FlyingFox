@@ -41,13 +41,26 @@ public struct OSLogHTTPLogging: HTTPLogging {
         self.logger = logger
     }
 
+    public func logDebug(_ debug: String) {
+        logger.debug("\(debug, privacy: .public)")
+    }
+        
     public func logInfo(_ info: String) {
         logger.info("\(info, privacy: .public)")
+    }
+
+    public func logWarning(_ warning: String) {
+        logger.warning("\(warning, privacy: .public)")
     }
 
     public func logError(_ error: String) {
         logger.error("\(error, privacy: .public)")
     }
+    
+    public func logCritical(_ critical: String) {
+        logger.critical("\(critical, privacy: .public)")
+    }
+
 }
 
 @available(macOS 11.0, iOS 14.0, tvOS 14.0, *)

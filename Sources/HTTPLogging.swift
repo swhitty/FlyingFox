@@ -30,8 +30,11 @@
 //
 
 public protocol HTTPLogging {
+    func logDebug(_ debug: String)
     func logInfo(_ info: String)
+    func logWarning(_ warning: String)
     func logError(_ error: String)
+    func logCritical(_ critical: String)
 }
 
 public struct PrintHTTPLogger: HTTPLogging {
@@ -42,12 +45,24 @@ public struct PrintHTTPLogger: HTTPLogging {
         self.category = category
     }
 
+    public func logDebug(_ debug: String) {
+        Swift.print("[\(category)] debug: \(debug)")
+    }
+    
     public func logInfo(_ info: String) {
         Swift.print("[\(category)] info: \(info)")
     }
 
+    public func logWarning(_ warning: String) {
+        Swift.print("[\(category)] warning: \(warning)")
+    }
+    
     public func logError(_ error: String) {
         Swift.print("[\(category)] error: \(error)")
+    }
+    
+    public func logCritical(_ critical: String) {
+        Swift.print("[\(category)] critical: \(critical)")
     }
 }
 

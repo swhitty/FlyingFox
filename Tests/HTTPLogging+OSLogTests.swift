@@ -1,8 +1,8 @@
 //
-//  HTTPLoggingTests.swift
+//  HTTPLogging+OSLogTests.swift
 //  FlyingFox
 //
-//  Created by Simon Whitty on 23/02/2022.
+//  Created by Andre Jacobs on 06/03/2022.
 //  Copyright © 2022 Simon Whitty. All rights reserved.
 //
 //  Distributed under the permissive MIT license
@@ -28,35 +28,19 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 //
-
+#if canImport(OSLog)
 @testable import FlyingFox
 import Foundation
+import OSLog
 import XCTest
 
-final class HTTPLoggingTests: XCTestCase {
-
-    func testPrintLogger_DefaultCategory() {
-        let logger = PrintHTTPLogger.print()
-
-        XCTAssertEqual(
-            logger.category,
-            "FlyingFox"
-        )
-    }
-
-    func testPrintLogger_SetsCategory() {
-        let logger = PrintHTTPLogger.print(category: "Fish")
-
-        XCTAssertEqual(
-            logger.category,
-            "Fish"
-        )
-    }
+final class HTTPLoggingOSLogTests: XCTestCase {
     
-    func testPrintLogger_output() {
-        // NOTE: For now this test is only used to verify the output by manual confirmation
-        // until Swift.print can be unit-tested or we are able to inject a mock.
-        let logger = PrintHTTPLogger.print()
+    func testInfo() {
+        // NOTE: For now this test is only used to verify the output by manual confirmation (e.g. Console.app or log tool)
+        // Run log tool in the terminal first and then run this unit-test:
+        // log stream --level debug --predicate 'category == "FlyingFox"'
+        let logger = OSLogHTTPLogging.oslog()
         
         logger.logDebug("alpha")
         logger.logInfo("bravo")
@@ -65,3 +49,5 @@ final class HTTPLoggingTests: XCTestCase {
         logger.logCritical("echo")
     }
 }
+
+#endif // canImport(OSLog)
