@@ -6,6 +6,8 @@
 [![Twitter](https://img.shields.io/badge/twitter-@simonwhitty-blue.svg)](http://twitter.com/simonwhitty)
 
 - [Usage](#usage)
+- [Handlers](#handlers)
+- [Routes](#routes)
 - [Credits](#credits)
 
 # Introduction
@@ -117,9 +119,9 @@ await server.appendRoute(for: "GET /fish/*", to: routes)
 
 `HTTPUnhandledError` is thrown when it's unable to handle the request with any of its registered handlers.
 
-### HTTPRoute
+## Routes
 
-Routes allow requests to be identified by some or all of its properties. Routes are designed to be [pattern matched](https://docs.swift.org/swift-book/ReferenceManual/Patterns.html#ID426) against requests:
+`HTTPRoute` is designed to be [pattern matched](https://docs.swift.org/swift-book/ReferenceManual/Patterns.html#ID426) against `HTTPRequest`, allowing requests to be identified by some or all of its properties. 
 
 ```swift
 let route = HTTPRoute("/hello/world")
