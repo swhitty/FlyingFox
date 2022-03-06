@@ -39,7 +39,7 @@ import FoundationNetworking
 final class HTTPServerTests: XCTestCase {
 
     func testRequests_AreMatchedToHandlers_ViaRoute() async throws {
-        let server = HTTPServer(port: 8008)
+        let server = HTTPServer.make()
 
         await server.appendRoute("/accepted") { _ in
             HTTPResponse.make(statusCode: .accepted)
@@ -62,7 +62,7 @@ final class HTTPServerTests: XCTestCase {
     }
 
     func testUnmatchedRequests_Return404() async throws {
-        let server = HTTPServer(port: 8008)
+        let server = HTTPServer.make()
 
         let response = await server.handleRequest(.make(method: .GET, path: "/accepted"))
         XCTAssertEqual(
@@ -72,7 +72,7 @@ final class HTTPServerTests: XCTestCase {
     }
 
     func testHandlerErrors_Return500() async throws {
-        let server = HTTPServer(port: 8008) { _ in
+        let server = HTTPServer.make() { _ in
             throw SocketError.disconnected
         }
 
@@ -84,7 +84,7 @@ final class HTTPServerTests: XCTestCase {
     }
 
     func testHandlerTimeout_Returns500() async throws {
-        let server = HTTPServer(port: 8008, timeout: 0.1) { _ in
+        let server = HTTPServer.make(timeout: 0.1) { _ in
             try await Task.sleep(nanoseconds: 1_000_000_000)
             return HTTPResponse.make(statusCode: .accepted)
         }
@@ -97,7 +97,7 @@ final class HTTPServerTests: XCTestCase {
     }
 
     func testKeepAlive_IsAddedToResponses() async throws {
-        let server = HTTPServer(port: 8008)
+        let server = HTTPServer.make()
 
         var response = await server.handleRequest(
             .make(method: .GET, path: "/accepted", headers: [.connection: "keep-alive"])
@@ -115,7 +115,7 @@ final class HTTPServerTests: XCTestCase {
     }
 
     func testServer_ReturnsFile_WhenFileHandlerIsMatched() async throws {
-        let server = HTTPServer(port: 8009, logger: .print())
+        let server = HTTPServer.make(port: 8009)
         await server.appendRoute("*", to: .file(named: "fish.json", in: .module))
         let task = Task { try await server.start() }
 
@@ -131,7 +131,7 @@ final class HTTPServerTests: XCTestCase {
 
 #if canImport(Darwin)
     func testServer_Returns500_WhenHandlerTimesout() async throws {
-        let server = HTTPServer(port: 8008, timeout: 0.1)
+        let server = HTTPServer.make(timeout: 0.1)
         await server.appendRoute("*") { _ in
             try await Task.sleep(nanoseconds: 5_000_000_000)
             return .make(statusCode: .ok)
@@ -150,4 +150,25 @@ final class HTTPServerTests: XCTestCase {
 #endif
 }
 
+extension HTTPServer {
 
+    static func make(port: UInt16 = 8008,
+                     timeout: TimeInterval = 15,
+                     logger: HTTPLogging? = defaultLogger(),
+                     handler: HTTPHandler? = nil) -> HTTPServer {
+        HTTPServer(port: port,
+                   timeout: timeout,
+                   logger: logger,
+                   handler: handler)
+    }
+
+    static func make(port: UInt16 = 8008,
+                     timeout: TimeInterval = 15,
+                     logger: HTTPLogging? = .print(),
+                     handler: @Sendable @escaping (HTTPRequest) async throws -> HTTPResponse) -> HTTPServer {
+        HTTPServer(port: port,
+                   timeout: timeout,
+                   logger: logger,
+                   handler:  ClosureHTTPHandler(handler))
+    }
+}
