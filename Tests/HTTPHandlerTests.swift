@@ -59,6 +59,20 @@ final class HTTPHandlerTests: XCTestCase {
 
     //MARK: - FileHTTPHandler
     
+    func testFileHandler_init_path() {
+        let expectedURL = URL(string: "file://var/tmp/flyingfox.json")!
+        let expectedContentType = "application/json"
+        let handler = FileHTTPHandler(path: expectedURL, contentType: expectedContentType)
+        XCTAssertEqual(handler.path, expectedURL)
+        XCTAssertEqual(handler.contentType, expectedContentType)
+    }
+    
+    func testFileHandler_init_namedInBundle() {
+        let handler = FileHTTPHandler(named: "fish.json", in: .module)
+        XCTAssertTrue(handler.path!.absoluteString.hasSuffix("fish.json"))
+        XCTAssertEqual(handler.contentType, "application/json")
+    }
+    
     func testFileHandler_Returns200WithData() async throws {
         let handler = FileHTTPHandler(named: "fish.json", in: .module)
 
