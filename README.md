@@ -52,7 +52,7 @@ Handlers can be added to the server by implementing `HTTPHandler`:
 
 ```swift
 public protocol HTTPHandler: Sendable {
-    func handleRequest(_ request: HTTPRequest) async throws -> HTTPResponse
+  func handleRequest(_ request: HTTPRequest) async throws -> HTTPResponse
 }
 ```
 
