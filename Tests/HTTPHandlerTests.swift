@@ -34,6 +34,16 @@ import XCTest
 
 final class HTTPHandlerTests: XCTestCase {
 
+    //MARK: - HTTPHandler
+    
+    func testUnhandledHandler_ThrowsError() async {
+        let handler: HTTPHandler = .unhandled()
+
+        await XCTAssertThrowsError(try await handler.handleRequest(.make()), of: HTTPUnhandledError.self)
+    }
+    
+    //MARK: - RedirectHTTPHandler
+    
     func testRedirectHandler_Returns301WithSuppliedLocation() async throws {
         let handler = RedirectHTTPHandler.redirect(to: "http://fish.com/cakes")
 
@@ -47,6 +57,22 @@ final class HTTPHandlerTests: XCTestCase {
         await XCTAssertThrowsError(try await handler.handleRequest(.make()), of: URLError.self)
     }
 
+    //MARK: - FileHTTPHandler
+    
+    func testFileHandler_init_path() {
+        let expectedURL = URL(string: "file://var/tmp/flyingfox.json")!
+        let expectedContentType = "application/json"
+        let handler = FileHTTPHandler(path: expectedURL, contentType: expectedContentType)
+        XCTAssertEqual(handler.path, expectedURL)
+        XCTAssertEqual(handler.contentType, expectedContentType)
+    }
+    
+    func testFileHandler_init_namedInBundle() {
+        let handler = FileHTTPHandler(named: "fish.json", in: .module)
+        XCTAssertTrue(handler.path!.absoluteString.hasSuffix("fish.json"))
+        XCTAssertEqual(handler.contentType, "application/json")
+    }
+    
     func testFileHandler_Returns200WithData() async throws {
         let handler = FileHTTPHandler(named: "fish.json", in: .module)
 
@@ -97,6 +123,8 @@ final class HTTPHandlerTests: XCTestCase {
         )
     }
 
+    //MARK: - ProxyHTTPHandler
+    
     func testProxyHandler_ReturnsResponse() async throws {
         let handler = ProxyHTTPHandler(base: "https://pie.dev")
         var response = try await handler.handleRequest(.make(method: .GET,
@@ -167,12 +195,8 @@ final class HTTPHandlerTests: XCTestCase {
         )
     }
 
-    func testUnhandledHandler_ThrowsError() async {
-        let handler: HTTPHandler = .unhandled()
-
-        await XCTAssertThrowsError(try await handler.handleRequest(.make()), of: HTTPUnhandledError.self)
-    }
-
+    //MARK: - RoutedHTTPHandler
+    
     func testRoutedHandler_CatchesUnhandledError() async throws {
         var handler = RoutedHTTPHandler()
 

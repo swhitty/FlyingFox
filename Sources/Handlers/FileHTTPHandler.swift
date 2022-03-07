@@ -34,8 +34,8 @@ import Foundation
 public struct FileHTTPHandler: HTTPHandler {
 
     @UncheckedSendable
-    private var path: URL?
-    private let contentType: String
+    private(set) var path: URL?
+    let contentType: String
 
     public init(path: URL, contentType: String) {
         self.path = path
