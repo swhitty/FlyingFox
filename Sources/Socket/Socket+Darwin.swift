@@ -107,6 +107,10 @@ extension Socket {
     static func poll(_ fds: UnsafeMutablePointer<pollfd>!, _ nfds: nfds_t, _ tmo_p: Int32) {
         Darwin.poll(fds, nfds, tmo_p)
     }
+
+    static func hasEvent(_ event: Int32, in revents: Int16) -> Bool {
+        revents & Int16(event) != 0
+    }
 }
 
 #endif

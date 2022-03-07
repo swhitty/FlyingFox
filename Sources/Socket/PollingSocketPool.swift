@@ -106,13 +106,13 @@ final actor PollingSocketPool: AsyncSocketPool {
         repeat {
             try Task.checkCancellation()
             var buffer = waiting.keys.map {
-                pollfd(fd: $0, events: Int16(POLLIN), revents: 0)
+                pollfd(fd: $0, events: Int16(POLLIN | POLLOUT), revents: 0)
             }
 
             Socket.poll(&buffer, nfds_t(buffer.count), interval.milliseconds)
 
             for file in buffer {
-                if (file.revents & Int16(POLLIN) != 0) {
+                if Socket.hasEvent(POLLIN, in: file.revents) || Socket.hasEvent(POLLOUT, in: file.revents) {
                     for continuation in waiting[file.fd]! {
                         continuation.resume()
                     }
