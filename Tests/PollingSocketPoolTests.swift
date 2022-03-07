@@ -70,7 +70,7 @@ final class PollingSocketPoolTests: XCTestCase {
 
         let task = Task {
             let socket = try Socket(domain: AF_UNIX, type: Socket.stream)
-            try await pool.suspend(untilReady: socket)
+            try await pool.suspend(untilReady: socket, for: .read)
         }
 
         task.cancel()
@@ -83,7 +83,7 @@ final class PollingSocketPoolTests: XCTestCase {
 
         let task = Task {
             let socket = try Socket(domain: AF_UNIX, type: Socket.stream)
-            try await pool.suspend(untilReady: socket)
+            try await pool.suspend(untilReady: socket, for: .read)
         }
 
         _ = Task(timeout: 0.5) {

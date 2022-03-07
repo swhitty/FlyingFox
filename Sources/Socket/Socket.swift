@@ -205,6 +205,19 @@ extension Socket {
     }
 }
 
+extension Socket {
+    struct Events: OptionSet, Hashable {
+        var rawValue: Int32
+
+        static let read = Events(rawValue: POLLIN)
+        static let write = Events(rawValue: POLLOUT)
+    }
+
+    static func hasEvents(_ event: Events, in revents: Int32) -> Bool {
+        (revents & event.rawValue) != 0
+    }
+}
+
 protocol SocketOption {
     associatedtype Value
     associatedtype SocketValue

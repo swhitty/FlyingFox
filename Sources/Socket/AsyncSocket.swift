@@ -33,7 +33,8 @@ import Foundation
 
 protocol AsyncSocketPool: Sendable {
     func run() async throws
-    func suspend(untilReady socket: Socket) async throws
+
+    func suspend(untilReady socket: Socket, for events: Socket.Events) async throws
 }
 
 struct AsyncSocket: Sendable {
@@ -54,7 +55,7 @@ struct AsyncSocket: Sendable {
                 let socket = Socket(file: file)
                 return try AsyncSocket(socket: socket, pool: pool)
             } catch SocketError.blocked {
-                try await pool.suspend(untilReady: socket)
+                try await pool.suspend(untilReady: socket, for: .read)
             } catch {
                 throw error
             }
@@ -66,7 +67,7 @@ struct AsyncSocket: Sendable {
             do {
                 return try socket.read()
             } catch SocketError.blocked {
-                try await pool.suspend(untilReady: socket)
+                try await pool.suspend(untilReady: socket, for: .read)
             } catch {
                 throw error
             }
@@ -82,7 +83,7 @@ struct AsyncSocket: Sendable {
             do {
                 try buffer.append(contentsOf: socket.read(atMost: toRead))
             } catch SocketError.blocked {
-                try await pool.suspend(untilReady: socket)
+                try await pool.suspend(untilReady: socket, for: .read)
             } catch {
                 throw error
             }
@@ -102,7 +103,7 @@ struct AsyncSocket: Sendable {
             do {
                 return try socket.write(data, from: index)
             } catch SocketError.blocked {
-                try await pool.suspend(untilReady: socket)
+                try await pool.suspend(untilReady: socket, for: .write)
             } catch {
                 throw error
             }
@@ -114,7 +115,7 @@ struct AsyncSocket: Sendable {
             do {
                 return try socket.close()
             } catch SocketError.blocked {
-                try await pool.suspend(untilReady: socket)
+                try await pool.suspend(untilReady: socket, for: .read)
             } catch {
                 throw error
             }
