@@ -48,4 +48,16 @@ final class SocketErrorTests: XCTestCase {
         XCTAssertEqual(SocketError.disconnected.errorDescription, "SocketError. Disconnected")
     }
 
+    func testSocketError_makeFailed() {
+        errno = EIO
+        let socketError = SocketError.makeFailed("unit-test")
+        switch socketError {
+        case let .failed(type: type, errno: socketErrno, message: message):
+            XCTAssertEqual(type, "unit-test")
+            XCTAssertEqual(socketErrno, EIO)
+            XCTAssertEqual(message, "Input/output error")
+        default:
+            XCTFail()
+        }
+    }
 }
