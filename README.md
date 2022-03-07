@@ -229,7 +229,8 @@ Internally, FlyingFox uses standard BSD sockets configured with the flag `O_NONB
 
 ```swift
 protocol AsyncSocketPool {
-  func suspend(untilReady socket: Socket) async throws
+  // Suspend a socket until it is ready to read and/or write
+  func suspend(untilReady socket: Socket, for events: Socket.Events) async throws
 }
 ```
 
