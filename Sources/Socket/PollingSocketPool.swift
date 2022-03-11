@@ -44,7 +44,7 @@ final actor PollingSocketPool: AsyncSocketPool {
         self.interval = interval
     }
 
-    func suspend(untilReady socket: Socket, for events: Socket.Events) async throws {
+    func suspendUntilReady(for events: Socket.Events, on socket: Socket) async throws {
         let socket = SuspendedSocket(file: socket.file, events: events)
         return try await withCancellingContinuation(returning: Void.self) { continuation, handler in
             let continuation = Continuation(continuation)

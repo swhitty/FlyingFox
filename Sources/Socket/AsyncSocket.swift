@@ -34,7 +34,7 @@ import Foundation
 protocol AsyncSocketPool: Sendable {
     func run() async throws
 
-    func suspend(untilReady socket: Socket, for events: Socket.Events) async throws
+    func suspendUntilReady(for events: Socket.Events, on socket: Socket) async throws
 }
 
 struct AsyncSocket: Sendable {
@@ -55,7 +55,7 @@ struct AsyncSocket: Sendable {
                 let socket = Socket(file: file)
                 return try AsyncSocket(socket: socket, pool: pool)
             } catch SocketError.blocked {
-                try await pool.suspend(untilReady: socket, for: .read)
+                try await pool.suspendUntilReady(for: .read, on: socket)
             } catch {
                 throw error
             }
@@ -67,7 +67,7 @@ struct AsyncSocket: Sendable {
             do {
                 return try socket.read()
             } catch SocketError.blocked {
-                try await pool.suspend(untilReady: socket, for: .read)
+                try await pool.suspendUntilReady(for: .read, on: socket)
             } catch {
                 throw error
             }
@@ -83,7 +83,7 @@ struct AsyncSocket: Sendable {
             do {
                 try buffer.append(contentsOf: socket.read(atMost: toRead))
             } catch SocketError.blocked {
-                try await pool.suspend(untilReady: socket, for: .read)
+                try await pool.suspendUntilReady(for: .read, on: socket)
             } catch {
                 throw error
             }
@@ -103,7 +103,7 @@ struct AsyncSocket: Sendable {
             do {
                 return try socket.write(data, from: index)
             } catch SocketError.blocked {
-                try await pool.suspend(untilReady: socket, for: .write)
+                try await pool.suspendUntilReady(for: .write, on: socket)
             } catch {
                 throw error
             }
@@ -115,7 +115,7 @@ struct AsyncSocket: Sendable {
             do {
                 return try socket.close()
             } catch SocketError.blocked {
-                try await pool.suspend(untilReady: socket, for: .read)
+                try await pool.suspendUntilReady(for: .read, on: socket)
             } catch {
                 throw error
             }
