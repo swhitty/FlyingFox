@@ -35,7 +35,6 @@ public final actor HTTPServer {
 
     private let port: UInt16
     private let timeout: TimeInterval
-    private var socket: AsyncSocket?
     private let logger: HTTPLogging?
     private var handlers: RoutedHTTPHandler
 
