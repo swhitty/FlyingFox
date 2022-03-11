@@ -213,6 +213,7 @@ extension Socket {
         static let write = Events(rawValue: POLLOUT)
         static let error = Events(rawValue: POLLERR)
         static let disconnected = Events(rawValue: POLLHUP)
+        static let invalid = Events(rawValue: POLLNVAL)
     }
 }
 

@@ -116,7 +116,7 @@ final actor PollingSocketPool: AsyncSocketPool {
                 let events = Socket.Events(rawValue: Int32(file.events))
                 let revents = Socket.Events(rawValue: Int32(file.revents))
 
-                if revents.contains(.disconnected) || revents.contains(.error) {
+                if revents.contains(.disconnected) || revents.contains(.error) || revents.contains(.invalid) {
                     let socket = SuspendedSocket(file: file.fd, events: events)
                     let continuations = waiting[socket]
                     waiting[socket] = nil
