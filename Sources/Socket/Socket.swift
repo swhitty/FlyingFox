@@ -211,10 +211,8 @@ extension Socket {
 
         static let read = Events(rawValue: POLLIN)
         static let write = Events(rawValue: POLLOUT)
-    }
-
-    static func hasEvents(_ event: Events, in revents: Int32) -> Bool {
-        (revents & event.rawValue) != 0
+        static let error = Events(rawValue: POLLERR)
+        static let disconnected = Events(rawValue: POLLHUP)
     }
 }
 

@@ -114,7 +114,16 @@ final actor PollingSocketPool: AsyncSocketPool {
 
             for file in buffer {
                 let events = Socket.Events(rawValue: Int32(file.events))
-                if Socket.hasEvents(events, in: Int32(file.revents)) {
+                let revents = Socket.Events(rawValue: Int32(file.revents))
+
+                if revents.contains(.disconnected) || revents.contains(.error) {
+                    let socket = SuspendedSocket(file: file.fd, events: events)
+                    let continuations = waiting[socket]
+                    waiting[socket] = nil
+                    continuations?.forEach {
+                        $0.disconnected()
+                    }
+                } else if revents.contains(events) {
                     let socket = SuspendedSocket(file: file.fd, events: events)
                     let continuations = waiting[socket]
                     waiting[socket] = nil
@@ -143,6 +152,10 @@ final actor PollingSocketPool: AsyncSocketPool {
 
         func resume() {
             continuation.resume()
+        }
+
+        func disconnected() {
+            continuation.resume(throwing: SocketError.disconnected)
         }
 
         func cancel() {
