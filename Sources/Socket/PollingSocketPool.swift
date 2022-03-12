@@ -110,31 +110,34 @@ final actor PollingSocketPool: AsyncSocketPool {
                 pollfd(fd: $0.file, events: Int16($0.events.rawValue), revents: 0)
             }
 
-            Socket.poll(&buffer, nfds_t(buffer.count), interval.milliseconds)
-
-            for file in buffer {
-                let events = Socket.Events(rawValue: Int32(file.events))
-                let revents = Socket.Events(rawValue: Int32(file.revents))
-
-                if revents.contains(.disconnected) || revents.contains(.error) || revents.contains(.invalid) {
-                    let socket = SuspendedSocket(file: file.fd, events: events)
-                    let continuations = waiting[socket]
-                    waiting[socket] = nil
-                    continuations?.forEach {
-                        $0.disconnected()
-                    }
-                } else if revents.contains(events) {
-                    let socket = SuspendedSocket(file: file.fd, events: events)
-                    let continuations = waiting[socket]
-                    waiting[socket] = nil
-                    continuations?.forEach {
-                        $0.resume()
-                    }
-                }
+            if Socket.poll(&buffer, nfds_t(buffer.count), interval.milliseconds) > 0 {
+                processPoll(buffer)
             }
-
             await Task.yield()
         } while true
+    }
+
+    private func processPoll(_ buffer: [pollfd]) {
+        for file in buffer {
+            let events = Socket.Events(rawValue: Int32(file.events))
+            let revents = Socket.Events(rawValue: Int32(file.revents))
+
+            if !revents.intersection([.disconnected, .error, .invalid]).isEmpty {
+                let socket = SuspendedSocket(file: file.fd, events: events)
+                let continuations = waiting[socket]
+                waiting[socket] = nil
+                continuations?.forEach {
+                    $0.disconnected()
+                }
+            } else if !revents.intersection(events).isEmpty {
+                let socket = SuspendedSocket(file: file.fd, events: events)
+                let continuations = waiting[socket]
+                waiting[socket] = nil
+                continuations?.forEach {
+                    $0.resume()
+                }
+            }
+        }
     }
 
     private struct SuspendedSocket: Hashable {

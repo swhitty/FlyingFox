@@ -104,7 +104,7 @@ extension Socket {
         Darwin.close(fd)
     }
 
-    static func poll(_ fds: UnsafeMutablePointer<pollfd>!, _ nfds: nfds_t, _ tmo_p: Int32) {
+    static func poll(_ fds: UnsafeMutablePointer<pollfd>!, _ nfds: nfds_t, _ tmo_p: Int32) -> Int32 {
         Darwin.poll(fds, nfds, tmo_p)
     }
 }

@@ -55,7 +55,7 @@ struct AsyncSocket: Sendable {
                 let socket = Socket(file: file)
                 return try AsyncSocket(socket: socket, pool: pool)
             } catch SocketError.blocked {
-                try await pool.suspendUntilReady(for: .read, on: socket)
+                try await pool.suspendUntilReady(for: [.read, .write], on: socket)
             } catch {
                 throw error
             }

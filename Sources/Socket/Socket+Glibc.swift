@@ -103,7 +103,7 @@ extension Socket {
         Glibc.close(fd)
     }
 
-    static func poll(_ fds: UnsafeMutablePointer<pollfd>!, _ nfds: nfds_t, _ tmo_p: Int32) {
+    static func poll(_ fds: UnsafeMutablePointer<pollfd>!, _ nfds: nfds_t, _ tmo_p: Int32) -> Int32 {
         Glibc.poll(fds, nfds, tmo_p)
     }
 }
