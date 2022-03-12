@@ -38,7 +38,8 @@ struct HTTPConnection {
 
     init(socket: AsyncSocket) {
         self.socket = socket
-        self.hostname = (try? socket.socket.remoteHostname()) ?? "<unknown>"
+        let remotePeer = try? socket.socket.remotePeer()
+        self.hostname = remotePeer?.host ?? "<unknown>"
     }
 
     // some AsyncSequence<HTTPRequest>

@@ -101,18 +101,24 @@ struct Socket: Sendable, Hashable {
         }
     }
 
-    func remoteHostname() throws -> String {
+    func remotePeer() throws -> (host: String, port: UInt16) {
         var addr = sockaddr()
         var len = socklen_t(MemoryLayout<sockaddr>.size)
         if Socket.getpeername(file, &addr, &len) != 0 {
             throw SocketError.makeFailed("GetPeerName")
         }
-        let capacity = Int(NI_MAXHOST)
-        let hostBuffer = UnsafeMutablePointer<CChar>.allocate(capacity: capacity)
-        if Socket.getnameinfo(&addr, len, hostBuffer, socklen_t(capacity), nil, 0, NI_NUMERICHOST) != 0 {
-            throw SocketError.makeFailed("GetNameInfo")
+
+        var addr_in6 = withUnsafePointer(to: &addr) {
+            $0.withMemoryRebound(to: Socket.sockaddr_in6, capacity: 1) {
+                $0.pointee
+            }
         }
-        return String(cString: hostBuffer)
+
+        let buffer = UnsafeMutablePointer<CChar>.allocate(capacity: Int(INET6_ADDRSTRLEN) + 2)
+        guard Socket.inet_ntop(AF_INET6, &addr_in6.sin6_addr, buffer, len) != nil else {
+            throw SocketError.makeFailed("AF_INET6 inet_ntop")
+        }
+        return (String(cString: buffer), UInt16(addr_in6.sin6_port).byteSwapped)
     }
 
     func accept() throws -> (file: Int32, addr: sockaddr) {

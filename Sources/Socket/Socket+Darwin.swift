@@ -73,11 +73,11 @@ extension Socket {
         Darwin.getpeername(fd, addr, len)
     }
 
-    static func getnameinfo(_ addr: UnsafePointer<sockaddr>!, _ addrLen: socklen_t,
-                            _ buffer: UnsafeMutablePointer<CChar>!, _ bufferLen: socklen_t,
-                            _ serv: UnsafeMutablePointer<CChar>!, _ servLen: socklen_t,
-                            _ flags: Int32) -> Int32 {
-        Darwin.getnameinfo(addr, addrLen, buffer, bufferLen, serv, servLen, flags)
+    static let sockaddr_in6 = Darwin.sockaddr_in6.self
+
+    static func inet_ntop(_ domain: Int32, _ addr: UnsafeRawPointer!,
+                          _ buffer: UnsafeMutablePointer<CChar>!, _ addrLen: socklen_t) -> UnsafePointer<CChar>? {
+        Darwin.inet_ntop(domain, addr, buffer, addrLen)
     }
 
     static func bind(_ fd: Int32, _ addr: UnsafePointer<sockaddr>!, _ len: socklen_t) -> Int32 {
