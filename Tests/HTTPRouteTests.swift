@@ -34,6 +34,22 @@ import XCTest
 
 final class HTTPRouteTests: XCTestCase {
 
+    func testMethodAndPathWithQuery() {
+        let route = HTTPRoute(method: .PUT, path: "/quick/brown/fox?eats=chips")
+
+        XCTAssertEqual(
+            route.method, .caseInsensitive("PUT")
+        )
+        XCTAssertEqual(
+            route.path,
+            [.caseInsensitive("quick"), .caseInsensitive("brown"), .caseInsensitive("fox")]
+        )
+        XCTAssertEqual(
+            route.query,
+            [.init(name: "eats", value: .caseInsensitive("chips"))]
+        )
+    }
+
     func testPathComponents() {
         XCTAssertEqual(
             HTTPRoute("hello/world").path,
