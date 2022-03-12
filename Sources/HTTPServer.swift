@@ -101,13 +101,18 @@ public final actor HTTPServer {
     }
 
     private func listenForConnections(on socket: AsyncSocket) async throws {
-        try await withThrowingTaskGroup(of: Void.self) { group in
-            for try await socket in socket.sockets {
-                group.addTask {
-                    await self.handleConnection(HTTPConnection(socket: socket))
+        do {
+            try await withThrowingTaskGroup(of: Void.self) { group in
+                for try await socket in socket.sockets {
+                    group.addTask {
+                        await self.handleConnection(HTTPConnection(socket: socket))
+                    }
                 }
+                group.cancelAll()
             }
-            group.cancelAll()
+        } catch {
+            try await socket.close()
+            throw error
         }
     }
 
