@@ -49,28 +49,16 @@ struct AsyncSocket: Sendable {
     }
 
     func accept() async throws -> AsyncSocket {
-        while true {
-            do {
-                let file = try socket.accept().file
-                let socket = Socket(file: file)
-                return try AsyncSocket(socket: socket, pool: pool)
-            } catch SocketError.blocked {
-                try await pool.suspendUntilReady(for: [.read, .write], on: socket)
-            } catch {
-                throw error
-            }
+        try await pool.loopUntilReady(for: [.read, .write], on: socket) {
+            let file = try socket.accept().file
+            let socket = Socket(file: file)
+            return try AsyncSocket(socket: socket, pool: pool)
         }
     }
 
     func read() async throws -> UInt8 {
-        while true {
-            do {
-                return try socket.read()
-            } catch SocketError.blocked {
-                try await pool.suspendUntilReady(for: .read, on: socket)
-            } catch {
-                throw error
-            }
+        try await pool.loopUntilReady(for: .read, on: socket) {
+            try socket.read()
         }
     }
 
@@ -99,14 +87,8 @@ struct AsyncSocket: Sendable {
     }
 
     private func write(_ data: Data, from index: Data.Index) async throws -> Data.Index {
-        while true {
-            do {
-                return try socket.write(data, from: index)
-            } catch SocketError.blocked {
-                try await pool.suspendUntilReady(for: .write, on: socket)
-            } catch {
-                throw error
-            }
+        try await pool.loopUntilReady(for: .write, on: socket) {
+            try socket.write(data, from: index)
         }
     }
 
@@ -120,6 +102,23 @@ struct AsyncSocket: Sendable {
 
     var sockets: ClosureSequence<AsyncSocket> {
         ClosureSequence(closure: accept)
+    }
+}
+
+private extension AsyncSocketPool {
+
+    func loopUntilReady<T>(for events: Socket.Events, on socket: Socket, body: () throws -> T) async throws -> T {
+        var result: T?
+        repeat {
+            do {
+                result = try body()
+            } catch SocketError.blocked {
+                try await suspendUntilReady(for: events, on: socket)
+            } catch {
+                throw error
+            }
+        } while result == nil
+        return result!
     }
 }
 
