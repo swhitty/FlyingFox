@@ -76,8 +76,10 @@ extension Socket {
     static let sockaddr_in6 = Darwin.sockaddr_in6.self
 
     static func inet_ntop(_ domain: Int32, _ addr: UnsafeRawPointer!,
-                          _ buffer: UnsafeMutablePointer<CChar>!, _ addrLen: socklen_t) -> UnsafePointer<CChar>? {
-        Darwin.inet_ntop(domain, addr, buffer, addrLen)
+                          _ buffer: UnsafeMutablePointer<CChar>!, _ addrLen: socklen_t) throws {
+        if Darwin.inet_ntop(domain, addr, buffer, addrLen) == nil {
+            throw SocketError.makeFailed("inet_ntop")
+        }
     }
 
     static func inet_pton(_ domain: Int32, _ buffer: UnsafePointer<CChar>!, _ addr: UnsafeMutableRawPointer!) -> Int32 {

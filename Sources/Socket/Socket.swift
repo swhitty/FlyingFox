@@ -107,29 +107,48 @@ struct Socket: Sendable, Hashable {
     }
 
     func remotePeer() throws -> (host: String, port: UInt16) {
-        var addr = sockaddr()
-        var len = socklen_t(MemoryLayout<sockaddr>.size)
-        if Socket.getpeername(file, &addr, &len) != 0 {
-            throw SocketError.makeFailed("GetPeerName")
-        }
+        var addr = sockaddr_storage()
+        var len = socklen_t(MemoryLayout<sockaddr_storage>.size)
 
-        var addr_in6 = withUnsafePointer(to: &addr) {
-            $0.withMemoryRebound(to: Socket.sockaddr_in6, capacity: 1) {
-                $0.pointee
+        let result = withUnsafeMutablePointer(to: &addr) {
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                Socket.getpeername(file, $0, &len)
             }
         }
-
-        let buffer = UnsafeMutablePointer<CChar>.allocate(capacity: Int(INET6_ADDRSTRLEN) + 2)
-        guard Socket.inet_ntop(AF_INET6, &addr_in6.sin6_addr, buffer, len) != nil else {
-            throw SocketError.makeFailed("AF_INET6 inet_ntop")
+        if result != 0 {
+            throw SocketError.makeFailed("GetPeerName")
         }
-        return (String(cString: buffer), UInt16(addr_in6.sin6_port).byteSwapped)
+        return try Self.makeDetails(from: addr)
     }
 
-    func accept() throws -> (file: Int32, addr: sockaddr) {
-        var addr = sockaddr()
-        var len: socklen_t = 0
-        let newFile = Socket.accept(file, &addr, &len)
+    static func makeDetails(from addr: sockaddr_storage) throws -> (host: String, port: UInt16) {
+        var addr = addr
+        switch Int32(addr.ss_family) {
+        case AF_INET6:
+            var addr_in6 = withUnsafePointer(to: &addr) {
+                $0.withMemoryRebound(to: Socket.sockaddr_in6, capacity: 1) {
+                    $0.pointee
+                }
+            }
+            let maxLength = socklen_t(INET6_ADDRSTRLEN)
+            let buffer = UnsafeMutablePointer<CChar>.allocate(capacity: Int(maxLength))
+            try Socket.inet_ntop(AF_INET6, &addr_in6.sin6_addr, buffer, maxLength)
+            return (String(cString: buffer), UInt16(addr_in6.sin6_port).byteSwapped)
+
+        default:
+            throw SocketError.makeFailed("makeDetails expected AF_INET6")
+        }
+    }
+
+    func accept() throws -> (file: Int32, addr: sockaddr_storage) {
+        var addr = sockaddr_storage()
+        var len = socklen_t(MemoryLayout<sockaddr_storage>.size)
+
+        let newFile = withUnsafeMutablePointer(to: &addr) {
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                Socket.accept(file, $0, &len)
+            }
+        }
 
         guard newFile >= 0 else {
             if errno == EWOULDBLOCK {

@@ -196,6 +196,12 @@ final class SocketTests: XCTestCase {
         )
     }
 
+    func test_ntop_ThrowsError_WhenBufferIsTooSmall() throws {
+        var addr = sockaddr_in6()
+        let maxLength = socklen_t(1)
+        let buffer = UnsafeMutablePointer<CChar>.allocate(capacity: Int(maxLength))
+        XCTAssertThrowsError(try Socket.inet_ntop(AF_INET6, &addr.sin6_addr, buffer, maxLength))
+    }
 }
 
 extension Socket.Flags {
