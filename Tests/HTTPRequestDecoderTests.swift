@@ -161,10 +161,33 @@ final class HTTPRequestDecoderTests: XCTestCase {
         }
     }
 
+    func testBody_ThrowsError_WhenSequenceEnds() async throws {
+        await XCTAssertThrowsError(
+            _ = try await HTTPRequestDecoder.readBody(from: EmptyChunkedSequence(), length: "100"),
+            of: HTTPRequestDecoder.Error.self
+        )
+    }
+
 }
 
 private extension HTTPRequestDecoder {
     static func decodeRequestFromString(_ string: String) async throws -> HTTPRequest {
         try await decodeRequest(from: ConsumingAsyncSequence(string.data(using: .utf8)!))
     }
+}
+
+private struct EmptyChunkedSequence: ChunkedAsyncSequence, ChunkedAsyncIteratorProtocol {
+    mutating func next() async throws -> UInt8? {
+        return nil
+    }
+
+    mutating func nextChunk(count: Int) async throws -> [Element]? {
+        return nil
+    }
+
+    func makeAsyncIterator() -> EmptyChunkedSequence {
+        self
+    }
+
+    typealias Element = UInt8
 }
