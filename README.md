@@ -44,7 +44,7 @@ let task = Task { try await server.start() }
 task.cancel()
 ```
 
-> Note: On iOS it is recommended to stop the server before the app is suspended in the background.
+> Note: iOS will hangup the listening socket when the app is suspended in the background. `HTTPServer` will not detect this until the app returns to foreground, where you will need to start the server once more.
 
 ## Handlers
 
