@@ -40,15 +40,14 @@ import FoundationNetworking
 extension URLSession {
 
     func data(for request: URLRequest, forceFallback: Bool = false) async throws -> (Data, URLResponse) {
-    #if canImport(FoundationNetworking)
-        return try await makeData(for: request)
-    #else
-        if !forceFallback, #available(macOS 12.0, iOS 15.0, tvOS 15.0, *) {
-            return try await data(for: request, delegate: nil)
-        } else {
+        guard !forceFallback, #available(macOS 12.0, iOS 15.0, tvOS 15.0, *) else {
             return try await makeData(for: request)
         }
-    #endif
+#if canImport(FoundationNetworking)
+        return try await makeData(for: request)
+#else
+        return try await data(for: request, delegate: nil)
+#endif
     }
 
     func makeData(for request: URLRequest) async throws -> (Data, URLResponse) {
@@ -60,9 +59,7 @@ extension URLSession {
                 continuation.resume(returning: (data, response))
             }
             task.resume()
-            handler.onCancel {
-                task.cancel()
-            }
+            handler.onCancel(task.cancel)
         }
     }
 }
