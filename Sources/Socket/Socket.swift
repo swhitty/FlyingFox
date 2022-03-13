@@ -47,7 +47,13 @@ struct Socket: Sendable, Hashable {
     }
 
     var flags: Flags {
-        Flags(rawValue: Socket.fcntl(file, F_GETFL))
+        get throws {
+            let flags = Socket.fcntl(file, F_GETFL)
+            if flags == -1 {
+                throw SocketError.makeFailed("GetFlags")
+            }
+            return Flags(rawValue: flags)
+        }
     }
 
     func setFlags(_ flags: Flags) throws {
@@ -76,10 +82,9 @@ struct Socket: Sendable, Hashable {
     func bindIP6(port: UInt16, listenAddress: String? = nil) throws {
         var addr = Socket.sockaddr_in6(port: port)
 
-        if let address = listenAddress {
-            guard address.withCString({ cstring in inet_pton(AF_INET6, cstring, &addr.sin6_addr) }) == 1 else {
-                throw SocketError.makeFailed("BindAddr")
-            }
+        guard listenAddress == nil ||
+              listenAddress?.withCString({ cstring in Socket.inet_pton(AF_INET6, cstring, &addr.sin6_addr) }) == 1 else {
+            throw SocketError.makeFailed("BindAddr")
         }
 
         let result = withUnsafePointer(to: &addr) {
@@ -126,7 +131,7 @@ struct Socket: Sendable, Hashable {
         var len: socklen_t = 0
         let newFile = Socket.accept(file, &addr, &len)
 
-        if newFile == -1 {
+        guard newFile >= 0 else {
             if errno == EWOULDBLOCK {
                 throw SocketError.blocked
             } else {
@@ -194,11 +199,7 @@ struct Socket: Sendable, Hashable {
 
     func close() throws {
         if Socket.close(file) == -1 {
-            if errno == EWOULDBLOCK {
-                throw SocketError.blocked
-            } else {
-                throw SocketError.makeFailed("Close")
-            }
+            throw errno == EWOULDBLOCK ? SocketError.blocked : SocketError.makeFailed("Close")
         }
     }
 }

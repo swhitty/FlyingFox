@@ -65,7 +65,20 @@ final class SocketTests: XCTestCase {
         }
     }
 
-    func testSocket_Sets_And_Gets_Int32Option() throws {
+    func testSocketWrite_ThrowsBlocked_WhenBufferIsFull() throws {
+        let (s1, s2) = try Socket.makeNonBlockingPair()
+        try s1.setValue(1024, for: .sendBufferSize)
+        let data = Data(repeating: 0x01, count: 8192)
+        let sent = try s1.write(data, from: data.startIndex)
+        XCTAssertThrowsError(try s1.write(data, from: sent), of: SocketError.self) {
+            XCTAssertEqual($0, .blocked)
+        }
+
+        try s1.close()
+        try s2.close()
+    }
+
+    func testSocket_Sets_And_Gets_ReceiveBufferSize() throws {
         let socket = try Socket(domain: AF_UNIX, type: Socket.stream)
 
         try socket.setValue(2048, for: .receiveBufferSize)
@@ -73,7 +86,19 @@ final class SocketTests: XCTestCase {
         XCTAssertEqual(try socket.getValue(for: .receiveBufferSize), Int32(2048))
 #else
         // Linux kernel doubles this value (to allow space for bookkeeping overhead)
-        XCTAssertEqual(try socket.getValue(for: .receiveBufferSize), Int32(4096))
+        XCTAssertGreaterThanOrEqual(try socket.getValue(for: .receiveBufferSize), Int32(4096))
+#endif
+    }
+
+    func testSocket_Sets_And_Gets_SendBufferSizeOption() throws {
+        let socket = try Socket(domain: AF_UNIX, type: Socket.stream)
+
+        try socket.setValue(2048, for: .sendBufferSize)
+#if canImport(Darwin)
+        XCTAssertEqual(try socket.getValue(for: .sendBufferSize), Int32(2048))
+#else
+        // Linux kernel doubles this value (to allow space for bookkeeping overhead)
+        XCTAssertGreaterThanOrEqual(try socket.getValue(for: .sendBufferSize), Int32(4096))
 #endif
     }
 
@@ -89,10 +114,16 @@ final class SocketTests: XCTestCase {
 
     func testSocket_Sets_And_Gets_Flags() throws {
         let socket = try Socket(domain: AF_UNIX, type: Socket.stream)
-        XCTAssertFalse(socket.flags.contains(.append))
+        XCTAssertFalse(try socket.flags.contains(.append))
 
         try socket.setFlags(.append)
-        XCTAssertTrue(socket.flags.contains(.append))
+        XCTAssertTrue(try socket.flags.contains(.append))
+    }
+
+    func testSocketInit_ThrowsError_WhenInvalid() throws {
+        XCTAssertThrowsError(
+            _ = try Socket(domain: -1, type: -1)
+        )
     }
 
     func testSocketAccept_ThrowsError_WhenInvalid() throws {
@@ -122,6 +153,42 @@ final class SocketTests: XCTestCase {
             try socket.bindIP6(port: 8080)
         )
     }
+
+    func testSocketBindIP6_ThrowsError_WhenListenAddressInvalid() throws {
+        let socket = try Socket(domain: AF_INET6, type: Socket.stream)
+        XCTAssertThrowsError(
+            try socket.bindIP6(port: 8080, listenAddress: "invalid address")
+        )
+    }
+
+    func testSocketGetOption_ThrowsError_WhenInvalid() throws {
+        let socket = Socket(file: -1)
+        XCTAssertThrowsError(
+            _ = try socket.getValue(for: .localAddressReuse)
+        )
+    }
+
+    func testSocketSetOption_ThrowsError_WhenInvalid() throws {
+        let socket = Socket(file: -1)
+        XCTAssertThrowsError(
+            try socket.setValue(true, for: .localAddressReuse)
+        )
+    }
+
+    func testSocketGetFlags_ThrowsError_WhenInvalid() throws {
+        let socket = Socket(file: -1)
+        XCTAssertThrowsError(
+            _ = try socket.flags
+        )
+    }
+
+    func testSocketSetFlags_ThrowsError_WhenInvalid() throws {
+        let socket = Socket(file: -1)
+        XCTAssertThrowsError(
+            try socket.setFlags(.nonBlocking)
+        )
+    }
+
 }
 
 extension Socket.Flags {

@@ -80,6 +80,10 @@ extension Socket {
         Darwin.inet_ntop(domain, addr, buffer, addrLen)
     }
 
+    static func inet_pton(_ domain: Int32, _ buffer: UnsafePointer<CChar>!, _ addr: UnsafeMutableRawPointer!) -> Int32 {
+        Darwin.inet_pton(domain, buffer, addr)
+    }
+
     static func bind(_ fd: Int32, _ addr: UnsafePointer<sockaddr>!, _ len: socklen_t) -> Int32 {
         Darwin.bind(fd, addr, len)
     }

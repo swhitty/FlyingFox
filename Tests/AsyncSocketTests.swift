@@ -69,6 +69,18 @@ final class AsyncSocketTests: XCTestCase {
         XCTAssertEqual(text, "Fish & Chips")
     }
 
+    func testSocketWrite_WaitsWhenBufferIsFull() async throws {
+        let (s1, s2) = try AsyncSocket.makePair(pool: pool)
+        try s1.socket.setValue(1024, for: .sendBufferSize)
+
+        let task = Task {
+            try await s1.write(Data(repeating: 0x01, count: 8192))
+        }
+
+        _ = try await s2.read(bytes: 8192)
+        try await task.value
+    }
+
     func testSocketReadByte_ThrowsDisconnected_WhenSocketIsClosed() async throws {
         let s1 = try AsyncSocket.make(pool: pool)
         try await s1.close()
