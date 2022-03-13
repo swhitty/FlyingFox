@@ -48,7 +48,12 @@ final class URLSessionAsyncTests: XCTestCase {
         )
     }
 
-    func testURLSessionFallback_CancelsRequest() async throws {
+    func testURLSessionFallback_ReturnsError() async throws {
+        let request = URLRequest(url: URL(string: "https://flying.fox.invalid/")!)
+        await XCTAssertThrowsError(try await URLSession.shared.data(for: request, forceFallback: true), of: URLError.self)
+    }
+
+    func testURLSession_CancelsRequest() async throws {
         let request = URLRequest(url: URL(string: "https://httpstat.us/200?sleep=10000")!)
 
         let task = Task {

@@ -54,7 +54,7 @@ extension URLSession {
         try await withCancellingContinuation(returning: (Data, URLResponse).self) { continuation, handler in
             let task = dataTask(with: request) { data, response, error in
                 guard let data = data, let response = response else {
-                    return continuation.resume(throwing: error ?? URLError(.unknown))
+                    return continuation.resume(throwing: error!)
                 }
                 continuation.resume(returning: (data, response))
             }
