@@ -39,11 +39,11 @@ import FoundationNetworking
 @available(macOS, deprecated: 12.0, message: "use data(for request: URLRequest) directly")
 extension URLSession {
 
-    func data(for request: URLRequest) async throws -> (Data, URLResponse) {
+    func data(for request: URLRequest, forceFallback: Bool = false) async throws -> (Data, URLResponse) {
     #if canImport(FoundationNetworking)
         return try await makeData(for: request)
     #else
-        if #available(macOS 12.0, iOS 15.0, tvOS 15.0, *) {
+        if !forceFallback, #available(macOS 12.0, iOS 15.0, tvOS 15.0, *) {
             return try await data(for: request, delegate: nil)
         } else {
             return try await makeData(for: request)
@@ -55,8 +55,7 @@ extension URLSession {
         try await withCancellingContinuation(returning: (Data, URLResponse).self) { continuation, handler in
             let task = dataTask(with: request) { data, response, error in
                 guard let data = data, let response = response else {
-                    let error = error ?? URLError(.unknown)
-                    return continuation.resume(throwing: error)
+                    return continuation.resume(throwing: error ?? URLError(.unknown))
                 }
                 continuation.resume(returning: (data, response))
             }
