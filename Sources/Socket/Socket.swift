@@ -152,33 +152,28 @@ struct Socket: Sendable, Hashable {
 
     func read(atMost length: Int) throws -> [UInt8] {
         try [UInt8](unsafeUninitializedCapacity: length) { buffer, count in
-            guard let baseAddress = buffer.baseAddress else {
-                throw SocketError.makeFailed("Read Buffer")
-            }
-            count = try read(into: baseAddress, length: length)
+            count = try read(into: buffer.baseAddress!, length: length)
         }
     }
 
     private func read(into buffer: UnsafeMutablePointer<UInt8>, length: Int) throws -> Int {
         let count = Socket.read(file, buffer, length)
-        if count > 0 {
-            return count
-        } else if errno == EWOULDBLOCK {
-            throw SocketError.blocked
-        } else if errno == EBADF || count == 0 {
-            throw SocketError.disconnected
-        } else {
-            throw SocketError.makeFailed("Read")
+        guard count > 0 else {
+            if errno == EWOULDBLOCK {
+                throw SocketError.blocked
+            } else if errno == EBADF || count == 0 {
+                throw SocketError.disconnected
+            } else {
+                throw SocketError.makeFailed("Read")
+            }
         }
+        return count
     }
 
     func write(_ data: Data, from index: Data.Index) throws -> Data.Index {
         guard index < data.endIndex else { return data.endIndex }
-        return try data.withUnsafeBytes {
-            guard let baseAddress = $0.baseAddress else {
-                throw SocketError.makeFailed("WriteBuffer")
-            }
-            let sent = try write(baseAddress + index, length: data.endIndex - index)
+        return try data.withUnsafeBytes { buffer in
+            let sent = try write(buffer.baseAddress! + index, length: data.endIndex - index)
             return index + sent
         }
     }
