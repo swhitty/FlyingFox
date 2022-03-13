@@ -78,10 +78,7 @@ public struct ProxyHTTPHandler: HTTPHandler, Sendable {
         if !request.query.isEmpty {
             comps.queryItems = request.query.map { URLQueryItem(name: $0.name, value: $0.value) }
         }
-        guard let url = comps.url else {
-            throw URLError(.badURL)
-        }
-        return url
+        return comps.url!
     }
 
     func makeResponse(for response: HTTPURLResponse, data: Data) -> HTTPResponse {
