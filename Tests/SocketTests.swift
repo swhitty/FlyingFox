@@ -78,6 +78,13 @@ final class SocketTests: XCTestCase {
         try s2.close()
     }
 
+    func testSocketWrite_Throws_WhenSocketIsNotConnected() async throws {
+        let s1 = try Socket(domain: AF_UNIX, type: Socket.stream)
+        let data = Data(repeating: 0x01, count: 100)
+        XCTAssertThrowsError(try s1.write(data, from: data.startIndex))
+        try s1.close()
+    }
+
     func testSocket_Sets_And_Gets_ReceiveBufferSize() throws {
         let socket = try Socket(domain: AF_UNIX, type: Socket.stream)
 

@@ -143,6 +143,11 @@ final class AsyncSocketTests: XCTestCase {
         }
     }
 
+    func testSocketWrite_Throws_WhenSocketIsNotConnected() async throws {
+        let s1 = try AsyncSocket.make(pool: pool)
+        await XCTAssertThrowsError(try await s1.writeString("Fish"), of: SocketError.self)
+    }
+
     func testSocketAccept_Throws_WhenSocketIsClosed() async throws {
         let s1 = try AsyncSocket.make(pool: pool)
 
