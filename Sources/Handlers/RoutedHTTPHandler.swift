@@ -45,9 +45,11 @@ public struct RoutedHTTPHandler: HTTPHandler, Sendable {
     }
 
     public func handleRequest(_ request: HTTPRequest) async throws -> HTTPResponse {
-        for entry in handlers where entry.route ~= request {
+        for entry in handlers  {
             do {
-                return try await entry.handler.handleRequest(request)
+                if entry.route ~= request {
+                    return try await entry.handler.handleRequest(request)
+                }
             } catch is HTTPUnhandledError {
                 continue
             } catch {
