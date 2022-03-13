@@ -148,6 +148,16 @@ final class HTTPServerTests: XCTestCase {
         task.cancel()
     }
 #endif
+
+#if canImport(Darwin)
+    func testDefaultLogger_IsOSLog() async throws {
+        XCTAssertTrue(HTTPServer.defaultLogger() is OSLogHTTPLogging)
+    }
+#endif
+
+    func testDefaultLoggerFallback_IsPrintLogger() async throws {
+        XCTAssertTrue(HTTPServer.defaultLogger(forceFallback: true) is PrintHTTPLogger)
+    }
 }
 
 extension HTTPHandlerTests {

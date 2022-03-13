@@ -73,19 +73,20 @@ public extension HTTPLogging where Self == PrintHTTPLogger {
     }
 }
 
-public extension HTTPServer {
+extension HTTPServer {
 
-#if canImport(OSLog)
-    static func defaultLogger(category: String = "FlyingFox") -> HTTPLogging {
-        guard #available(macOS 11.0, iOS 14.0, tvOS 14.0, *) else {
+    public static func defaultLogger(category: String = "FlyingFox") -> HTTPLogging {
+        defaultLogger(category: category, forceFallback: false)
+    }
+
+    static func defaultLogger(category: String = "FlyingFox", forceFallback: Bool) -> HTTPLogging {
+        guard !forceFallback, #available(macOS 11.0, iOS 14.0, tvOS 14.0, *) else {
             return .print(category: category)
         }
+#if canImport(OSLog)
         return .oslog(category: category)
-    }
 #else
-    static func defaultLogger(category: String = "FlyingFox") -> HTTPLogging {
         return .print(category: category)
-    }
 #endif
-
+    }
 }
