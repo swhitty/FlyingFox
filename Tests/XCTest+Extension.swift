@@ -31,6 +31,15 @@
 
 import XCTest
 
+func XCTAssertEqualAsync<T: Equatable>(_ expression: @autoclosure () async throws -> T,
+                                       _ expected: @autoclosure () throws -> T,
+                                       _ message: @autoclosure () -> String = "",
+                                       file: StaticString = #filePath,
+                                       line: UInt = #line) async {
+    let result = await Result(catching: expression)
+    XCTAssertEqual(try result.get(), try expected(), message(), file: file, line: line)
+}
+
 func XCTAssertThrowsError<T, E: Error>(_ expression: @autoclosure () throws -> T,
                                        of type: E.Type,
                                        _ message: @autoclosure () -> String = "",
