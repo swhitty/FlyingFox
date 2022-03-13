@@ -73,8 +73,8 @@ final class HTTPConnectionTests: XCTestCase {
                   body: "Hello".data(using: .utf8)!)
         )
 
-        try await s1.close()
-        try await s2.close()
+        try s1.close()
+        try s2.close()
     }
 
     func testConnectionRequestsAreReceived_WhileConnectionIsKeptAlive() async throws {
@@ -98,8 +98,8 @@ final class HTTPConnectionTests: XCTestCase {
         let count = try await connection.requests.reduce(0, { count, _ in count + 1 })
         XCTAssertEqual(count, 3)
 
-        try await s1.close()
-        try await s2.close()
+        try s1.close()
+        try s2.close()
     }
 
     func testConnectionResponse_IsSent() async throws {
@@ -127,7 +127,7 @@ final class HTTPConnectionTests: XCTestCase {
     func testConnectionDisconnects_WhenErrorIsReceived() async throws {
         let (s1, s2) = try AsyncSocket.makePair(pool: pool)
 
-        try await s2.close()
+        try s2.close()
         let connection = HTTPConnection(socket: s1)
 
         let count = try await connection.requests.reduce(0, { count, _ in count + 1 })

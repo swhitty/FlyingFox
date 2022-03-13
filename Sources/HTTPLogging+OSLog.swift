@@ -67,8 +67,7 @@ public struct OSLogHTTPLogging: HTTPLogging {
 public extension HTTPLogging where Self == OSLogHTTPLogging {
 
     static func oslog(bundle: Bundle = .main, category: String = "FlyingFox") -> Self {
-        let logger = Logger(subsystem: bundle.bundleIdentifier ?? category,
-                            category: category)
+        let logger = Logger(subsystem: bundle.bundleIdentifier ?? category, category: category)
         return OSLogHTTPLogging(logger: logger)
     }
 }

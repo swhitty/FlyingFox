@@ -199,7 +199,7 @@ struct Socket: Sendable, Hashable {
 
     func close() throws {
         if Socket.close(file) == -1 {
-            throw errno == EWOULDBLOCK ? SocketError.blocked : SocketError.makeFailed("Close")
+            throw SocketError.makeFailed("Close")
         }
     }
 }

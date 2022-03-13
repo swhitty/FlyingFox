@@ -110,16 +110,8 @@ struct AsyncSocket: Sendable {
         }
     }
 
-    func close() async throws {
-        while true {
-            do {
-                return try socket.close()
-            } catch SocketError.blocked {
-                try await pool.suspendUntilReady(for: .read, on: socket)
-            } catch {
-                throw error
-            }
-        }
+    func close() throws {
+        try socket.close()
     }
 
     var bytes: ByteSequence {

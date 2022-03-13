@@ -53,8 +53,8 @@ final class AsyncSocketTests: XCTestCase {
         let v2 = try await d2
         XCTAssertEqual(v2, 10)
 
-        try await s1.close()
-        try await s2.close()
+        try s1.close()
+        try s2.close()
     }
 
     func testSocketReadsChunk_WhenAvailable() async throws {
@@ -83,7 +83,7 @@ final class AsyncSocketTests: XCTestCase {
 
     func testSocketReadByte_ThrowsDisconnected_WhenSocketIsClosed() async throws {
         let s1 = try AsyncSocket.make(pool: pool)
-        try await s1.close()
+        try s1.close()
 
         await XCTAssertThrowsError(try await s1.read(), of: SocketError.self) {
             XCTAssertEqual($0, .disconnected)
@@ -105,7 +105,7 @@ final class AsyncSocketTests: XCTestCase {
 
     func testSocketReadChunk_ThrowsDisconnected_WhenSocketIsClosed() async throws {
         let s1 = try AsyncSocket.make(pool: pool)
-        try await s1.close()
+        try s1.close()
 
         await XCTAssertThrowsError(try await s1.read(bytes: 5), of: SocketError.self) {
             XCTAssertEqual($0, .disconnected)
@@ -120,7 +120,7 @@ final class AsyncSocketTests: XCTestCase {
 
     func testSocketBytesReadChunk_ReturnsNil_WhenSocketIsClosed() async throws {
         let s1 = try AsyncSocket.make(pool: pool)
-        try await s1.close()
+        try s1.close()
 
         var bytes = s1.bytes
         let chunk = try await bytes.nextChunk(count: 1)
@@ -136,7 +136,7 @@ final class AsyncSocketTests: XCTestCase {
 
     func testSocketWrite_ThrowsDisconnected_WhenSocketIsClosed() async throws {
         let s1 = try AsyncSocket.make(pool: pool)
-        try await s1.close()
+        try s1.close()
 
         await XCTAssertThrowsError(try await s1.writeString("Fish"), of: SocketError.self) {
             XCTAssertEqual($0, .disconnected)
@@ -152,8 +152,8 @@ final class AsyncSocketTests: XCTestCase {
     func testSocket_Throws_WhenAlreadyCLosed() async throws {
         let s1 = try AsyncSocket.make(pool: pool)
 
-        try await s1.close()
-        await XCTAssertThrowsError(try await s1.close(), of: SocketError.self)
+        try s1.close()
+        await XCTAssertThrowsError(try s1.close(), of: SocketError.self)
     }
 }
 

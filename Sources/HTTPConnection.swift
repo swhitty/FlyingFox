@@ -51,8 +51,8 @@ struct HTTPConnection {
         try await socket.write(HTTPResponseEncoder.encodeResponse(response))
     }
 
-    func close() async throws {
-        try await socket.close()
+    func close() throws {
+        try socket.close()
     }
 }
 

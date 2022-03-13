@@ -111,7 +111,7 @@ public final actor HTTPServer {
                 group.cancelAll()
             }
         } catch {
-            try await socket.close()
+            try socket.close()
             throw error
         }
     }
@@ -127,7 +127,7 @@ public final actor HTTPServer {
         } catch {
             logger?.logError(error, on: connection)
         }
-        try? await connection.close()
+        try? connection.close()
         logger?.logCloseConnection(connection)
     }
 
