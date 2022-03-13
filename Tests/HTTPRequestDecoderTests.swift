@@ -168,6 +168,25 @@ final class HTTPRequestDecoderTests: XCTestCase {
         )
     }
 
+    func testInvalidPathDecodes() {
+        let comps = HTTPRequestDecoder.makeComponents(from: nil)
+        XCTAssertEqual(
+            comps.path, ""
+        )
+        XCTAssertEqual(
+            comps.query, []
+        )
+    }
+
+    func testEmptyQueryItem_Decodes() {
+        var urlComps = URLComponents()
+        urlComps.queryItems = [.init(name: "name", value: nil)]
+
+        XCTAssertEqual(
+            HTTPRequestDecoder.makeComponents(from: urlComps).query,
+            [.init(name: "name", value: "")]
+        )
+    }
 }
 
 private extension HTTPRequestDecoder {

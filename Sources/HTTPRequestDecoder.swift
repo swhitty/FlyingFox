@@ -65,11 +65,13 @@ struct HTTPRequestDecoder {
     }
 
     static func readComponents(from target: String) -> (path: String, query: [HTTPRequest.QueryItem]) {
-        let comps = URLComponents(string: target)
+        makeComponents(from: URLComponents(string: target))
+    }
+
+    static func makeComponents(from comps: URLComponents?) -> (path: String, query: [HTTPRequest.QueryItem]) {
         let path = comps?.path ?? ""
         let query = comps?.queryItems?.map {
-            HTTPRequest.QueryItem(name: $0.name,
-                                  value: $0.value ?? "")
+            HTTPRequest.QueryItem(name: $0.name, value: $0.value ?? "")
         }
         return (path, query ?? [])
     }
