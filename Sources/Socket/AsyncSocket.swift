@@ -49,7 +49,7 @@ struct AsyncSocket: Sendable {
     }
 
     func accept() async throws -> AsyncSocket {
-        repeat {
+        while true {
             do {
                 let file = try socket.accept().file
                 let socket = Socket(file: file)
@@ -59,11 +59,11 @@ struct AsyncSocket: Sendable {
             } catch {
                 throw error
             }
-        } while true
+        }
     }
 
     func read() async throws -> UInt8 {
-        repeat {
+        while true {
             do {
                 return try socket.read()
             } catch SocketError.blocked {
@@ -71,7 +71,7 @@ struct AsyncSocket: Sendable {
             } catch {
                 throw error
             }
-        } while true
+        }
     }
 
     func read(bytes: Int) async throws -> [UInt8] {
@@ -99,7 +99,7 @@ struct AsyncSocket: Sendable {
     }
 
     private func write(_ data: Data, from index: Data.Index) async throws -> Data.Index {
-        repeat {
+        while true {
             do {
                 return try socket.write(data, from: index)
             } catch SocketError.blocked {
@@ -107,11 +107,11 @@ struct AsyncSocket: Sendable {
             } catch {
                 throw error
             }
-        } while true
+        }
     }
 
     func close() async throws {
-        repeat {
+        while true {
             do {
                 return try socket.close()
             } catch SocketError.blocked {
@@ -119,7 +119,7 @@ struct AsyncSocket: Sendable {
             } catch {
                 throw error
             }
-        } while true
+        }
     }
 
     var bytes: ByteSequence {

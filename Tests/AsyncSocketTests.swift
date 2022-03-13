@@ -148,6 +148,13 @@ final class AsyncSocketTests: XCTestCase {
 
         await XCTAssertThrowsError(try await s1.accept(), of: SocketError.self)
     }
+
+    func testSocket_Throws_WhenAlreadyCLosed() async throws {
+        let s1 = try AsyncSocket.make(pool: pool)
+
+        try await s1.close()
+        await XCTAssertThrowsError(try await s1.close(), of: SocketError.self)
+    }
 }
 
 extension AsyncSocket {
