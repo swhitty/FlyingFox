@@ -87,7 +87,7 @@ struct Socket: Sendable, Hashable {
             throw SocketError.makeFailed("BindAddr")
         }
 
-        let result = withUnsafeMutablePointer(to: &addr) {
+        let result = withUnsafePointer(to: &addr) {
             $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
                 Socket.bind(file, $0, socklen_t(MemoryLayout<sockaddr_in6>.size))
             }
