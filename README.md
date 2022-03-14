@@ -33,7 +33,7 @@ Start the server by providing a port number:
 ```swift
 import FlyingFox
 
-let server = HTTPServer(port: 8080)
+let server = HTTPServer(port: 80)
 try await server.start()
 ```
 
