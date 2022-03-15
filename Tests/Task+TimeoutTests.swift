@@ -59,7 +59,6 @@ final class TaskTimeoutTests: XCTestCase {
         }
     }
 
-
     func testTimeoutCancels() async {
         // given
         let task = Task(timeout: 0.5) {
