@@ -45,17 +45,17 @@ public final actor HTTPServer {
         self.address = address.makeStorage()
         self.timeout = timeout
         self.logger = logger
-        self.handlers = Self.makeCompositeHandler(root: handler)
+        self.handlers = Self.makeRootHandler(to: handler)
     }
 
-    public init(port: UInt16,
-                timeout: TimeInterval = 15,
-                logger: HTTPLogging? = defaultLogger(),
-                handler: HTTPHandler? = nil) {
-        self.address = Socket.makeAddressINET6(port: port).makeStorage()
-        self.timeout = timeout
-        self.logger = logger
-        self.handlers = Self.makeCompositeHandler(root: handler)
+    public convenience init(port: UInt16,
+                            timeout: TimeInterval = 15,
+                            logger: HTTPLogging? = defaultLogger(),
+                            handler: HTTPHandler? = nil) {
+        self.init(address: .makeINET6(port: port),
+                  timeout: timeout,
+                  logger: logger,
+                  handler: handler)
     }
 
     public convenience init(port: UInt16,
@@ -164,12 +164,12 @@ public final actor HTTPServer {
         }
     }
 
-    private static func makeCompositeHandler(root: HTTPHandler?) -> RoutedHTTPHandler {
-        var composite = RoutedHTTPHandler()
-        if let handler = root {
-            composite.appendRoute("*", to: handler)
+    private static func makeRootHandler(to handler: HTTPHandler?) -> RoutedHTTPHandler {
+        var root = RoutedHTTPHandler()
+        if let handler = handler {
+            root.appendRoute("*", to: handler)
         }
-        return composite
+        return root
     }
 }
 
