@@ -1,5 +1,5 @@
 //
-//  HTTPResponseEncoderTests.swift
+//  HTTPEncoderTests.swift
 //  FlyingFox
 //
 //  Created by Simon Whitty on 17/02/2022.
@@ -33,18 +33,18 @@
 import Foundation
 import XCTest
 
-final class HTTPResponseEncoderTests: XCTestCase {
+final class HTTPEncoderTests: XCTestCase {
 
     func testHeaderLines_BeginWithStatusCode() {
         XCTAssertEqual(
-            HTTPResponseEncoder
+            HTTPEncoder
                 .makeHeaderLines(from: .make(version: .http2, statusCode: .ok))
                 .first,
             "HTTP/2 200 OK"
         )
 
         XCTAssertEqual(
-            HTTPResponseEncoder
+            HTTPEncoder
                 .makeHeaderLines(from: .make(version: HTTPVersion("Fish"),
                                              statusCode: HTTPStatusCode(999, phrase: "Chips")))
                 .first,
@@ -54,22 +54,22 @@ final class HTTPResponseEncoderTests: XCTestCase {
 
     func testHeaderLines_IncludesContentSize() {
         XCTAssertTrue(
-            HTTPResponseEncoder.makeHeaderLines(from: .make(body: Data()))
+            HTTPEncoder.makeHeaderLines(from: .make(body: Data()))
                 .contains("Content-Length: 0")
         )
 
         XCTAssertTrue(
-            HTTPResponseEncoder.makeHeaderLines(from: .make(body: Data([0x01])))
+            HTTPEncoder.makeHeaderLines(from: .make(body: Data([0x01])))
                 .contains("Content-Length: 1")
         )
         XCTAssertTrue(
-            HTTPResponseEncoder.makeHeaderLines(from: .make(body: Data([0x01, 0x02, 0x03])))
+            HTTPEncoder.makeHeaderLines(from: .make(body: Data([0x01, 0x02, 0x03])))
                 .contains("Content-Length: 3")
         )
     }
 
     func testHeaderLines_IncludeSuppliedHeaders() {
-        let lines = HTTPResponseEncoder
+        let lines = HTTPEncoder
             .makeHeaderLines(from: .make(headers: [
                 .connection: "keep",
                 .location: "Swan Hill",
@@ -91,14 +91,14 @@ final class HTTPResponseEncoderTests: XCTestCase {
 
     func testHeaderLines_EndWithCarriageReturnLineFeed() {
         XCTAssertEqual(
-            HTTPResponseEncoder
+            HTTPEncoder
                 .makeHeaderLines(from: .make())
                 .last,
             "\r\n"
         )
 
         XCTAssertEqual(
-            HTTPResponseEncoder
+            HTTPEncoder
                 .makeHeaderLines(from: .make(headers: [.connection: "keep", .contentType: "none"]))
                 .last,
             "\r\n"
@@ -107,7 +107,7 @@ final class HTTPResponseEncoderTests: XCTestCase {
 
     func testEncodesResponse() throws {
         XCTAssertEqual(
-            try HTTPResponseEncoder.encodeResponse(
+            try HTTPEncoder.encodeResponse(
                 .make(version: .http11,
                       statusCode: .ok,
                       headers: [:],
@@ -115,6 +115,44 @@ final class HTTPResponseEncoderTests: XCTestCase {
             ),
             """
             HTTP/1.1 200 OK\r
+            Content-Length: 12\r
+            \r
+            Hello World!
+            """.data(using: .utf8)
+        )
+    }
+
+    func testEncodesRequest() throws {
+        XCTAssertEqual(
+            try HTTPEncoder.encodeRequest(
+                .make(method: .GET,
+                      version: .http11,
+                      path: "greeting/hello world",
+                      query: [],
+                      headers: [:],
+                      body: "Hello World!".data(using: .utf8)!)
+            ),
+            """
+            GET greeting/hello%20world HTTP/1.1\r
+            Content-Length: 12\r
+            \r
+            Hello World!
+            """.data(using: .utf8)
+        )
+    }
+
+    func testEncodesRequest_WithQuery() throws {
+        XCTAssertEqual(
+            try HTTPEncoder.encodeRequest(
+                .make(method: .GET,
+                      version: .http11,
+                      path: "greeting/hello world",
+                      query: [.init(name: "fish", value: "chips")],
+                      headers: [:],
+                      body: "Hello World!".data(using: .utf8)!)
+            ),
+            """
+            GET greeting/hello%20world?fish=chips HTTP/1.1\r
             Content-Length: 12\r
             \r
             Hello World!

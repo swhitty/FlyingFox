@@ -142,19 +142,13 @@ final class HTTPServerTests: XCTestCase {
 
         let socket = try AsyncSocket(socket: Socket(domain: AF_UNIX, type: Socket.stream), pool: pool)
         try socket.socket.connect(to: address)
-        try await socket.writeString(
-            """
-            GET /hello/world HTTP/1.1\r
-            Connection: keep-alive\r
-            \r
-
-            """
-        )
+        try await socket.writeRequest(.make(headers: [.connection: "keep-alive"]))
 
         await XCTAssertEqualAsync(
-            try await socket.readString(length: 21),
-            "HTTP/1.1 202 Accepted"
+            try await socket.readResponse().statusCode,
+            .accepted
         )
+
         poolTask.cancel()
         serverTask.cancel()
     }

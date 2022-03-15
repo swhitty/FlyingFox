@@ -1,5 +1,5 @@
 //
-//  HTTPResponseEncoder.swift
+//  HTTPEncoder.swift
 //  FlyingFox
 //
 //  Created by Simon Whitty on 13/02/2022.
@@ -31,7 +31,7 @@
 
 import Foundation
 
-struct HTTPResponseEncoder {
+struct HTTPEncoder {
 
     static func makeHeaderLines(from response: HTTPResponse) -> [String] {
         let status = [response.version.rawValue,
@@ -51,6 +51,38 @@ struct HTTPResponseEncoder {
             .data(using: .utf8)!
 
         data.append(response.body)
+
+        return data
+    }
+
+    static func makeHeaderLines(from request: HTTPRequest) -> [String] {
+        let status = [request.method.rawValue,
+                      makePercentEncoded(from: request),
+                      request.version.rawValue].joined(separator: " ")
+
+        var httpHeaders = request.headers
+        httpHeaders[.contentLength] = String(request.body.count)
+        let headers = httpHeaders.map { "\($0.key.rawValue): \($0.value)" }
+
+        return [status] + headers + ["\r\n"]
+    }
+
+    static func makePercentEncoded(from request: HTTPRequest) -> String {
+        var comps = URLComponents()
+        comps.path = request.path
+        comps.queryItems = request.query.map { URLQueryItem(name: $0.name, value: $0.value) }
+        guard let query = comps.percentEncodedQuery, !query.isEmpty else {
+            return comps.percentEncodedPath
+        }
+        return "\(comps.percentEncodedPath)?\(query)"
+    }
+
+    static func encodeRequest(_ request: HTTPRequest) throws -> Data {
+        var data = makeHeaderLines(from: request)
+            .joined(separator: "\r\n")
+            .data(using: .utf8)!
+
+        data.append(request.body)
 
         return data
     }

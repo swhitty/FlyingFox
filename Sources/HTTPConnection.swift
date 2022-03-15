@@ -47,7 +47,7 @@ struct HTTPConnection {
     }
 
     func sendResponse(_ response: HTTPResponse) async throws {
-        try await socket.write(HTTPResponseEncoder.encodeResponse(response))
+        try await socket.write(HTTPEncoder.encodeResponse(response))
     }
 
     func close() throws {
@@ -71,7 +71,7 @@ struct HTTPRequestSequence<S: ChunkedAsyncSequence>: AsyncSequence, AsyncIterato
         guard !isComplete else { return nil }
 
         do {
-            let request = try await HTTPRequestDecoder.decodeRequest(from: bytes)
+            let request = try await HTTPDecoder.decodeRequest(from: bytes)
             if !request.shouldKeepAlive {
                 isComplete = true
             }

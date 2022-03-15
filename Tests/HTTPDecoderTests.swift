@@ -1,5 +1,5 @@
 //
-//  HTTPRequestDecoderTests.swift
+//  HTTPDecoderTests.swift
 //  FlyingFox
 //
 //  Created by Simon Whitty on 17/02/2022.
@@ -33,10 +33,10 @@
 import Foundation
 import XCTest
 
-final class HTTPRequestDecoderTests: XCTestCase {
+final class HTTPDecoderTests: XCTestCase {
 
     func testGETMethod_IsParsed() async throws {
-        let request = try await HTTPRequestDecoder.decodeRequestFromString(
+        let request = try await HTTPDecoder.decodeRequestFromString(
             """
             GET /hello HTTP/1.1\r
             \r
@@ -50,7 +50,7 @@ final class HTTPRequestDecoderTests: XCTestCase {
     }
 
     func testPOSTMethod_IsParsed() async throws {
-        let request = try await HTTPRequestDecoder.decodeRequestFromString(
+        let request = try await HTTPDecoder.decodeRequestFromString(
             """
             POST /hello HTTP/1.1\r
             \r
@@ -64,7 +64,7 @@ final class HTTPRequestDecoderTests: XCTestCase {
     }
 
     func testCUSTOMMethod_IsParsed() async throws {
-        let request = try await HTTPRequestDecoder.decodeRequestFromString(
+        let request = try await HTTPDecoder.decodeRequestFromString(
             """
             FISH /hello HTTP/1.1\r
             \r
@@ -78,7 +78,7 @@ final class HTTPRequestDecoderTests: XCTestCase {
     }
 
     func testPath_IsParsed() async throws {
-        let request = try await HTTPRequestDecoder.decodeRequestFromString(
+        let request = try await HTTPDecoder.decodeRequestFromString(
             """
             GET /hello/world?fish=Chips&with=Mushy%20Peas HTTP/1.1\r
             \r
@@ -98,7 +98,7 @@ final class HTTPRequestDecoderTests: XCTestCase {
     }
 
     func testHeaders_AreParsed() async throws {
-        let request = try await HTTPRequestDecoder.decodeRequestFromString(
+        let request = try await HTTPDecoder.decodeRequestFromString(
             """
             GET /hello HTTP/1.1\r
             Fish: Chips\r
@@ -117,7 +117,7 @@ final class HTTPRequestDecoderTests: XCTestCase {
     }
 
     func testBody_IsNotParsed_WhenContentLength_IsNotProvided() async throws {
-        let request = try await HTTPRequestDecoder.decodeRequestFromString(
+        let request = try await HTTPDecoder.decodeRequestFromString(
             """
             GET /hello HTTP/1.1\r
             \r
@@ -132,7 +132,7 @@ final class HTTPRequestDecoderTests: XCTestCase {
     }
 
     func testBody_IsParsed_WhenContentLength_IsProvided() async throws {
-        let request = try await HTTPRequestDecoder.decodeRequestFromString(
+        let request = try await HTTPDecoder.decodeRequestFromString(
             """
             GET /hello HTTP/1.1\r
             Content-Length: 5\r
@@ -149,7 +149,7 @@ final class HTTPRequestDecoderTests: XCTestCase {
 
     func testInvalidStatusLine_ThrowsErrorM() async throws {
         do {
-            _ = try await HTTPRequestDecoder.decodeRequestFromString(
+            _ = try await HTTPDecoder.decodeRequestFromString(
                 """
                 GET/hello HTTP/1.1\r
                 \r
@@ -157,19 +157,19 @@ final class HTTPRequestDecoderTests: XCTestCase {
             )
             XCTFail("Expected Error")
         } catch {
-            XCTAssertTrue(error is HTTPRequestDecoder.Error)
+            XCTAssertTrue(error is HTTPDecoder.Error)
         }
     }
 
     func testBody_ThrowsError_WhenSequenceEnds() async throws {
         await XCTAssertThrowsError(
-            _ = try await HTTPRequestDecoder.readBody(from: EmptyChunkedSequence(), length: "100"),
-            of: HTTPRequestDecoder.Error.self
+            _ = try await HTTPDecoder.readBody(from: EmptyChunkedSequence(), length: "100"),
+            of: HTTPDecoder.Error.self
         )
     }
 
     func testInvalidPathDecodes() {
-        let comps = HTTPRequestDecoder.makeComponents(from: nil)
+        let comps = HTTPDecoder.makeComponents(from: nil)
         XCTAssertEqual(
             comps.path, ""
         )
@@ -183,15 +183,64 @@ final class HTTPRequestDecoderTests: XCTestCase {
         urlComps.queryItems = [.init(name: "name", value: nil)]
 
         XCTAssertEqual(
-            HTTPRequestDecoder.makeComponents(from: urlComps).query,
+            HTTPDecoder.makeComponents(from: urlComps).query,
             [.init(name: "name", value: "")]
+        )
+    }
+
+    func testResponseInvalidStatusLine_ThrowsErrorM() async throws {
+        do {
+            _ = try await HTTPDecoder.decodeResponseFromString(
+                """
+                HTTP/1.1\r
+                \r
+                """
+            )
+            XCTFail("Expected Error")
+        } catch {
+            XCTAssertTrue(error is HTTPDecoder.Error)
+        }
+    }
+
+    func testResponseBody_IsNotParsed_WhenContentLength_IsNotProvided() async throws {
+        let response = try await HTTPDecoder.decodeResponseFromString(
+            """
+            HTTP/1.1 202 OK \r
+            \r
+            Hello
+            """
+        )
+
+        XCTAssertEqual(
+            response.body,
+            Data()
+        )
+    }
+
+    func testResponseBody_IsParsed_WhenContentLength_IsProvided() async throws {
+        let response = try await HTTPDecoder.decodeResponseFromString(
+            """
+            HTTP/1.1 202 OK \r
+            Content-Length: 5\r
+            \r
+            Hello
+            """
+        )
+
+        XCTAssertEqual(
+            response.body,
+            "Hello".data(using: .utf8)
         )
     }
 }
 
-private extension HTTPRequestDecoder {
+private extension HTTPDecoder {
     static func decodeRequestFromString(_ string: String) async throws -> HTTPRequest {
         try await decodeRequest(from: ConsumingAsyncSequence(string.data(using: .utf8)!))
+    }
+
+    static func decodeResponseFromString(_ string: String) async throws -> HTTPResponse {
+        try await decodeResponse(from: ConsumingAsyncSequence(string.data(using: .utf8)!))
     }
 }
 

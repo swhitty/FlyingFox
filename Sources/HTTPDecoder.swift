@@ -1,5 +1,5 @@
 //
-//  HTTPRequestDecoder.swift
+//  HTTPDecoder.swift
 //  FlyingFox
 //
 //  Created by Simon Whitty on 13/02/2022.
@@ -31,7 +31,7 @@
 
 import Foundation
 
-struct HTTPRequestDecoder {
+struct HTTPDecoder {
 
     static func decodeRequest<S>(from bytes: S) async throws -> HTTPRequest where S: ChunkedAsyncSequence, S.Element == UInt8 {
         let status = try await bytes.takeLine()
@@ -46,19 +46,37 @@ struct HTTPRequestDecoder {
         let version = HTTPVersion(String(comps[2]))
         let (path, query) = Self.readComponents(from: String(comps[1]))
 
-        let headers = try await bytes
-            .lines
-            .prefix { $0 != "\r" && $0 != "" }
-            .compactMap(Self.readHeader)
-            .reduce(into: [HTTPHeader: String]()) { $0[$1.header] = $1.value }
-
-        let body = try await Self.readBody(from: bytes, length: headers[.contentLength])
+        let headers = try await Self.readHeaders(from: bytes)
+        let body = try await HTTPDecoder.readBody(from: bytes, length: headers[.contentLength])
 
         return HTTPRequest(
             method: method,
             version: version,
             path: path,
             query: query,
+            headers: headers,
+            body: body
+        )
+    }
+
+    static func decodeResponse<S>(from bytes: S) async throws -> HTTPResponse where S: ChunkedAsyncSequence, S.Element == UInt8 {
+        let comps = try await bytes.takeLine()
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .split(separator: " ", maxSplits: 2, omittingEmptySubsequences: true)
+        guard comps.count == 3,
+              let code = Int(comps[1]) else {
+            throw Error("Invalid Status Line")
+        }
+
+        let version = HTTPVersion(String(comps[0]))
+        let statusCode = HTTPStatusCode(code, phrase: String(comps[2]))
+
+        let headers = try await Self.readHeaders(from: bytes)
+        let body = try await HTTPDecoder.readBody(from: bytes, length: headers[.contentLength])
+
+        return HTTPResponse(
+            version: version,
+            statusCode: statusCode,
             headers: headers,
             body: body
         )
@@ -84,6 +102,14 @@ struct HTTPRequestDecoder {
         return (HTTPHeader(name), value)
     }
 
+    static func readHeaders<S: ChunkedAsyncSequence>(from bytes: S) async throws -> [HTTPHeader : String] where S.Element == UInt8 {
+        try await bytes
+            .lines
+            .prefix { $0 != "\r" && $0 != "" }
+            .compactMap(Self.readHeader)
+            .reduce(into: [HTTPHeader: String]()) { $0[$1.header] = $1.value }
+    }
+
     static func readBody<S: ChunkedAsyncSequence>(from bytes: S, length: String?) async throws -> Data where S.Element == UInt8 {
         guard let length = length.flatMap(Int.init) else {
             return Data()
@@ -98,7 +124,7 @@ struct HTTPRequestDecoder {
     }
 }
 
-extension HTTPRequestDecoder {
+extension HTTPDecoder {
 
     struct Error: LocalizedError {
         var errorDescription: String?
@@ -109,8 +135,7 @@ extension HTTPRequestDecoder {
     }
 }
 
-
-private extension AsyncSequence where Element == UInt8 {
+extension AsyncSequence where Element == UInt8 {
 
     var lines: AsyncThrowingMapSequence<CollectUntil<Self>, String> {
         collectStrings(separatedBy: "\n")

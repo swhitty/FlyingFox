@@ -49,7 +49,7 @@ public struct HTTPRoute: Sendable {
 
     init(method: String, path: String, headers: [HTTPHeader: String], body: HTTPBodyPattern?) {
         self.method = Component(method)
-        let comps = HTTPRequestDecoder.readComponents(from: path)
+        let comps = HTTPDecoder.readComponents(from: path)
         self.path = comps.path
             .split(separator: "/", omittingEmptySubsequences: true)
             .map { Component(String($0)) }
@@ -170,7 +170,7 @@ public extension HTTPRoute {
     @available(*, deprecated, message: "Pattern match against HTTPRequest instead")
     static func ~= (route: HTTPRoute, target: String) -> Bool {
         let comps = HTTPRoute.components(for: target)
-        let pathComps = HTTPRequestDecoder.readComponents(from: comps.path)
+        let pathComps = HTTPDecoder.readComponents(from: comps.path)
         let request = HTTPRequest(method: .init(comps.method),
                                   version: .http11,
                                   path: pathComps.path,
