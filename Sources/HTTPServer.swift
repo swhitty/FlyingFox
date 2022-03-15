@@ -77,14 +77,7 @@ public final actor HTTPServer {
     }
 
     public func start() async throws {
-        let socket = try Socket(domain: Int32(address.ss_family), type: Socket.stream)
-        try socket.setValue(true, for: .localAddressReuse)
-        #if canImport(Darwin)
-        try socket.setValue(true, for: .noSIGPIPE)
-        #endif
-        try socket.bind(to: address)
-        try socket.listen()
-
+        let socket = try makeSocketAndListen()
         do {
             try await start(on: socket)
         } catch {
@@ -94,7 +87,18 @@ public final actor HTTPServer {
         }
     }
 
-    private func start(on socket: Socket) async throws {
+    func makeSocketAndListen() throws -> Socket {
+        let socket = try Socket(domain: Int32(address.ss_family), type: Socket.stream)
+        try socket.setValue(true, for: .localAddressReuse)
+        #if canImport(Darwin)
+        try socket.setValue(true, for: .noSIGPIPE)
+        #endif
+        try socket.bind(to: address)
+        try socket.listen()
+        return socket
+    }
+
+    func start(on socket: Socket) async throws {
         let pool = PollingSocketPool()
         let asyncSocket = try AsyncSocket(socket: socket, pool: pool)
         logger?.logListening(on: address)

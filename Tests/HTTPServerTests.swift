@@ -138,9 +138,8 @@ final class HTTPServerTests: XCTestCase {
             return HTTPResponse.make(statusCode: .accepted)
         }
         let poolTask = Task { try await pool.run() }
-        let serverTask = Task { try await server.start() }
+        let serverTask = try await server.startDetached()
 
-        try await Task.sleep(nanoseconds: 500_000_000)
         let socket = try AsyncSocket(socket: Socket(domain: AF_UNIX, type: Socket.stream), pool: pool)
         try socket.socket.connect(to: address)
         try await socket.writeString(
@@ -295,5 +294,12 @@ extension HTTPServer {
                    timeout: timeout,
                    logger: logger,
                    handler: handler)
+    }
+
+    // Ensures server is listening before returning
+    // clients can then immediatley connect
+    func startDetached() throws -> Task<Void, Error> {
+        let socket = try makeSocketAndListen()
+        return Task { try await start(on: socket) }
     }
 }
