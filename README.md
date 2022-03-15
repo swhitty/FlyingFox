@@ -44,7 +44,7 @@ let task = Task { try await server.start() }
 task.cancel()
 ```
 
-> Note: iOS will hangup the listening socket when the app is suspended in the background. Once the app returns to the foreground, `HTTPServer.start()` detects this, throwing `SocketError.disconnected`. The server can then be started once more.
+> Note: iOS will hangup the listening socket when the app is suspended in the background. Once the app returns to the foreground, `HTTPServer.start()` detects this, throwing `SocketError.disconnected`. The server must then be started once more.
 
 ## Handlers
 
