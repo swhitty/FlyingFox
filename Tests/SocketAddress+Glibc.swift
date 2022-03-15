@@ -1,8 +1,8 @@
 //
-//  SocketErrorTests.swift
+//  SocketAddress+Glibc.swift
 //  FlyingFox
 //
-//  Created by Andre Jacobs on 07/03/2022.
+//  Created by Simon Whitty on 15/03/2022.
 //  Copyright © 2022 Simon Whitty. All rights reserved.
 //
 //  Distributed under the permissive MIT license
@@ -29,36 +29,21 @@
 //  SOFTWARE.
 //
 
-@testable import FlyingFox
-import XCTest
+#if canImport(Glibc)
+import Glibc
+import FlyingFox
 
-final class SocketErrorTests: XCTestCase {
-
-    func testSocketError_errorDescription() {
-        
-        let failedType = "failed"
-        let failedErrno: Int32 = 42
-        let failedMessage = "failure is an option"
-        XCTAssertEqual(
-            SocketError.failed(type: failedType, errno: failedErrno, message: failedMessage).errorDescription,
-            "SocketError. \(failedType)(\(failedErrno)): \(failedMessage)"
-        )
-        
-        XCTAssertEqual(SocketError.blocked.errorDescription, "SocketError. Blocked")
-        XCTAssertEqual(SocketError.disconnected.errorDescription, "SocketError. Disconnected")
-        XCTAssertEqual(SocketError.unsupportedAddress.errorDescription, "SocketError. UnsupportedAddress")
-    }
-
-    func testSocketError_makeFailed() {
-        errno = EIO
-        let socketError = SocketError.makeFailed("unit-test")
-        switch socketError {
-        case let .failed(type: type, errno: socketErrno, message: message):
-            XCTAssertEqual(type, "unit-test")
-            XCTAssertEqual(socketErrno, EIO)
-            XCTAssertEqual(message, "Input/output error")
-        default:
-            XCTFail()
-        }
-    }
+// import FlyingFox fails to import comformance for these Glibc types 🤷🏻‍♂️:
+extension sockaddr_in: SocketAddress {
+    public static let family = sa_family_t(AF_INET)
 }
+
+extension sockaddr_in6: SocketAddress {
+    public static let family = sa_family_t(AF_INET6)
+}
+
+extension sockaddr_un: SocketAddress {
+    public static let family = sa_family_t(AF_UNIX)
+}
+
+#endif

@@ -133,7 +133,22 @@ final class HTTPConnectionTests: XCTestCase {
         let count = try await connection.requests.reduce(0, { count, _ in count + 1 })
         XCTAssertEqual(count, 0)
 
-        try await connection.close()
+        try connection.close()
+    }
+
+    func testConnectionHostName() {
+        XCTAssertEqual(
+            HTTPConnection.makeIdentifer(from: .ip4("8.8.8.8", port: 8080)),
+            "8.8.8.8"
+        )
+        XCTAssertEqual(
+            HTTPConnection.makeIdentifer(from: .ip6("::1", port: 8080)),
+            "::1"
+        )
+        XCTAssertEqual(
+            HTTPConnection.makeIdentifer(from: .unix("/var/sock/fox")),
+            "/var/sock/fox"
+        )
     }
 }
 

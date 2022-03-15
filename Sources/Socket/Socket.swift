@@ -79,24 +79,41 @@ struct Socket: Sendable, Hashable {
         return option.makeValue(from: valuePtr.pointee)
     }
 
-    func bindIP6(port: UInt16, listenAddress: String? = nil) throws {
-        var addr = Socket.sockaddr_in6(port: port)
-
-        guard listenAddress == nil ||
-              listenAddress?.withCString({ cstring in Socket.inet_pton(AF_INET6, cstring, &addr.sin6_addr) }) == 1 else {
-            throw SocketError.makeFailed("BindAddr")
-        }
-
+    func bind<A: SocketAddress>(to address: A) throws {
+        var addr = address
         let result = withUnsafePointer(to: &addr) {
             $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-                Socket.bind(file, $0, socklen_t(MemoryLayout<sockaddr_in6>.size))
+                Socket.bind(file, $0, socklen_t(MemoryLayout<A>.size))
             }
         }
+        guard result >= 0 else {
+            throw SocketError.makeFailed("Bind")
+        }
+    }
 
-        if result == -1 {
-            let error = SocketError.makeFailed("Bind")
-            try close()
-            throw error
+    func bind(to storage: sockaddr_storage) throws {
+        var storage = storage
+        switch Int32(storage.ss_family) {
+        case AF_INET:
+            try withUnsafePointer(to: &storage) {
+                try $0.withMemoryRebound(to: sockaddr_in.self, capacity: 1) {
+                    try bind(to: $0.pointee)
+                }
+            }
+        case AF_INET6:
+            try withUnsafePointer(to: &storage) {
+                try $0.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) {
+                    try bind(to: $0.pointee)
+                }
+            }
+        case AF_UNIX:
+            try withUnsafePointer(to: &storage) {
+                try $0.withMemoryRebound(to: sockaddr_un.self, capacity: 1) {
+                    try bind(to: $0.pointee)
+                }
+            }
+        default:
+            throw SocketError.unsupportedAddress
         }
     }
 
@@ -108,7 +125,7 @@ struct Socket: Sendable, Hashable {
         }
     }
 
-    func remotePeer() throws -> (host: String, port: UInt16) {
+    func remotePeer() throws -> Address {
         var addr = sockaddr_storage()
         var len = socklen_t(MemoryLayout<sockaddr_storage>.size)
 
@@ -120,26 +137,22 @@ struct Socket: Sendable, Hashable {
         if result != 0 {
             throw SocketError.makeFailed("GetPeerName")
         }
-        return try Self.makeDetails(from: addr)
+        return try Self.makeAddress(from: addr)
     }
 
-    static func makeDetails(from addr: sockaddr_storage) throws -> (host: String, port: UInt16) {
-        var addr = addr
-        switch Int32(addr.ss_family) {
-        case AF_INET6:
-            var addr_in6 = withUnsafePointer(to: &addr) {
-                $0.withMemoryRebound(to: Socket.sockaddr_in6, capacity: 1) {
-                    $0.pointee
-                }
-            }
-            let maxLength = socklen_t(INET6_ADDRSTRLEN)
-            let buffer = UnsafeMutablePointer<CChar>.allocate(capacity: Int(maxLength))
-            try Socket.inet_ntop(AF_INET6, &addr_in6.sin6_addr, buffer, maxLength)
-            return (String(cString: buffer), UInt16(addr_in6.sin6_port).byteSwapped)
+    func sockname() throws -> Address {
+        var addr = sockaddr_storage()
+        var len = socklen_t(MemoryLayout<sockaddr_storage>.size)
 
-        default:
-            throw SocketError.makeFailed("makeDetails expected AF_INET6")
+        let result = withUnsafeMutablePointer(to: &addr) {
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                Socket.getsockname(file, $0, &len)
+            }
         }
+        if result != 0 {
+            throw SocketError.makeFailed("GetSockName")
+        }
+        return try Self.makeAddress(from: addr)
     }
 
     func accept() throws -> (file: Int32, addr: sockaddr_storage) {
@@ -161,6 +174,18 @@ struct Socket: Sendable, Hashable {
         }
 
         return (newFile, addr)
+    }
+
+    func connect<A: SocketAddress>(to address: A) throws {
+        var addr = address
+        let result = withUnsafePointer(to: &addr) {
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                Socket.connect(file, $0, socklen_t(MemoryLayout<A>.size))
+            }
+        }
+        guard result >= 0 else {
+            throw SocketError.makeFailed("Connect")
+        }
     }
 
     func read() throws -> UInt8 {

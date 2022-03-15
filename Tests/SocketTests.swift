@@ -127,77 +127,120 @@ final class SocketTests: XCTestCase {
         XCTAssertTrue(try socket.flags.contains(.append))
     }
 
-    func testSocketInit_ThrowsError_WhenInvalid() throws {
+    func testSocketInit_ThrowsError_WhenInvalid() {
         XCTAssertThrowsError(
             _ = try Socket(domain: -1, type: -1)
         )
     }
 
-    func testSocketAccept_ThrowsError_WhenInvalid() throws {
+    func testSocketAccept_ThrowsError_WhenInvalid() {
         let socket = Socket(file: -1)
         XCTAssertThrowsError(
             try socket.accept()
         )
     }
 
-    func testSocketClose_ThrowsError_WhenInvalid() throws {
+    func testSocketConnect_ThrowsError_WhenInvalid() {
+        let socket = Socket(file: -1)
+        XCTAssertThrowsError(
+            try socket.connect(to: .makeUnix(path: "test"))
+        )
+    }
+
+    func testSocketClose_ThrowsError_WhenInvalid() {
         let socket = Socket(file: -1)
         XCTAssertThrowsError(
             try socket.close()
         )
     }
 
-    func testSocketListen_ThrowsError_WhenInvalid() throws {
+    func testSocketListen_ThrowsError_WhenInvalid() {
         let socket = Socket(file: -1)
         XCTAssertThrowsError(
             try socket.listen()
         )
     }
 
-    func testSocketBindIP6_ThrowsError_WhenInvalid() throws {
+    func testSocketBind_ToINET() throws {
+        let socket = try Socket(domain: AF_INET, type: Socket.stream)
+        let address = Socket.makeAddressINET(port: 8080).makeStorage()
+        XCTAssertNoThrow(
+            try socket.bind(to: address)
+        )
+    }
+
+    func testSocketBind_ToINET6_ThrowsError_WhenInvalid() {
         let socket = Socket(file: -1)
+        let address = Socket.makeAddressINET6(port: 8080)
         XCTAssertThrowsError(
-            try socket.bindIP6(port: 8080)
+            try socket.bind(to: address)
         )
     }
 
-    func testSocketBindIP6_ThrowsError_WhenListenAddressInvalid() throws {
-        let socket = try Socket(domain: AF_INET6, type: Socket.stream)
+    func testSocketBind_ToInvalidStorage_ThrowsUnsupported() {
+        let socket = Socket(file: -1)
+        var addr = Socket.makeAddressUnix(path: "/var/fox/xyz").makeStorage()
+        addr.ss_family = sa_family_t(AF_IPX)
         XCTAssertThrowsError(
-            try socket.bindIP6(port: 8080, listenAddress: "invalid address")
+            try socket.bind(to: addr),
+            of: SocketError.self
+        ) {
+            XCTAssertEqual($0, .unsupportedAddress)
+        }
+    }
+
+    func testSocketBind_ToStorage_ThrowsError_WhenInvalid() {
+        let socket = Socket(file: -1)
+        let address = Socket.makeAddressINET6(port: 8080).makeStorage()
+        XCTAssertThrowsError(
+            try socket.bind(to: address)
         )
     }
 
-    func testSocketGetOption_ThrowsError_WhenInvalid() throws {
+    func testSocketGetOption_ThrowsError_WhenInvalid() {
         let socket = Socket(file: -1)
         XCTAssertThrowsError(
             _ = try socket.getValue(for: .localAddressReuse)
         )
     }
 
-    func testSocketSetOption_ThrowsError_WhenInvalid() throws {
+    func testSocketSetOption_ThrowsError_WhenInvalid() {
         let socket = Socket(file: -1)
         XCTAssertThrowsError(
             try socket.setValue(true, for: .localAddressReuse)
         )
     }
 
-    func testSocketGetFlags_ThrowsError_WhenInvalid() throws {
+    func testSocketGetFlags_ThrowsError_WhenInvalid() {
         let socket = Socket(file: -1)
         XCTAssertThrowsError(
             _ = try socket.flags
         )
     }
 
-    func testSocketSetFlags_ThrowsError_WhenInvalid() throws {
+    func testSocketSetFlags_ThrowsError_WhenInvalid() {
         let socket = Socket(file: -1)
         XCTAssertThrowsError(
             try socket.setFlags(.nonBlocking)
         )
     }
 
-    func test_ntop_ThrowsError_WhenBufferIsTooSmall() throws {
-        var addr = sockaddr_in6()
+    func testSocketRemotePeer_ThrowsError_WhenInvalid() {
+        let socket = Socket(file: -1)
+        XCTAssertThrowsError(
+            try socket.remotePeer()
+        )
+    }
+
+    func testSocket_sockname_ThrowsError_WhenInvalid() {
+        let socket = Socket(file: -1)
+        XCTAssertThrowsError(
+            try socket.sockname()
+        )
+    }
+
+    func test_ntop_ThrowsError_WhenBufferIsTooSmall() {
+        var addr = Socket.makeAddressINET6(port: 8080)
         let maxLength = socklen_t(1)
         let buffer = UnsafeMutablePointer<CChar>.allocate(capacity: Int(maxLength))
         XCTAssertThrowsError(try Socket.inet_ntop(AF_INET6, &addr.sin6_addr, buffer, maxLength))
