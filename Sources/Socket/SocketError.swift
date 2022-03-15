@@ -35,6 +35,7 @@ enum SocketError: LocalizedError, Equatable {
     case failed(type: String, errno: Int32, message: String)
     case blocked
     case disconnected
+    case unsupportedAddress
 
     var errorDescription: String? {
         switch self {
@@ -44,6 +45,8 @@ enum SocketError: LocalizedError, Equatable {
             return "SocketError. Blocked"
         case .disconnected:
             return "SocketError. Disconnected"
+        case .unsupportedAddress:
+            return "SocketError. UnsupportedAddress"
         }
     }
 

@@ -129,6 +129,37 @@ final class HTTPServerTests: XCTestCase {
         task.cancel()
     }
 
+    func testServer_StartsOnUnixSocket() async throws {
+        let pool = PollingSocketPool()
+        var address = sockaddr_un.makeUnix(path: "flyingfox")
+        _ = Socket.unlink(&address.sun_path.0)
+        let server = HTTPServer.make(address: address)
+        await server.appendRoute("*") { _ in
+            return HTTPResponse.make(statusCode: .accepted)
+        }
+        let poolTask = Task { try await pool.run() }
+        let serverTask = Task { try await server.start() }
+
+        try await Task.sleep(nanoseconds: 500_000_000)
+        let socket = try AsyncSocket(socket: Socket(domain: AF_UNIX, type: Socket.stream), pool: pool)
+        try socket.socket.connect(to: address)
+        try await socket.writeString(
+            """
+            GET /hello/world HTTP/1.1\r
+            Connection: keep-alive\r
+            \r
+
+            """
+        )
+
+        await XCTAssertEqualAsync(
+            try await socket.readString(length: 21),
+            "HTTP/1.1 202 Accepted"
+        )
+        poolTask.cancel()
+        serverTask.cancel()
+    }
+
 #if canImport(Darwin)
     func testServer_Returns500_WhenHandlerTimesout() async throws {
         let server = HTTPServer.make(timeout: 0.1)
@@ -158,6 +189,57 @@ final class HTTPServerTests: XCTestCase {
     func testDefaultLoggerFallback_IsPrintLogger() async throws {
         XCTAssertTrue(HTTPServer.defaultLogger(forceFallback: true) is PrintHTTPLogger)
     }
+
+    func testListeningLog_INETPort() {
+        let addr = Socket.makeAddressINET(port: 1234)
+        XCTAssertEqual(
+            PrintHTTPLogger.makeListening(on: AnySocketAddress(addr)),
+            "starting server port: 1234"
+        )
+    }
+
+    func testListeningLog_INET() throws {
+        var addr = Socket.makeAddressINET(port: 1234)
+        addr.sin_addr = try Socket.makeInAddr(fromIP4: "8.8.8.8")
+        XCTAssertEqual(
+            PrintHTTPLogger.makeListening(on: AnySocketAddress(addr)),
+            "starting server 8.8.8.8:1234"
+        )
+    }
+
+    func testListeningLog_INET6Port() {
+        let addr = Socket.makeAddressINET6(port: 5678)
+        XCTAssertEqual(
+            PrintHTTPLogger.makeListening(on: AnySocketAddress(addr)),
+            "starting server port: 5678"
+        )
+    }
+
+    func testListeningLog_INET6() throws {
+        var addr = Socket.makeAddressINET6(port: 1234)
+        addr.sin6_addr = try Socket.makeInAddr(fromIP6: "::1")
+        XCTAssertEqual(
+            PrintHTTPLogger.makeListening(on: AnySocketAddress(addr)),
+            "starting server ::1:1234"
+        )
+    }
+
+    func testListeningLog_UnixPath() {
+        let addr = Socket.makeAddressUnix(path: "/var/fox/xyz")
+        XCTAssertEqual(
+            PrintHTTPLogger.makeListening(on: AnySocketAddress(addr)),
+            "starting server path: /var/fox/xyz"
+        )
+    }
+
+    func testListeningLog_Invalid() {
+        var addr = Socket.makeAddressUnix(path: "/var/fox/xyz")
+        addr.sun_family = sa_family_t(AF_IPX)
+        XCTAssertEqual(
+            PrintHTTPLogger.makeListening(on: AnySocketAddress(addr)),
+            "starting server"
+        )
+    }
 }
 
 extension HTTPHandlerTests {
@@ -184,6 +266,16 @@ extension HTTPHandlerTests {
 }
 
 extension HTTPServer {
+
+    static func make<A: SocketAddress>(address: A,
+                                       timeout: TimeInterval = 15,
+                                       logger: HTTPLogging? = defaultLogger(),
+                                       handler: HTTPHandler? = nil) -> HTTPServer {
+        HTTPServer(address: address,
+                   timeout: timeout,
+                   logger: logger,
+                   handler: handler)
+    }
 
     static func make(port: UInt16 = 8008,
                      timeout: TimeInterval = 15,

@@ -35,6 +35,42 @@ import Darwin
 extension Socket {
 
     static let stream = Int32(SOCK_STREAM)
+    static let in_addr_any = Darwin.in_addr(s_addr: Darwin.in_addr_t(0))
+
+    static func makeAddressINET(port: UInt16) -> Darwin.sockaddr_in {
+        Darwin.sockaddr_in(
+            sin_len: UInt8(MemoryLayout<sockaddr_in>.stride),
+            sin_family: sa_family_t(AF_INET),
+            sin_port: port.bigEndian,
+            sin_addr: in_addr_any,
+            sin_zero: (0, 0, 0, 0, 0, 0, 0, 0)
+        )
+    }
+
+    static func makeAddressINET6(port: UInt16) -> Darwin.sockaddr_in6 {
+        Darwin.sockaddr_in6(
+            sin6_len: UInt8(MemoryLayout<sockaddr_in6>.stride),
+            sin6_family: sa_family_t(AF_INET6),
+            sin6_port: port.bigEndian,
+            sin6_flowinfo: 0,
+            sin6_addr: in6addr_any,
+            sin6_scope_id: 0
+        )
+    }
+
+    static func makeAddressUnix(path: String) -> Darwin.sockaddr_un {
+        var addr = Darwin.sockaddr_un()
+        addr.sun_family = sa_family_t(AF_UNIX)
+        let pathCount = min(path.utf8.count, 104)
+        let len = UInt8(MemoryLayout<UInt8>.size + MemoryLayout<sa_family_t>.size + pathCount + 1)
+        _ = withUnsafeMutablePointer(to: &addr.sun_path.0) { ptr in
+            path.withCString {
+                strncpy(ptr, $0, Int(len))
+            }
+        }
+        addr.sun_len = len
+        return addr
+    }
 
     static func socket(_ domain: Int32, _ type: Int32, _ protocol: Int32) -> Int32 {
         Darwin.socket(domain, type, `protocol`)
@@ -58,22 +94,9 @@ extension Socket {
         Darwin.getsockopt(fd, level, name, value, len)
     }
 
-    static func sockaddr_in6(port: UInt16) -> sockaddr_in6 {
-        Darwin.sockaddr_in6(
-            sin6_len: UInt8(MemoryLayout<sockaddr_in6>.stride),
-            sin6_family: sa_family_t(AF_INET6),
-            sin6_port: port.bigEndian,
-            sin6_flowinfo: 0,
-            sin6_addr: in6addr_any,
-            sin6_scope_id: 0
-        )
-    }
-
     static func getpeername(_ fd: Int32, _ addr: UnsafeMutablePointer<sockaddr>!, _ len: UnsafeMutablePointer<socklen_t>!) -> Int32 {
         Darwin.getpeername(fd, addr, len)
     }
-
-    static let sockaddr_in6 = Darwin.sockaddr_in6.self
 
     static func inet_ntop(_ domain: Int32, _ addr: UnsafeRawPointer!,
                           _ buffer: UnsafeMutablePointer<CChar>!, _ addrLen: socklen_t) throws {
@@ -98,6 +121,10 @@ extension Socket {
         Darwin.accept(fd, addr, len)
     }
 
+    static func connect(_ fd: Int32, _ addr: UnsafePointer<sockaddr>!, _ len: socklen_t) -> Int32 {
+        Darwin.connect(fd, addr, len)
+    }
+
     static func read(_ fd: Int32, _ buffer: UnsafeMutableRawPointer!, _ nbyte: Int) -> Int {
         Darwin.read(fd, buffer, nbyte)
     }
@@ -108,6 +135,10 @@ extension Socket {
 
     static func close(_ fd: Int32) -> Int32 {
         Darwin.close(fd)
+    }
+
+    static func unlink(_ addr: UnsafePointer<CChar>!) -> Int32 {
+        return Darwin.unlink(addr)
     }
 
     static func poll(_ fds: UnsafeMutablePointer<pollfd>!, _ nfds: nfds_t, _ tmo_p: Int32) -> Int32 {

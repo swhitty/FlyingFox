@@ -33,16 +33,26 @@ import Foundation
 
 public final actor HTTPServer {
 
-    private let port: UInt16
+    private let address: AnySocketAddress
     private let timeout: TimeInterval
     private let logger: HTTPLogging?
     private var handlers: RoutedHTTPHandler
+
+    public init<A: SocketAddress>(address: A,
+                                  timeout: TimeInterval = 15,
+                                  logger: HTTPLogging? = defaultLogger(),
+                                  handler: HTTPHandler? = nil) {
+        self.address = AnySocketAddress(address)
+        self.timeout = timeout
+        self.logger = logger
+        self.handlers = Self.makeCompositeHandler(root: handler)
+    }
 
     public init(port: UInt16,
                 timeout: TimeInterval = 15,
                 logger: HTTPLogging? = defaultLogger(),
                 handler: HTTPHandler? = nil) {
-        self.port = port
+        self.address = AnySocketAddress(Socket.makeAddressINET6(port: port))
         self.timeout = timeout
         self.logger = logger
         self.handlers = Self.makeCompositeHandler(root: handler)
@@ -67,12 +77,12 @@ public final actor HTTPServer {
     }
 
     public func start() async throws {
-        let socket = try Socket(domain: AF_INET6, type: Socket.stream)
+        let socket = try Socket(domain: Int32(address.storage.ss_family), type: Socket.stream)
         try socket.setValue(true, for: .localAddressReuse)
         #if canImport(Darwin)
         try socket.setValue(true, for: .noSIGPIPE)
         #endif
-        try socket.bindIP6(port: port)
+        try socket.bind(to: address)
         try socket.listen()
 
         do {
@@ -87,7 +97,7 @@ public final actor HTTPServer {
     private func start(on socket: Socket) async throws {
         let pool = PollingSocketPool()
         let asyncSocket = try AsyncSocket(socket: socket, pool: pool)
-        logger?.logInfo("starting server port: \(port)")
+        logger?.logListening(on: address)
 
         return try await withThrowingTaskGroup(of: Void.self) { group in
             group.addTask {
@@ -180,6 +190,35 @@ extension HTTPLogging {
     func logError(_ error: Error, on connection: HTTPConnection) {
         logError("\(connection.identifer) error: \(error.localizedDescription)")
     }
+
+    func logListening(on address: AnySocketAddress) {
+        logInfo(Self.makeListening(on: address))
+    }
+
+    static func makeListening(on address: AnySocketAddress) -> String {
+        var comps = ["starting server"]
+        guard let addr = try? Socket.makeAddress(from: address.storage) else {
+            return comps.joined()
+        }
+
+        switch addr {
+        case let .ip4(address, port: port):
+            if address == "0.0.0.0" {
+                comps.append("port: \(port)")
+            } else {
+                comps.append("\(address):\(port)")
+            }
+        case let .ip6(address, port: port):
+            if address == "::" {
+                comps.append("port: \(port)")
+            } else {
+                comps.append("\(address):\(port)")
+            }
+        case let .unix(path):
+            comps.append("path: \(path)")
+        }
+        return comps.joined(separator: " ")
+    }
 }
 
 private extension HTTPConnection {
@@ -187,7 +226,6 @@ private extension HTTPConnection {
         "<\(hostname)>"
     }
 }
-
 
 public extension HTTPServer {
 

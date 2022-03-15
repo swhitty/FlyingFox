@@ -46,6 +46,7 @@ final class SocketErrorTests: XCTestCase {
         
         XCTAssertEqual(SocketError.blocked.errorDescription, "SocketError. Blocked")
         XCTAssertEqual(SocketError.disconnected.errorDescription, "SocketError. Disconnected")
+        XCTAssertEqual(SocketError.unsupportedAddress.errorDescription, "SocketError. UnsupportedAddress")
     }
 
     func testSocketError_makeFailed() {

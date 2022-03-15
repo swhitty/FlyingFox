@@ -1,8 +1,8 @@
 //
-//  Socket+Pair.swift
+//  SocketAddress+Glibc.swift
 //  FlyingFox
 //
-//  Created by Simon Whitty on 22/02/2022.
+//  Created by Simon Whitty on 15/03/2022.
 //  Copyright © 2022 Simon Whitty. All rights reserved.
 //
 //  Distributed under the permissive MIT license
@@ -29,50 +29,21 @@
 //  SOFTWARE.
 //
 
-#if canImport(Darwin)
-import Darwin
-#else
+#if canImport(Glibc)
 import Glibc
+import FlyingFox
+
+// import FlyingFox fails to import comformance for these Glibc types 🤷🏻‍♂️:
+extension sockaddr_in: SocketAddress {
+    public static let family = sa_family_t(AF_INET)
+}
+
+extension sockaddr_in6: SocketAddress {
+    public static let family = sa_family_t(AF_INET6)
+}
+
+extension sockaddr_un: SocketAddress {
+    public static let family = sa_family_t(AF_UNIX)
+}
+
 #endif
-
-@testable import FlyingFox
-
-extension Socket {
-
-    static func socketpair(_ domain: Int32, _ type: Int32, _ protocol: Int32) -> (Int32, Int32) {
-        var sockets: [Int32] = [-1, -1]
-        #if canImport(Darwin)
-        _ = Darwin.socketpair(domain, type, `protocol`, &sockets)
-        #else
-        _ = Glibc.socketpair(domain, type, `protocol`, &sockets)
-        #endif
-        return (sockets[0], sockets[1])
-    }
-
-    static func makeNonBlockingPair() throws -> (Socket, Socket) {
-        let (file1, file2) = Socket.socketpair(AF_UNIX, Socket.stream, 0)
-        guard file1 > -1, file2 > -1 else {
-            throw SocketError.makeFailed("SocketPair")
-        }
-
-        let s1 = Socket(file: file1)
-        try s1.setFlags(.nonBlocking)
-
-        let s2 = Socket(file: file2)
-        try s2.setFlags(.nonBlocking)
-
-        return (s1, s2)
-    }
-}
-
-extension SocketAddress {
-
-    func makeStorage() -> sockaddr_storage {
-        var addr = self
-        return withUnsafePointer(to: &addr) {
-            $0.withMemoryRebound(to: sockaddr_storage.self, capacity: 1) {
-                $0.pointee
-            }
-        }
-    }
-}
