@@ -92,26 +92,13 @@ struct Socket: Sendable, Hashable {
     }
 
     func bind(to storage: sockaddr_storage) throws {
-        var storage = storage
         switch Int32(storage.ss_family) {
         case AF_INET:
-            try withUnsafePointer(to: &storage) {
-                try $0.withMemoryRebound(to: sockaddr_in.self, capacity: 1) {
-                    try bind(to: $0.pointee)
-                }
-            }
+            try bind(to: sockaddr_in.make(from: storage))
         case AF_INET6:
-            try withUnsafePointer(to: &storage) {
-                try $0.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) {
-                    try bind(to: $0.pointee)
-                }
-            }
+            try bind(to: sockaddr_in6.make(from: storage))
         case AF_UNIX:
-            try withUnsafePointer(to: &storage) {
-                try $0.withMemoryRebound(to: sockaddr_un.self, capacity: 1) {
-                    try bind(to: $0.pointee)
-                }
-            }
+            try bind(to: sockaddr_un.make(from: storage))
         default:
             throw SocketError.unsupportedAddress
         }
