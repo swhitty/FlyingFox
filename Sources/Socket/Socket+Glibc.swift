@@ -59,7 +59,8 @@ extension Socket {
     static func makeAddressUnix(path: String) -> Glibc.sockaddr_un {
         var addr = Glibc.sockaddr_un()
         addr.sun_family = sa_family_t(AF_UNIX)
-        let len = UInt8(MemoryLayout<UInt8>.size + MemoryLayout<sa_family_t>.size + path.utf8.count + 1)
+        let pathCount = min(path.utf8.count, 104)
+        let len = UInt8(MemoryLayout<UInt8>.size + MemoryLayout<sa_family_t>.size + pathCount + 1)
         _ = withUnsafeMutablePointer(to: &addr.sun_path.0) { ptr in
             path.withCString {
                 strncpy(ptr, $0, Int(len))
