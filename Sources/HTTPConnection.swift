@@ -38,7 +38,7 @@ struct HTTPConnection {
 
     init(socket: AsyncSocket) {
         self.socket = socket
-        self.hostname = HTTPConnection.makeIdentifer(from: try? socket.socket.remotePeer())
+        self.hostname = HTTPConnection.makeIdentifer(from: socket.socket)
     }
 
     // some AsyncSequence<HTTPRequest>
@@ -86,10 +86,19 @@ struct HTTPRequestSequence<S: ChunkedAsyncSequence>: AsyncSequence, AsyncIterato
 
 extension HTTPConnection {
 
-    static func makeIdentifer(from peer: Socket.Address?) -> String {
-        guard let peer = peer else {
+    static func makeIdentifer(from socket: Socket) -> String {
+        guard let peer = try? socket.remotePeer() else {
             return "<unknown>"
         }
+
+        if case .unix = peer, let unixAddress = try? socket.sockname() {
+            return makeIdentifer(from: unixAddress)
+        } else {
+            return makeIdentifer(from: peer)
+        }
+    }
+
+    static func makeIdentifer(from peer: Socket.Address) -> String {
         switch peer {
         case .ip4(let address, port: _):
             return address

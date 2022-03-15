@@ -64,15 +64,3 @@ extension Socket {
         return (s1, s2)
     }
 }
-
-extension SocketAddress {
-
-    func makeStorage() -> sockaddr_storage {
-        var addr = self
-        return withUnsafePointer(to: &addr) {
-            $0.withMemoryRebound(to: sockaddr_storage.self, capacity: 1) {
-                $0.pointee
-            }
-        }
-    }
-}

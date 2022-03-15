@@ -77,6 +77,15 @@ public extension SocketAddress {
             }
         }
     }
+
+    func makeStorage() -> sockaddr_storage {
+        var addr = self
+        return withUnsafePointer(to: &addr) {
+            $0.withMemoryRebound(to: sockaddr_storage.self, capacity: 1) {
+                $0.pointee
+            }
+        }
+    }
 }
 
 extension Socket {
@@ -127,34 +136,4 @@ extension Socket {
         }
         return addr
     }
-}
-
-struct AnySocketAddress {
-    let storage: sockaddr_storage
-    let length: socklen_t
-
-    init<A: SocketAddress>(_ addr: A) {
-        var addr = addr
-        self.storage = withUnsafePointer(to: &addr) {
-            $0.withMemoryRebound(to: sockaddr_storage.self, capacity: 1) {
-                $0.pointee
-            }
-        }
-        self.length = socklen_t(MemoryLayout<A>.size)
-    }
-
-#if canImport(Darwin)
-    init(_ addr: sockaddr_un) {
-        var addr = addr
-        self.storage = withUnsafePointer(to: &addr) {
-            $0.withMemoryRebound(to: sockaddr_storage.self, capacity: 1) {
-                $0.pointee
-            }
-        }
-        self.length = socklen_t(addr.sun_len)
-    }
-#endif
-
-    @available(*, unavailable, message: "use sockaddr_in, sockaddr_in6 and sockaddr_un.")
-    init(_ addr: sockaddr_storage) { fatalError() }
 }

@@ -79,18 +79,41 @@ struct Socket: Sendable, Hashable {
         return option.makeValue(from: valuePtr.pointee)
     }
 
-    func bind(to address: AnySocketAddress) throws {
-        var storage = address.storage
-        let result: Int32 = withUnsafePointer(to: &storage) {
+    func bind<A: SocketAddress>(to address: A) throws {
+        var addr = address
+        let result = withUnsafePointer(to: &addr) {
             $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-                Socket.bind(file, $0, address.length)
+                Socket.bind(file, $0, socklen_t(MemoryLayout<A>.size))
             }
         }
+        guard result >= 0 else {
+            throw SocketError.makeFailed("Bind")
+        }
+    }
 
-        guard result != -1 else {
-            let error = SocketError.makeFailed("Bind")
-            try close()
-            throw error
+    func bind(to storage: sockaddr_storage) throws {
+        var storage = storage
+        switch Int32(storage.ss_family) {
+        case AF_INET:
+            try withUnsafePointer(to: &storage) {
+                try $0.withMemoryRebound(to: sockaddr_in.self, capacity: 1) {
+                    try bind(to: $0.pointee)
+                }
+            }
+        case AF_INET6:
+            try withUnsafePointer(to: &storage) {
+                try $0.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) {
+                    try bind(to: $0.pointee)
+                }
+            }
+        case AF_UNIX:
+            try withUnsafePointer(to: &storage) {
+                try $0.withMemoryRebound(to: sockaddr_un.self, capacity: 1) {
+                    try bind(to: $0.pointee)
+                }
+            }
+        default:
+            throw SocketError.unsupportedAddress
         }
     }
 
@@ -113,6 +136,21 @@ struct Socket: Sendable, Hashable {
         }
         if result != 0 {
             throw SocketError.makeFailed("GetPeerName")
+        }
+        return try Self.makeAddress(from: addr)
+    }
+
+    func sockname() throws -> Address {
+        var addr = sockaddr_storage()
+        var len = socklen_t(MemoryLayout<sockaddr_storage>.size)
+
+        let result = withUnsafeMutablePointer(to: &addr) {
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                Socket.getsockname(file, $0, &len)
+            }
+        }
+        if result != 0 {
+            throw SocketError.makeFailed("GetSockName")
         }
         return try Self.makeAddress(from: addr)
     }

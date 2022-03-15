@@ -193,7 +193,7 @@ final class HTTPServerTests: XCTestCase {
     func testListeningLog_INETPort() {
         let addr = Socket.makeAddressINET(port: 1234)
         XCTAssertEqual(
-            PrintHTTPLogger.makeListening(on: AnySocketAddress(addr)),
+            PrintHTTPLogger.makeListening(on: addr.makeStorage()),
             "starting server port: 1234"
         )
     }
@@ -202,7 +202,7 @@ final class HTTPServerTests: XCTestCase {
         var addr = Socket.makeAddressINET(port: 1234)
         addr.sin_addr = try Socket.makeInAddr(fromIP4: "8.8.8.8")
         XCTAssertEqual(
-            PrintHTTPLogger.makeListening(on: AnySocketAddress(addr)),
+            PrintHTTPLogger.makeListening(on: addr.makeStorage()),
             "starting server 8.8.8.8:1234"
         )
     }
@@ -210,7 +210,7 @@ final class HTTPServerTests: XCTestCase {
     func testListeningLog_INET6Port() {
         let addr = Socket.makeAddressINET6(port: 5678)
         XCTAssertEqual(
-            PrintHTTPLogger.makeListening(on: AnySocketAddress(addr)),
+            PrintHTTPLogger.makeListening(on: addr.makeStorage()),
             "starting server port: 5678"
         )
     }
@@ -219,7 +219,7 @@ final class HTTPServerTests: XCTestCase {
         var addr = Socket.makeAddressINET6(port: 1234)
         addr.sin6_addr = try Socket.makeInAddr(fromIP6: "::1")
         XCTAssertEqual(
-            PrintHTTPLogger.makeListening(on: AnySocketAddress(addr)),
+            PrintHTTPLogger.makeListening(on: addr.makeStorage()),
             "starting server ::1:1234"
         )
     }
@@ -227,7 +227,7 @@ final class HTTPServerTests: XCTestCase {
     func testListeningLog_UnixPath() {
         let addr = Socket.makeAddressUnix(path: "/var/fox/xyz")
         XCTAssertEqual(
-            PrintHTTPLogger.makeListening(on: AnySocketAddress(addr)),
+            PrintHTTPLogger.makeListening(on: addr.makeStorage()),
             "starting server path: /var/fox/xyz"
         )
     }
@@ -236,7 +236,7 @@ final class HTTPServerTests: XCTestCase {
         var addr = Socket.makeAddressUnix(path: "/var/fox/xyz")
         addr.sun_family = sa_family_t(AF_IPX)
         XCTAssertEqual(
-            PrintHTTPLogger.makeListening(on: AnySocketAddress(addr)),
+            PrintHTTPLogger.makeListening(on: addr.makeStorage()),
             "starting server"
         )
     }

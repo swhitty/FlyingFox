@@ -161,11 +161,39 @@ final class SocketTests: XCTestCase {
         )
     }
 
+    func testSocketBind_ToINET() throws {
+        let socket = try Socket(domain: AF_INET, type: Socket.stream)
+        let address = Socket.makeAddressINET(port: 8080).makeStorage()
+        XCTAssertNoThrow(
+            try socket.bind(to: address)
+        )
+    }
+
     func testSocketBind_ToINET6_ThrowsError_WhenInvalid() {
         let socket = Socket(file: -1)
         let address = Socket.makeAddressINET6(port: 8080)
         XCTAssertThrowsError(
-            try socket.bind(to: AnySocketAddress(address))
+            try socket.bind(to: address)
+        )
+    }
+
+    func testSocketBind_ToInvalidStorage_ThrowsUnsupported() {
+        let socket = Socket(file: -1)
+        var addr = Socket.makeAddressUnix(path: "/var/fox/xyz").makeStorage()
+        addr.ss_family = sa_family_t(AF_IPX)
+        XCTAssertThrowsError(
+            try socket.bind(to: addr),
+            of: SocketError.self
+        ) {
+            XCTAssertEqual($0, .unsupportedAddress)
+        }
+    }
+
+    func testSocketBind_ToStorage_ThrowsError_WhenInvalid() {
+        let socket = Socket(file: -1)
+        let address = Socket.makeAddressINET6(port: 8080).makeStorage()
+        XCTAssertThrowsError(
+            try socket.bind(to: address)
         )
     }
 
@@ -194,6 +222,20 @@ final class SocketTests: XCTestCase {
         let socket = Socket(file: -1)
         XCTAssertThrowsError(
             try socket.setFlags(.nonBlocking)
+        )
+    }
+
+    func testSocketRemotePeer_ThrowsError_WhenInvalid() {
+        let socket = Socket(file: -1)
+        XCTAssertThrowsError(
+            try socket.remotePeer()
+        )
+    }
+
+    func testSocket_sockname_ThrowsError_WhenInvalid() {
+        let socket = Socket(file: -1)
+        XCTAssertThrowsError(
+            try socket.sockname()
         )
     }
 

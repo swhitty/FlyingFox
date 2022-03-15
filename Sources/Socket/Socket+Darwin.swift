@@ -98,6 +98,10 @@ extension Socket {
         Darwin.getpeername(fd, addr, len)
     }
 
+    static func getsockname(_ fd: Int32, _ addr: UnsafeMutablePointer<sockaddr>!, _ len: UnsafeMutablePointer<socklen_t>!) -> Int32 {
+        Darwin.getsockname(fd, addr, len)
+    }
+
     static func inet_ntop(_ domain: Int32, _ addr: UnsafeRawPointer!,
                           _ buffer: UnsafeMutablePointer<CChar>!, _ addrLen: socklen_t) throws {
         if Darwin.inet_ntop(domain, addr, buffer, addrLen) == nil {

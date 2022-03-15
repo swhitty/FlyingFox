@@ -33,7 +33,7 @@ import Foundation
 
 public final actor HTTPServer {
 
-    private let address: AnySocketAddress
+    private let address: sockaddr_storage
     private let timeout: TimeInterval
     private let logger: HTTPLogging?
     private var handlers: RoutedHTTPHandler
@@ -42,7 +42,7 @@ public final actor HTTPServer {
                                   timeout: TimeInterval = 15,
                                   logger: HTTPLogging? = defaultLogger(),
                                   handler: HTTPHandler? = nil) {
-        self.address = AnySocketAddress(address)
+        self.address = address.makeStorage()
         self.timeout = timeout
         self.logger = logger
         self.handlers = Self.makeCompositeHandler(root: handler)
@@ -52,7 +52,7 @@ public final actor HTTPServer {
                 timeout: TimeInterval = 15,
                 logger: HTTPLogging? = defaultLogger(),
                 handler: HTTPHandler? = nil) {
-        self.address = AnySocketAddress(Socket.makeAddressINET6(port: port))
+        self.address = Socket.makeAddressINET6(port: port).makeStorage()
         self.timeout = timeout
         self.logger = logger
         self.handlers = Self.makeCompositeHandler(root: handler)
@@ -77,7 +77,7 @@ public final actor HTTPServer {
     }
 
     public func start() async throws {
-        let socket = try Socket(domain: Int32(address.storage.ss_family), type: Socket.stream)
+        let socket = try Socket(domain: Int32(address.ss_family), type: Socket.stream)
         try socket.setValue(true, for: .localAddressReuse)
         #if canImport(Darwin)
         try socket.setValue(true, for: .noSIGPIPE)
@@ -191,13 +191,13 @@ extension HTTPLogging {
         logError("\(connection.identifer) error: \(error.localizedDescription)")
     }
 
-    func logListening(on address: AnySocketAddress) {
+    func logListening(on address: sockaddr_storage) {
         logInfo(Self.makeListening(on: address))
     }
 
-    static func makeListening(on address: AnySocketAddress) -> String {
+    static func makeListening(on address: sockaddr_storage) -> String {
         var comps = ["starting server"]
-        guard let addr = try? Socket.makeAddress(from: address.storage) else {
+        guard let addr = try? Socket.makeAddress(from: address) else {
             return comps.joined()
         }
 
