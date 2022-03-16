@@ -41,3 +41,5 @@ public struct UncheckedSendable<Value>: @unchecked Sendable {
 }
 
 extension UncheckedSendable: Equatable where Value: Equatable { }
+
+extension UncheckedSendable: Hashable where Value: Hashable { }
