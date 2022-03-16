@@ -29,11 +29,12 @@
 //  SOFTWARE.
 //
 
-#if canImport(Glibc)
+#if canImport(Glibc) && compiler(<5.7)
+// swift 5.6 on linux fails to import comformance for these Glibc types 🤷🏻‍♂️:
+// (test targets only)
 import Glibc
 import FlyingFox
 
-// import FlyingFox fails to import comformance for these Glibc types 🤷🏻‍♂️:
 extension sockaddr_in: SocketAddress {
     public static let family = sa_family_t(AF_INET)
 }
