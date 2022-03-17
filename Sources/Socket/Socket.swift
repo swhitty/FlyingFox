@@ -170,8 +170,12 @@ struct Socket: Sendable, Hashable {
                 Socket.connect(file, $0, socklen_t(MemoryLayout<A>.size))
             }
         }
-        guard result >= 0 else {
-            throw SocketError.makeFailed("Connect")
+        guard result >= 0 || errno == EISCONN else {
+            if errno == EINPROGRESS {
+                throw SocketError.blocked
+            } else {
+                throw SocketError.makeFailed("Connect")
+            }
         }
     }
 
@@ -304,6 +308,10 @@ extension SocketOption where Self == Int32SocketOption {
     }
 
     static var receiveBufferSize: Self {
+        Int32SocketOption(name: SO_RCVBUF)
+    }
+
+    static var error: Self {
         Int32SocketOption(name: SO_RCVBUF)
     }
 }

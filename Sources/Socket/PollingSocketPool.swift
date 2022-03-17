@@ -122,19 +122,19 @@ final actor PollingSocketPool: AsyncSocketPool {
             let events = Socket.Events(rawValue: Int32(file.events))
             let revents = Socket.Events(rawValue: Int32(file.revents))
 
-            if !revents.intersection([.disconnected, .error, .invalid]).isEmpty {
-                let socket = SuspendedSocket(file: file.fd, events: events)
-                let continuations = waiting[socket]
-                waiting[socket] = nil
-                continuations?.forEach {
-                    $0.disconnected()
-                }
-            } else if !revents.intersection(events).isEmpty {
+            if !revents.intersection(events).isEmpty {
                 let socket = SuspendedSocket(file: file.fd, events: events)
                 let continuations = waiting[socket]
                 waiting[socket] = nil
                 continuations?.forEach {
                     $0.resume()
+                }
+            } else if !revents.intersection([.disconnected, .error, .invalid]).isEmpty {
+                let socket = SuspendedSocket(file: file.fd, events: events)
+                let continuations = waiting[socket]
+                waiting[socket] = nil
+                continuations?.forEach {
+                    $0.disconnected()
                 }
             }
         }

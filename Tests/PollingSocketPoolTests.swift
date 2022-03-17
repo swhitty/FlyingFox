@@ -104,7 +104,7 @@ final class PollingSocketPoolTests: XCTestCase {
         await XCTAssertThrowsError(try await pool.suspendUntilReady(for: .read, on: socket), of: CancellationError.self)
     }
 
-    func testPoolThowsError_WhenSocketClosed() async throws {
+    func testPoolResumesSocket_WhenSocketClosed() async throws {
         let pool = PollingSocketPool()
         let (s1, s2) = try Socket.makeNonBlockingPair()
         try s2.close()
@@ -113,8 +113,6 @@ final class PollingSocketPoolTests: XCTestCase {
             try await pool.run()
         }
 
-        await XCTAssertThrowsError(try await pool.suspendUntilReady(for: .read, on: s1), of: SocketError.self) {
-            XCTAssertEqual($0, .disconnected)
-        }
+        try await pool.suspendUntilReady(for: .read, on: s1)
     }
 }

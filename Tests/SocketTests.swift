@@ -163,10 +163,13 @@ final class SocketTests: XCTestCase {
 
     func testSocketBind_ToINET() throws {
         let socket = try Socket(domain: AF_INET, type: Socket.stream)
+        try socket.setValue(true, for: .localAddressReuse)
         let address = Socket.makeAddressINET(port: 8080).makeStorage()
         XCTAssertNoThrow(
             try socket.bind(to: address)
         )
+
+        try? socket.close()
     }
 
     func testSocketBind_ToINET6_ThrowsError_WhenInvalid() {

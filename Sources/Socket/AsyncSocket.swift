@@ -56,6 +56,12 @@ struct AsyncSocket: Sendable {
         }
     }
 
+    func connect<A: SocketAddress>(to address: A) async throws {
+        return try await pool.loopUntilReady(for: [.write], on: socket) {
+            try socket.connect(to: address)
+        }
+    }
+
     func read() async throws -> UInt8 {
         try await pool.loopUntilReady(for: .read, on: socket) {
             try socket.read()

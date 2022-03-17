@@ -130,27 +130,42 @@ final class HTTPServerTests: XCTestCase {
     }
 
     func testServer_StartsOnUnixSocket() async throws {
-        let pool = PollingSocketPool()
         var address = sockaddr_un.makeUnix(path: "flyingfox")
         _ = Socket.unlink(&address.sun_path.0)
         let server = HTTPServer.make(address: address)
         await server.appendRoute("*") { _ in
             return HTTPResponse.make(statusCode: .accepted)
         }
-        let poolTask = Task { try await pool.run() }
-        let serverTask = try await server.startDetached()
-
+        let (task, pool) = try await server.startDetached()
         let socket = try AsyncSocket(socket: Socket(domain: AF_UNIX, type: Socket.stream), pool: pool)
-        try socket.socket.connect(to: address)
-        try await socket.writeRequest(.make(headers: [.connection: "keep-alive"]))
+        try await socket.connect(to: address)
+        try await socket.writeRequest(.make())
 
         await XCTAssertEqualAsync(
             try await socket.readResponse().statusCode,
             .accepted
         )
+        task.cancel()
+    }
 
-        poolTask.cancel()
-        serverTask.cancel()
+    func testServer_StartsOnIP4Socket() async throws {
+        let server = HTTPServer.make(address: .makeINET(port: 8080))
+        await server.appendRoute("*") { _ in
+            return HTTPResponse.make(statusCode: .accepted)
+        }
+        let (task, pool) = try await server.startDetached()
+        let socket = try AsyncSocket(socket: Socket(domain: AF_INET, type: Socket.stream), pool: pool)
+        let address = try Socket.makeAddressINET(fromIP4: "127.0.0.1", port: 8080)
+        try await socket.connect(to: address)
+        try await socket.writeRequest(.make())
+
+        await XCTAssertEqualAsync(
+            try await socket.readResponse().statusCode,
+            .accepted
+        )
+        try? socket.close()
+        task.cancel()
+        try? await task.value
     }
 
 #if canImport(Darwin)
@@ -192,8 +207,7 @@ final class HTTPServerTests: XCTestCase {
     }
 
     func testListeningLog_INET() throws {
-        var addr = Socket.makeAddressINET(port: 1234)
-        addr.sin_addr = try Socket.makeInAddr(fromIP4: "8.8.8.8")
+        let addr = try Socket.makeAddressINET(fromIP4: "8.8.8.8", port: 1234)
         XCTAssertEqual(
             PrintHTTPLogger.makeListening(on: addr.makeStorage()),
             "starting server 8.8.8.8:1234"
@@ -292,8 +306,17 @@ extension HTTPServer {
 
     // Ensures server is listening before returning
     // clients can then immediatley connect
-    func startDetached() throws -> Task<Void, Error> {
+    func startDetached() throws -> (task: Task<Void, Error>, pool: AsyncSocketPool) {
+        let pool = PollingSocketPool()
+        let task = try startDetached(pool: pool)
+        return (task, pool)
+    }
+
+    func startDetached(pool: AsyncSocketPool) throws -> Task<Void, Error>{
         let socket = try makeSocketAndListen()
-        return Task { try await start(on: socket) }
+        return Task {
+            defer { try? socket.close() }
+            try await start(on: socket, pool: pool)
+        }
     }
 }

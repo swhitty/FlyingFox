@@ -79,7 +79,7 @@ public final actor HTTPServer {
     public func start() async throws {
         let socket = try makeSocketAndListen()
         do {
-            try await start(on: socket)
+            try await start(on: socket, pool: PollingSocketPool())
         } catch {
             logger?.logCritical("server error: \(error.localizedDescription)")
             try? socket.close()
@@ -98,8 +98,7 @@ public final actor HTTPServer {
         return socket
     }
 
-    func start(on socket: Socket) async throws {
-        let pool = PollingSocketPool()
+    func start(on socket: Socket, pool: AsyncSocketPool) async throws {
         let asyncSocket = try AsyncSocket(socket: socket, pool: pool)
         logger?.logListening(on: address)
 

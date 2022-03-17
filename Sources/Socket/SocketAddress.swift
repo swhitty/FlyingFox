@@ -121,6 +121,12 @@ extension Socket {
         }
     }
 
+    static func makeAddressINET(fromIP4 ip: String, port: UInt16) throws -> sockaddr_in {
+        var address = Socket.makeAddressINET(port: port)
+        address.sin_addr = try Socket.makeInAddr(fromIP4: ip)
+        return address
+    }
+
     static func makeInAddr(fromIP4 address: String) throws -> in_addr {
         var addr = in_addr()
         guard address.withCString({ Socket.inet_pton(AF_INET, $0, &addr) }) == 1 else {
