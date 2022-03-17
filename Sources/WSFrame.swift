@@ -42,9 +42,9 @@ public struct WSFrame: Sendable, Hashable {
     public var payload: Data
 
     public init(fin: Bool,
-                rsv1: Bool,
-                rsv2: Bool,
-                rsv3: Bool,
+                rsv1: Bool = false,
+                rsv2: Bool = false,
+                rsv3: Bool = false,
                 opcode: Opcode,
                 mask: Mask?,
                 payload: Data) {
@@ -88,5 +88,20 @@ public struct WSFrame: Sendable, Hashable {
             self.m3 = m3
             self.m4 = m4
         }
+    }
+}
+
+public extension WSFrame {
+    static func close(message: String? = nil, mask: Mask? = nil) -> Self {
+        var payload = message == nil ? Data([0x03, 0xE8]) : Data([0x03, 0xEA])
+        if let data = message?.data(using: .utf8) {
+            payload.append(contentsOf: data)
+        }
+        return WSFrame(
+            fin: true,
+            opcode: .close,
+            mask: mask,
+            payload: Data(payload)
+        )
     }
 }

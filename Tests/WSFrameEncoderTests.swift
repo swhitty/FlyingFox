@@ -313,11 +313,59 @@ final class WSFrameEncoderTests: XCTestCase {
             of: SocketError.self
         ) { XCTAssertEqual($0, .disconnected) }
     }
-}
 
-private extension UInt8 {
-    static func ascii(_ char: Character) -> Self {
-        char.asciiValue!
+#if canImport(Darwin)
+    func testEchoVIServer() async throws {
+        let task = URLSession.shared.webSocketTask(with: URL(string: "ws://ws.vi-server.org/mirror")!)
+        task.resume()
+        try await task.send(.string("Hello"))
+        try await print("Receive", task.receive())
+    }
+#endif
+
+    func testWebSocketConnection() async throws {
+        let pool = PollingSocketPool()
+        let poolTask = Task { try await pool.run() }
+
+        var addr = Socket.makeAddressINET(port: 80)
+        addr.sin_addr = try Socket.makeInAddr(fromIP4: "192.236.209.31")
+        let sock = try Socket(domain: AF_INET, type: Socket.stream)
+        try sock.connect(to: addr)
+        let socket = try AsyncSocket(socket: sock, pool: pool)
+
+        let key = withUnsafeBytes(of: UUID().uuid) {
+            Data($0).base64EncodedString()
+        }
+
+        let expected = SHA1.hash(data: (key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").data(using: .utf8)!).base64EncodedString()
+
+        var request = HTTPRequest.make(path: "/mirror")
+        request.headers[.host] = "ws.vi-server.org"
+        request.headers[HTTPHeader("Upgrade")] = "websocket"
+        request.headers[.connection] = "Upgrade"
+        request.headers[HTTPHeader("Sec-WebSocket-Key")] = key
+        request.headers[HTTPHeader("Sec-WebSocket-Version")] = "13"
+        try print(String(data: HTTPEncoder.encodeRequest(request), encoding: .utf8)!)
+
+        try await socket.writeRequest(request)
+        let response = try await socket.readResponse()
+
+        XCTAssertEqual(expected, response.headers[HTTPHeader("Sec-WebSocket-Accept")])
+        try print(String(data: HTTPEncoder.encodeResponse(response), encoding: .utf8)!)
+
+        var frame = WSFrame.make(fin: true, opcode: .text, mask: .mock, payload: "FlyingFox".data(using: .utf8)!)
+        try await socket.writeFrame(frame)
+        try await print("Frame", socket.readFrame())
+
+        frame = WSFrame.make(fin: true, opcode: .text, mask: .mock, payload: "FlyingSox".data(using: .utf8)!)
+        try await socket.writeFrame(frame)
+        try await print("Frame", socket.readFrame())
+
+        frame = WSFrame.close(mask: .mock)
+        try await socket.writeFrame(frame)
+        try await print("Frame", socket.readFrame())
+
+        poolTask.cancel()
     }
 }
 
@@ -341,24 +389,5 @@ private extension WSFrameEncoder {
 
     static func decodeLengthMask(_ bytes: [UInt8]) async throws -> (length: Int, mask: WSFrame.Mask?) {
         try await decodeLengthMask(from: ConsumingAsyncSequence(bytes))
-    }
-}
-
-extension WSFrame {
-
-    static func make(fin: Bool = true,
-                     rsv1: Bool = false,
-                     rsv2: Bool = false,
-                     rsv3: Bool = false,
-                     opcode: Opcode = .text,
-                     mask: Mask? = nil,
-                     payload: Data = Data()) -> Self {
-        WSFrame(fin: fin,
-                rsv1: rsv1,
-                rsv2: rsv2,
-                rsv3: rsv3,
-                opcode: opcode,
-                mask: mask,
-                payload: payload)
     }
 }
