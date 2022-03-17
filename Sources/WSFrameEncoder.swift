@@ -58,7 +58,7 @@ struct WSFrameEncoder {
     static func encodeFrame(_ frame: WSFrame) -> Data {
         var data = Data([encodeFrame0(frame)])
         data.append(
-            contentsOf: encodeLength(frame.payload.count, isMask: frame.mask != nil)
+            contentsOf: encodeLength(frame.payload.count, hasMask: frame.mask != nil)
         )
         data.append(
             contentsOf: encodePayload(frame.payload, mask: frame.mask)
@@ -67,7 +67,9 @@ struct WSFrameEncoder {
     }
 
     static func decodeFrame<S>(from bytes: S) async throws -> WSFrame where S: ChunkedAsyncSequence, S.Element == UInt8 {
-        let frame = try await decodeFrame(from: bytes.take())
+        var frame = try await decodeFrame(from: bytes.take())
+        let (length, mask) = try await decodeLengthMask(from: bytes)
+        frame.payload = try await decodePayload(from: bytes, length: length, mask: mask)
         return frame
     }
 
@@ -89,19 +91,15 @@ struct WSFrameEncoder {
                 payload: Data())
     }
 
-    static func decodeOpcode(from byte0: UInt8) -> WSFrame.Opcode {
-        .text
-    }
-
-    static func encodeLength(_ length: Int, isMask: Bool) -> [UInt8] {
+    static func encodeLength(_ length: Int, hasMask: Bool) -> [UInt8] {
         if length <= 125 {
-            return [isMask.byte << 7 | UInt8(length)]
+            return [hasMask.byte << 7 | UInt8(length)]
         } else if length <= UInt16.max {
-            return [isMask.byte << 7 | UInt8(126),
+            return [hasMask.byte << 7 | UInt8(126),
                     UInt8(length >> 8 & 0xFF),
                     UInt8(length >> 0 & 0xFF)]
         } else {
-            return [isMask.byte << 7 | UInt8(127),
+            return [hasMask.byte << 7 | UInt8(127),
                     UInt8(length >> 56 & 0xFF),
                     UInt8(length >> 48 & 0xFF),
                     UInt8(length >> 40 & 0xFF),
@@ -111,6 +109,53 @@ struct WSFrameEncoder {
                     UInt8(length >> 8 & 0xFF),
                     UInt8(length >> 0 & 0xFF)]
         }
+    }
+
+    static func decodePayload<S>(from bytes: S, length: Int, mask: WSFrame.Mask?) async throws -> Data where S: ChunkedAsyncSequence, S.Element == UInt8 {
+        var iterator = bytes.makeAsyncIterator()
+        guard var payload = try await iterator.nextChunk(count: length) else {
+            throw SocketError.disconnected
+        }
+        if let mask = mask {
+            for idx in payload.indices {
+                payload[idx] ^= mask[idx % 4]
+            }
+        }
+        return Data(payload)
+    }
+
+    static func decodeLengthMask<S>(from bytes: S) async throws -> (length: Int, mask: WSFrame.Mask?) where S: ChunkedAsyncSequence, S.Element == UInt8 {
+        let byte0 = try await bytes.take()
+        let hasMask = byte0 & 0b10000000 == 0b10000000
+        let length0 = byte0 & 0b01111111
+        switch length0 {
+        case 0...125:
+            return try await (Int(length0), hasMask ? decodeMask(from: bytes) : nil)
+        case 126:
+            let length = try await UInt16(bytes.take()) |
+                                   UInt16(bytes.take()) << 8
+            return try await (Int(length), hasMask ? decodeMask(from: bytes) : nil)
+        default:
+            let length = try await UInt64(bytes.take()) |
+                                   UInt64(bytes.take()) << 8 |
+                                   UInt64(bytes.take()) << 16 |
+                                   UInt64(bytes.take()) << 24 |
+                                   UInt64(bytes.take()) << 32 |
+                                   UInt64(bytes.take()) << 40 |
+                                   UInt64(bytes.take()) << 48 |
+                                   UInt64(bytes.take()) << 56
+            guard length <= Int.max else {
+                throw Error("Length is greater than Int.max")
+            }
+            return try await (Int(length), hasMask ? decodeMask(from: bytes) : nil)
+        }
+    }
+
+    static func decodeMask<S>(from bytes: S) async throws -> WSFrame.Mask where S: ChunkedAsyncSequence, S.Element == UInt8 {
+        try await WSFrame.Mask(m1: bytes.take(),
+                               m2: bytes.take(),
+                               m3: bytes.take(),
+                               m4: bytes.take())
     }
 
     static func encodePayload(_ payload: Data, mask: WSFrame.Mask?) -> Data {
@@ -126,6 +171,17 @@ struct WSFrameEncoder {
     }
 }
 
+extension WSFrameEncoder {
+
+    struct Error: LocalizedError {
+        var errorDescription: String?
+
+        init(_ description: String) {
+            self.errorDescription = description
+        }
+    }
+}
+
 private extension Bool {
     var byte: UInt8 { self ? 1 : 0 }
 }
@@ -133,6 +189,7 @@ private extension Bool {
 private extension WSFrame.Mask {
     subscript(_ idx: Int) -> UInt8 {
         get {
+            precondition(idx >= 0 && idx < 4)
             switch idx {
             case 0:
                 return m1
@@ -140,15 +197,12 @@ private extension WSFrame.Mask {
                 return m2
             case 2:
                 return m3
-            case 3:
-                return m4
             default:
-                preconditionFailure("invalid index")
+                return m4
             }
         }
     }
 }
-
 
 extension AsyncSequence where Element == UInt8 {
 
