@@ -29,6 +29,8 @@
 //  SOFTWARE.
 //
 
+import Foundation
+
 public struct WebSocketHTTPHander: HTTPHandler, Sendable {
 
     private let handler: WSHandler
@@ -52,5 +54,11 @@ public struct WebSocketHTTPHander: HTTPHandler, Sendable {
         SHA1
             .hash(data: (key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").data(using: .utf8)!)
             .base64EncodedString()
+    }
+
+    static func makeSecWebSocketKeyValue(for uuid: UUID = .init()) -> String {
+        withUnsafeBytes(of: uuid.uuid) {
+            Data($0).base64EncodedString()
+        }
     }
 }

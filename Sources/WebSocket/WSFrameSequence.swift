@@ -53,18 +53,6 @@ public struct WSFrameSequence: AsyncSequence, AsyncIteratorProtocol {
         var iterator = inner.makeAsyncIterator()
         return try await iterator.next()
     }
-
-    private static func nextFrame<S>(from bytes: S) async throws -> WSFrame? where S: ChunkedAsyncSequence, S.Element == UInt8 {
-        do {
-            return try await WSFrameEncoder.decodeFrame(from: bytes)
-        } catch SocketError.disconnected {
-            return nil
-        } catch is SequenceTerminationError {
-            return nil
-        } catch {
-            throw error
-        }
-    }
 }
 
 private struct DecodeFrameSequence<S: ChunkedAsyncSequence>: AsyncSequence, AsyncIteratorProtocol where S.Element == UInt8 {
@@ -78,9 +66,7 @@ private struct DecodeFrameSequence<S: ChunkedAsyncSequence>: AsyncSequence, Asyn
     public mutating func next() async throws -> WSFrame? {
         do {
             return try await WSFrameEncoder.decodeFrame(from: bytes)
-        } catch SocketError.disconnected {
-            return nil
-        } catch is SequenceTerminationError {
+        } catch SocketError.disconnected, is SequenceTerminationError {
             return nil
         } catch {
             throw error

@@ -314,24 +314,11 @@ final class WSFrameEncoderTests: XCTestCase {
         ) { XCTAssertEqual($0, .disconnected) }
     }
 
-#if canImport(Darwin) && compiler(>=5.6)
-    func testEchoVIServer() async throws {
-        guard #available(macOS 12.0, *) else { return }
-        let task = URLSession.shared.webSocketTask(with: URL(string: "ws://ws.vi-server.org/mirror")!)
-        task.resume()
-
-        try await task.send(.string("Hello"))
-        try await print("Receive", task.receive())
-    }
-#endif
-
-    func testWebSocketConnection() async throws {
+    func debug_testWebSocketConnectionToVI() async throws {
         let addr = try Socket.makeAddressINET(fromIP4: "192.236.209.31", port: 80)
         let socket = try await AsyncSocket(connectedTo: addr, pool: .polling)
 
-        let key = withUnsafeBytes(of: UUID().uuid) {
-            Data($0).base64EncodedString()
-        }
+        let key = WebSocketHTTPHander.makeSecWebSocketKeyValue()
 
         var request = HTTPRequest.make(path: "/mirror")
         request.headers[.host] = "ws.vi-server.org"
@@ -344,8 +331,10 @@ final class WSFrameEncoderTests: XCTestCase {
         try await socket.writeRequest(request)
         let response = try await socket.readResponse()
 
-        let expected = WebSocketHTTPHander.makeSecWebSocketAcceptValue(for: key)
-        XCTAssertEqual(expected, response.headers[HTTPHeader("Sec-WebSocket-Accept")])
+        XCTAssertEqual(
+            response.headers[.webSocketAccept],
+            WebSocketHTTPHander.makeSecWebSocketAcceptValue(for: key)
+        )
         print(String(data: HTTPEncoder.encodeResponse(response), encoding: .utf8)!)
 
         var frame = WSFrame.make(fin: true, opcode: .text, mask: .mock, payload: "FlyingFox".data(using: .utf8)!)
@@ -359,46 +348,6 @@ final class WSFrameEncoderTests: XCTestCase {
         frame = WSFrame.close(mask: .mock)
         try await socket.writeFrame(frame)
         try await print("Frame", socket.readFrame())
-    }
-
-    func testWebSocketHandler() async throws {
-        let key = withUnsafeBytes(of: UUID().uuid) {
-            Data($0).base64EncodedString()
-        }
-
-        let server = HTTPServer(port: 8080)
-        await server.appendRoute("GET /socket", to: .webSocket(WebSocketEchoHandler()))
-        let task = try await server.startDetached()
-
-        let addr = try Socket.makeAddressINET(fromIP4: "127.0.0.1", port: 8080)
-        let socket = try await AsyncSocket(connectedTo: addr, pool: .polling)
-
-        var request = HTTPRequest.make(path: "/socket")
-        request.headers[.upgrade] = "websocket"
-        request.headers[.connection] = "Upgrade"
-        request.headers[.webSocketVersion] = "13"
-        request.headers[.webSocketKey] = key
-        try print(String(data: HTTPEncoder.encodeRequest(request), encoding: .utf8)!)
-
-        try await socket.writeRequest(request)
-        let response = try await socket.readResponse()
-
-        let expected = WebSocketHTTPHander.makeSecWebSocketAcceptValue(for: key)
-        XCTAssertEqual(expected, response.headers[HTTPHeader("Sec-WebSocket-Accept")])
-        print(String(data: HTTPEncoder.encodeResponse(response), encoding: .utf8)!)
-
-        var frame = WSFrame.make(fin: true, opcode: .text, mask: .mock, payload: "FlyingFox".data(using: .utf8)!)
-        try await socket.writeFrame(frame)
-        try await print("Frame", socket.readFrame())
-
-        frame = WSFrame.make(fin: true, opcode: .text, mask: .mock, payload: "FlyingSox".data(using: .utf8)!)
-        try await socket.writeFrame(frame)
-        try await print("Frame", socket.readFrame())
-
-        frame = WSFrame.close(mask: .mock)
-        try await socket.writeFrame(frame)
-        try await print("Frame", socket.readFrame())
-        task.cancel()
     }
 }
 

@@ -88,9 +88,7 @@ final class HTTPRequestSequence<S: ChunkedAsyncSequence>: AsyncSequence, AsyncIt
                 isComplete = true
             }
             return request
-        } catch SocketError.disconnected {
-            return nil
-        } catch is SequenceTerminationError {
+        } catch SocketError.disconnected, is SequenceTerminationError {
             return nil
         } catch {
             throw error

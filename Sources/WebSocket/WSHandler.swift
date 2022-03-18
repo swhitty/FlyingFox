@@ -35,7 +35,7 @@ public protocol WSHandler: Sendable {
 
 public struct WebSocketEchoHandler: WSHandler {
 
-    public func makeSocketFrames(for request: WSFrameSequence) async throws -> WSFrameSequence {
+    public func makeSocketFrames(for request: WSFrameSequence) -> WSFrameSequence {
         WSFrameSequence(request.compactMap(Self.makeEchoFrame))
     }
 

@@ -1,8 +1,8 @@
 //
-//  WSFrameSequenceTests.swift
+//  WebSocketEchoHandlerTests.swift
 //  FlyingFox
 //
-//  Created by Simon Whitty on 18/03/2022.
+//  Created by Simon Whitty on 19/03/2022.
 //  Copyright © 2022 Simon Whitty. All rights reserved.
 //
 //  Distributed under the permissive MIT license
@@ -33,43 +33,15 @@
 import Foundation
 import XCTest
 
-final class WSFrameSequenceTests: XCTestCase {
+final class WebSocketEchoHandlerTests: XCTestCase {
 
-    func testSequenceDecodesFramesFromBytes() async throws {
+    func testEcho() async throws {
+        let request = WSFrameSequence.make([.fish, .chips, .ping, .fish, .pong, .chips, .close])
+        let response = WebSocketEchoHandler().makeSocketFrames(for: request)
+
         await XCTAssertEqualAsync(
-            try await WSFrameSequence.make([.fish, .chips, .close]).collectAll(),
-            [.fish, .chips, .close]
+            try await response.collectAll(),
+            [.fish, .chips, .pong, .fish, .chips, .close(message: "Goodbye")]
         )
-        await XCTAssertEqualAsync(
-            try await WSFrameSequence.make([.close]).collectAll(),
-            [.close]
-        )
-        await XCTAssertEqualAsync(
-            try await WSFrameSequence.make([]).collectAll(),
-            []
-        )
-    }
-}
-
-extension WSFrame {
-    static let fish = WSFrame.make(payload: "Fish".data(using: .utf8)!)
-    static let chips = WSFrame.make(payload: "Chips".data(using: .utf8)!)
-    static let close = WSFrame.close(message: "Bye")
-    static let ping = WSFrame.make(opcode: .ping)
-    static let pong = WSFrame.make(opcode: .pong)
-}
-
-extension WSFrameSequence {
-    static func make(_ frames: [WSFrame]) -> WSFrameSequence {
-        let bytes = ConsumingAsyncSequence(frames.flatMap(WSFrameEncoder.encodeFrame))
-        return WSFrameSequence(bytes)
-    }
-}
-
-extension AsyncSequence {
-    func collectAll() async throws -> [Element] {
-        let collect = collectUntil { _ in false }
-        var iterator = collect.makeAsyncIterator()
-        return try await iterator.next() ?? []
     }
 }
