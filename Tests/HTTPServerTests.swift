@@ -360,6 +360,7 @@ extension HTTPServer {
     }
 }
 
+#if canImport(Darwin)
 extension URLSessionWebSocketTask.Message: Equatable {
     public static func == (lhs: URLSessionWebSocketTask.Message, rhs: URLSessionWebSocketTask.Message) -> Bool {
         switch (lhs, rhs) {
@@ -372,3 +373,4 @@ extension URLSessionWebSocketTask.Message: Equatable {
         }
     }
 }
+#endif
