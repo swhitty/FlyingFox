@@ -35,6 +35,18 @@ extension AsyncSequence {
     func collectUntil(buffer: @escaping ([Element]) -> Bool) -> CollectUntil<Self> {
         CollectUntil(sequence: self, until: buffer)
     }
+
+    func takeNext() async throws -> Element {
+        var iterator = makeAsyncIterator()
+        guard let line = try await iterator.next() else {
+            throw SequenceTerminationError()
+        }
+        return line
+    }
+}
+
+struct SequenceTerminationError: LocalizedError {
+    var errorDescription: String? = "Sequence Terminated"
 }
 
 struct ClosureSequence<Element>: AsyncSequence, AsyncIteratorProtocol {

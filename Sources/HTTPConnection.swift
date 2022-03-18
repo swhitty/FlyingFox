@@ -42,7 +42,7 @@ struct HTTPConnection {
     }
 
     // some AsyncSequence<HTTPRequest>
-    var requests: HTTPRequestSequence<ByteSequence> {
+    var requests: HTTPRequestSequence<AsyncSocketReadSequence> {
         HTTPRequestSequence(bytes: socket.bytes)
     }
 
@@ -77,6 +77,8 @@ struct HTTPRequestSequence<S: ChunkedAsyncSequence>: AsyncSequence, AsyncIterato
             }
             return request
         } catch SocketError.disconnected {
+            return nil
+        } catch is SequenceTerminationError {
             return nil
         } catch {
             throw error

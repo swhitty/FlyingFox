@@ -108,8 +108,8 @@ struct AsyncSocket: Sendable {
         try socket.close()
     }
 
-    var bytes: ByteSequence {
-        ByteSequence(socket: self)
+    var bytes: AsyncSocketReadSequence {
+        AsyncSocketReadSequence(socket: self)
     }
 
     var sockets: ClosureSequence<AsyncSocket> {
@@ -134,12 +134,12 @@ private extension AsyncSocketPool {
     }
 }
 
-struct ByteSequence: ChunkedAsyncSequence, ChunkedAsyncIteratorProtocol {
+struct AsyncSocketReadSequence: ChunkedAsyncSequence, ChunkedAsyncIteratorProtocol {
     typealias Element = UInt8
 
     let socket: AsyncSocket
 
-    func makeAsyncIterator() -> ByteSequence { self }
+    func makeAsyncIterator() -> AsyncSocketReadSequence { self }
 
     mutating func next() async throws -> UInt8? {
         do {
