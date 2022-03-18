@@ -152,6 +152,12 @@ final class HTTPConnectionTests: XCTestCase {
     }
 }
 
+private extension HTTPConnection {
+    init(socket: AsyncSocket) {
+        self.init(socket: socket, logger: nil)
+    }
+}
+
 extension AsyncSequence {
     func first() async throws -> Element {
         guard let next = try await first(where: { _ in true }) else {

@@ -33,28 +33,13 @@ import Foundation
 
 struct HTTPEncoder {
 
-    static func makeStatusCode(from response: HTTPResponse) -> HTTPStatusCode {
-        switch response.payload {
-        case .body:
-            return response.statusCode
-        case .webSocket:
-            return .switchingProtocols
-        }
-    }
-
     static func makeHeaderLines(from response: HTTPResponse) -> [String] {
-        let statusCode = makeStatusCode(from: response)
         let status = [response.version.rawValue,
-                      String(statusCode.code),
-                      statusCode.phrase].joined(separator: " ")
+                      String(response.statusCode.code),
+                      response.statusCode.phrase].joined(separator: " ")
 
         var httpHeaders = response.headers
         httpHeaders[.contentLength] = String(response.body?.count ?? 0)
-        if case .webSocket = response.payload {
-            httpHeaders[.connection] = "upgrade"
-            httpHeaders[.upgrade] = "websocket"
-            //httpHeaders[.webSocketAccept] = "0dqj424qQvratGncPQ830go3JBw="
-        }
         let headers = httpHeaders.map { "\($0.key.rawValue): \($0.value)" }
 
         return [status] + headers + ["\r\n"]

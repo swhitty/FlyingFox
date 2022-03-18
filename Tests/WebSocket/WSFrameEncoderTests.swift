@@ -314,14 +314,16 @@ final class WSFrameEncoderTests: XCTestCase {
         ) { XCTAssertEqual($0, .disconnected) }
     }
 
-//#if canImport(Darwin)
-//    func testEchoVIServer() async throws {
-//        let task = URLSession.shared.webSocketTask(with: URL(string: "ws://ws.vi-server.org/mirror")!)
-//        task.resume()
-//        try await task.send(.string("Hello"))
-//        try await print("Receive", task.receive())
-//    }
-//#endif
+#if canImport(Darwin) && compiler(>=5.6)
+    func testEchoVIServer() async throws {
+        guard #available(macOS 12.0, *) else { return }
+        let task = URLSession.shared.webSocketTask(with: URL(string: "ws://ws.vi-server.org/mirror")!)
+        task.resume()
+
+        try await task.send(.string("Hello"))
+        try await print("Receive", task.receive())
+    }
+#endif
 
     func testWebSocketConnection() async throws {
         let addr = try Socket.makeAddressINET(fromIP4: "192.236.209.31", port: 80)
@@ -331,19 +333,18 @@ final class WSFrameEncoderTests: XCTestCase {
             Data($0).base64EncodedString()
         }
 
-        let expected = SHA1.hash(data: (key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").data(using: .utf8)!).base64EncodedString()
-
         var request = HTTPRequest.make(path: "/mirror")
         request.headers[.host] = "ws.vi-server.org"
-        request.headers[HTTPHeader("Upgrade")] = "websocket"
+        request.headers[.upgrade] = "websocket"
         request.headers[.connection] = "Upgrade"
-        request.headers[HTTPHeader("Sec-WebSocket-Key")] = key
-        request.headers[HTTPHeader("Sec-WebSocket-Version")] = "13"
+        request.headers[.webSocketVersion] = "13"
+        request.headers[.webSocketKey] = key
         try print(String(data: HTTPEncoder.encodeRequest(request), encoding: .utf8)!)
 
         try await socket.writeRequest(request)
         let response = try await socket.readResponse()
 
+        let expected = WebSocketHTTPHander.makeSecWebSocketAcceptValue(for: key)
         XCTAssertEqual(expected, response.headers[HTTPHeader("Sec-WebSocket-Accept")])
         print(String(data: HTTPEncoder.encodeResponse(response), encoding: .utf8)!)
 
@@ -364,31 +365,25 @@ final class WSFrameEncoderTests: XCTestCase {
         let key = withUnsafeBytes(of: UUID().uuid) {
             Data($0).base64EncodedString()
         }
-        let expected = SHA1.hash(data: (key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").data(using: .utf8)!).base64EncodedString()
-
 
         let server = HTTPServer(port: 8080)
-        await server.appendRoute("*") { _ in
-            HTTPResponse(headers: [.webSocketAccept: expected],
-                         webSocket: WebSocketEchoHandler())
-        }
+        await server.appendRoute("GET /socket", to: .webSocket(WebSocketEchoHandler()))
         let task = try await server.startDetached()
 
         let addr = try Socket.makeAddressINET(fromIP4: "127.0.0.1", port: 8080)
         let socket = try await AsyncSocket(connectedTo: addr, pool: .polling)
 
-
-        var request = HTTPRequest.make(path: "/mirror")
-        request.headers[.host] = "ws.vi-server.org"
-        request.headers[HTTPHeader("Upgrade")] = "websocket"
+        var request = HTTPRequest.make(path: "/socket")
+        request.headers[.upgrade] = "websocket"
         request.headers[.connection] = "Upgrade"
-        request.headers[HTTPHeader("Sec-WebSocket-Key")] = key
-        request.headers[HTTPHeader("Sec-WebSocket-Version")] = "13"
+        request.headers[.webSocketVersion] = "13"
+        request.headers[.webSocketKey] = key
         try print(String(data: HTTPEncoder.encodeRequest(request), encoding: .utf8)!)
 
         try await socket.writeRequest(request)
         let response = try await socket.readResponse()
 
+        let expected = WebSocketHTTPHander.makeSecWebSocketAcceptValue(for: key)
         XCTAssertEqual(expected, response.headers[HTTPHeader("Sec-WebSocket-Accept")])
         print(String(data: HTTPEncoder.encodeResponse(response), encoding: .utf8)!)
 

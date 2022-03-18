@@ -63,3 +63,9 @@ public extension HTTPHandler where Self == ClosureHTTPHandler {
         ClosureHTTPHandler { _ in throw HTTPUnhandledError() }
     }
 }
+
+public extension HTTPHandler where Self == WebSocketHTTPHander {
+    static func webSocket(_ handler: WSHandler) -> WebSocketHTTPHander {
+        WebSocketHTTPHander(handler: handler)
+    }
+}

@@ -35,10 +35,12 @@ struct HTTPConnection {
 
     let hostname: String
     private let socket: AsyncSocket
+    private let logger: HTTPLogging?
     let requests: HTTPRequestSequence<AsyncSocketReadSequence>
 
-    init(socket: AsyncSocket) {
+    init(socket: AsyncSocket, logger: HTTPLogging?) {
         self.socket = socket
+        self.logger = logger
         self.hostname = HTTPConnection.makeIdentifer(from: socket.socket)
         self.requests = HTTPRequestSequence(bytes: socket.bytes)
     }
@@ -47,10 +49,16 @@ struct HTTPConnection {
         try await socket.write(HTTPEncoder.encodeResponse(response))
 
         if case let .webSocket(handler) = response.payload {
-            requests.isComplete = true
-            for try await frame in try await handler.makeSocketFrames(for: WSFrameSequence(socket.bytes)) {
-                try await socket.write(WSFrameEncoder.encodeFrame(frame))
-            }
+            try await switchToWebSocket(with: handler)
+        }
+    }
+
+    func switchToWebSocket(with handler: WSHandler) async throws {
+        logger?.logSwitchProtocol(self, to: "websocket")
+
+        requests.isComplete = true
+        for try await frame in try await handler.makeSocketFrames(for: WSFrameSequence(socket.bytes)) {
+            try await socket.write(WSFrameEncoder.encodeFrame(frame))
         }
     }
 
@@ -94,7 +102,7 @@ extension HTTPConnection {
 
     static func makeIdentifer(from socket: Socket) -> String {
         guard let peer = try? socket.remotePeer() else {
-            return "<unknown>"
+            return "unknown"
         }
 
         if case .unix = peer, let unixAddress = try? socket.sockname() {

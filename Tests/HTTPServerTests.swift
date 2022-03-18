@@ -186,6 +186,22 @@ final class HTTPServerTests: XCTestCase {
     }
 #endif
 
+#if canImport(Darwin) && compiler(>=5.6)
+    func testServer_ResturnsWebSocketFrames() async throws {
+        let server = HTTPServer(port: 8080)
+        await server.appendRoute("GET /socket", to: .webSocket(WebSocketEchoHandler()))
+        let task = try await server.startDetached()
+
+        let wsTask = URLSession.shared.webSocketTask(with: URL(string: "ws://localhost:8080/socket")!)
+        wsTask.resume()
+
+        try await wsTask.send(.string("Hello"))
+        await XCTAssertEqualAsync(try await wsTask.receive(), .string("Hello"))
+
+        task.cancel()
+    }
+#endif
+
 #if canImport(Darwin)
     func testDefaultLogger_IsOSLog() async throws {
         XCTAssertTrue(HTTPServer.defaultLogger() is OSLogHTTPLogging)
@@ -310,6 +326,19 @@ extension HTTPServer {
         return Task {
             defer { try? socket.close() }
             try await start(on: socket, pool: pool)
+        }
+    }
+}
+
+extension URLSessionWebSocketTask.Message: Equatable {
+    public static func == (lhs: URLSessionWebSocketTask.Message, rhs: URLSessionWebSocketTask.Message) -> Bool {
+        switch (lhs, rhs) {
+        case (.string(let lval), .string(let rval)):
+            return lval == rval
+        case (.data(let lval), .data(let rval)):
+            return lval == rval
+        default:
+            return false
         }
     }
 }

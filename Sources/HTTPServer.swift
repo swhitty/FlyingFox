@@ -115,10 +115,10 @@ public final actor HTTPServer {
 
     private func listenForConnections(on socket: AsyncSocket) async throws {
         do {
-            try await withThrowingTaskGroup(of: Void.self) { group in
+            try await withThrowingTaskGroup(of: Void.self) { [logger] group in
                 for try await socket in socket.sockets {
                     group.addTask {
-                        await self.handleConnection(HTTPConnection(socket: socket))
+                        await self.handleConnection(HTTPConnection(socket: socket, logger: logger))
                     }
                 }
                 group.cancelAll()
@@ -184,6 +184,10 @@ extension HTTPLogging {
 
     func logCloseConnection(_ connection: HTTPConnection) {
         logInfo("\(connection.identifer) close connection")
+    }
+
+    func logSwitchProtocol(_ connection: HTTPConnection, to protocol: String) {
+        logInfo("\(connection.identifer) switching protocol to \(`protocol`)")
     }
 
     func logRequest(_ request: HTTPRequest, on connection: HTTPConnection) {
