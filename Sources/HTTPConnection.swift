@@ -35,19 +35,23 @@ struct HTTPConnection {
 
     let hostname: String
     private let socket: AsyncSocket
+    let requests: HTTPRequestSequence<AsyncSocketReadSequence>
 
     init(socket: AsyncSocket) {
         self.socket = socket
         self.hostname = HTTPConnection.makeIdentifer(from: socket.socket)
-    }
-
-    // some AsyncSequence<HTTPRequest>
-    var requests: HTTPRequestSequence<AsyncSocketReadSequence> {
-        HTTPRequestSequence(bytes: socket.bytes)
+        self.requests = HTTPRequestSequence(bytes: socket.bytes)
     }
 
     func sendResponse(_ response: HTTPResponse) async throws {
         try await socket.write(HTTPEncoder.encodeResponse(response))
+
+        if case let .webSocket(handler) = response.payload {
+            requests.isComplete = true
+            for try await frame in try await handler.makeSocketFrames(for: WSFrameSequence(socket.bytes)) {
+                try await socket.write(WSFrameEncoder.encodeFrame(frame))
+            }
+        }
     }
 
     func close() throws {
@@ -55,10 +59,10 @@ struct HTTPConnection {
     }
 }
 
-struct HTTPRequestSequence<S: ChunkedAsyncSequence>: AsyncSequence, AsyncIteratorProtocol where S.Element == UInt8 {
+final class HTTPRequestSequence<S: ChunkedAsyncSequence>: AsyncSequence, AsyncIteratorProtocol where S.Element == UInt8 {
     typealias Element = HTTPRequest
     private let bytes: S
-    private var isComplete: Bool
+    fileprivate var isComplete: Bool
 
     init(bytes: S) {
         self.bytes = bytes
@@ -67,7 +71,7 @@ struct HTTPRequestSequence<S: ChunkedAsyncSequence>: AsyncSequence, AsyncIterato
 
     func makeAsyncIterator() -> HTTPRequestSequence { self }
 
-    mutating func next() async throws -> HTTPRequest? {
+    func next() async throws -> HTTPRequest? {
         guard !isComplete else { return nil }
 
         do {

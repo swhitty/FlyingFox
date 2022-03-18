@@ -50,7 +50,7 @@ struct SequenceTerminationError: LocalizedError {
 }
 
 struct ClosureSequence<Element>: AsyncSequence, AsyncIteratorProtocol {
-    let closure: () async throws -> Element
+    let closure: () async throws -> Element?
 
     func makeAsyncIterator() -> ClosureSequence<Element> { self }
 
@@ -82,6 +82,32 @@ struct CollectUntil<S>: AsyncSequence, AsyncIteratorProtocol where S: AsyncSeque
             }
         }
         return buffer.isEmpty ? nil : buffer
+    }
+}
+
+struct AnyAsyncSequence<Element>: AsyncSequence {
+
+    private let _makeIterator: () -> AsyncIterator
+
+    init<S: AsyncSequence>(_ sequence: S) where S.Element == Element {
+        self._makeIterator = { AsyncIterator(sequence.makeAsyncIterator()) }
+    }
+
+    func makeAsyncIterator() -> AsyncIterator {
+        _makeIterator()
+    }
+
+    struct AsyncIterator: AsyncIteratorProtocol {
+        private let _next: () async throws -> Element?
+
+        init<I: AsyncIteratorProtocol>(_ iterator: I) where I.Element == Element {
+            var iterator = iterator
+            self._next = { try await iterator.next() }
+        }
+
+        mutating func next() async throws -> Element? {
+            try await _next()
+        }
     }
 }
 

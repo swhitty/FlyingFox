@@ -1,8 +1,8 @@
 //
-//  HTTPResponse.swift
+//  WSHandler.swift
 //  FlyingFox
 //
-//  Created by Simon Whitty on 13/02/2022.
+//  Created by Simon Whitty on 18/03/2022.
 //  Copyright © 2022 Simon Whitty. All rights reserved.
 //
 //  Distributed under the permissive MIT license
@@ -29,50 +29,30 @@
 //  SOFTWARE.
 //
 
-import Foundation
-
-public struct HTTPResponse: Sendable {
-    public var version: HTTPVersion
-    public var statusCode: HTTPStatusCode
-    public var headers: [HTTPHeader: String]
-    public var payload: Payload
-
-    public enum Payload: @unchecked Sendable {
-        case body(Data)
-        case webSocket(WSHandler)
-    }
-
-    public var body: Data? {
-        switch payload {
-        case .body(let body):
-            return body
-        case .webSocket:
-            return nil
-        }
-    }
-
-    public init(version: HTTPVersion = .http11,
-                statusCode: HTTPStatusCode,
-                headers: [HTTPHeader: String] = [:],
-                body: Data = Data()) {
-        self.version = version
-        self.statusCode = statusCode
-        self.headers = headers
-        self.payload = .body(body)
-    }
-
-    public init(version: HTTPVersion = .http11,
-                headers: [HTTPHeader: String] = [:],
-                webSocket handler: WSHandler) {
-        self.version = version
-        self.statusCode = .switchingProtocols
-        self.headers = headers
-        self.payload = .webSocket(handler)
-    }
+public protocol WSHandler: Sendable {
+    func makeSocketFrames(for request: WSFrameSequence) async throws -> WSFrameSequence
 }
 
-extension HTTPResponse {
-    var shouldKeepAlive: Bool {
-        headers[.connection]?.caseInsensitiveCompare("keep-alive") == .orderedSame
+public struct WebSocketEchoHandler: WSHandler {
+
+    public func makeSocketFrames(for request: WSFrameSequence) async throws -> WSFrameSequence {
+        WSFrameSequence(request.compactMap(Self.makeEchoFrame))
+    }
+
+    private static func makeEchoFrame(for frame: WSFrame) -> WSFrame? {
+        var response = frame
+        response.mask = nil
+
+        switch frame.opcode {
+        case .ping:
+            response.opcode = .pong
+            return response
+        case .pong:
+            return nil
+        case .close:
+            return .close(message: "Goodbye")
+        default:
+            return response
+        }
     }
 }

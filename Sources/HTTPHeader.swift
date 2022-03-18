@@ -50,11 +50,15 @@ public struct HTTPHeader: Sendable, RawRepresentable, Hashable {
 }
 
 public extension HTTPHeader {
-    static let authorization   = HTTPHeader("Authorization")
-    static let connection      = HTTPHeader("Connection")
-    static let contentLength   = HTTPHeader("Content-Length")
-    static let contentType     = HTTPHeader("Content-Type")
-    static let contentEncoding = HTTPHeader("Content-Encoding")
-    static let host            = HTTPHeader("Host")
-    static let location        = HTTPHeader("Location")
+    static let authorization    = HTTPHeader("Authorization")
+    static let connection       = HTTPHeader("Connection")
+    static let contentLength    = HTTPHeader("Content-Length")
+    static let contentType      = HTTPHeader("Content-Type")
+    static let contentEncoding  = HTTPHeader("Content-Encoding")
+    static let host             = HTTPHeader("Host")
+    static let location         = HTTPHeader("Location")
+    static let webSocketAccept  = HTTPHeader("Sec-WebSocket-Accept")
+    static let webSocketKey     = HTTPHeader("Sec-WebSocket-Key")
+    static let webSocketVersion = HTTPHeader("Sec-WebSocket-Version")
+    static let upgrade          = HTTPHeader("Upgrade")
 }
