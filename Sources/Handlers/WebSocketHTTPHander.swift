@@ -1,8 +1,8 @@
 //
-//  HTTPResponse.swift
+//  WebSocketHTTPHander.swift
 //  FlyingFox
 //
-//  Created by Simon Whitty on 13/02/2022.
+//  Created by Simon Whitty on 19/03/2022.
 //  Copyright © 2022 Simon Whitty. All rights reserved.
 //
 //  Distributed under the permissive MIT license
@@ -31,47 +31,34 @@
 
 import Foundation
 
-public struct HTTPResponse: Sendable {
-    public var version: HTTPVersion
-    public var statusCode: HTTPStatusCode
-    public var headers: [HTTPHeader: String]
-    public var payload: Payload
+public struct WebSocketHTTPHander: HTTPHandler, Sendable {
 
-    public enum Payload: @unchecked Sendable {
-        case body(Data)
-        case webSocket(WSHandler)
+    private let handler: WSHandler
+
+    public init(handler: WSHandler) {
+        self.handler = handler
     }
 
-    public var body: Data? {
-        switch payload {
-        case .body(let body):
-            return body
-        case .webSocket:
-            return nil
+    public func handleRequest(_ request: HTTPRequest) async throws -> HTTPResponse {
+        var response = HTTPResponse(webSocket: handler)
+        response.headers[.connection] = "upgrade"
+        response.headers[.upgrade] = "websocket"
+        if let key = request.headers[.webSocketKey] {
+            response.headers[.webSocketAccept] = Self.makeSecWebSocketAcceptValue(for: key)
         }
+
+        return response
     }
 
-    public init(version: HTTPVersion = .http11,
-                statusCode: HTTPStatusCode,
-                headers: [HTTPHeader: String] = [:],
-                body: Data = Data()) {
-        self.version = version
-        self.statusCode = statusCode
-        self.headers = headers
-        self.payload = .body(body)
+    static func makeSecWebSocketAcceptValue(for key: String) -> String {
+        SHA1
+            .hash(data: (key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").data(using: .utf8)!)
+            .base64EncodedString()
     }
 
-    public init(headers: [HTTPHeader: String] = [:],
-                webSocket handler: WSHandler) {
-        self.version = .http11
-        self.statusCode = .switchingProtocols
-        self.headers = headers
-        self.payload = .webSocket(handler)
-    }
-}
-
-extension HTTPResponse {
-    var shouldKeepAlive: Bool {
-        headers[.connection]?.caseInsensitiveCompare("keep-alive") == .orderedSame
+    static func makeSecWebSocketKeyValue(for uuid: UUID = .init()) -> String {
+        withUnsafeBytes(of: uuid.uuid) {
+            Data($0).base64EncodedString()
+        }
     }
 }

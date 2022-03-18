@@ -107,7 +107,7 @@ final class HTTPEncoderTests: XCTestCase {
 
     func testEncodesResponse() throws {
         XCTAssertEqual(
-            try HTTPEncoder.encodeResponse(
+            HTTPEncoder.encodeResponse(
                 .make(version: .http11,
                       statusCode: .ok,
                       headers: [:],

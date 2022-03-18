@@ -39,18 +39,20 @@ struct HTTPEncoder {
                       response.statusCode.phrase].joined(separator: " ")
 
         var httpHeaders = response.headers
-        httpHeaders[.contentLength] = String(response.body.count)
+        httpHeaders[.contentLength] = String(response.body?.count ?? 0)
         let headers = httpHeaders.map { "\($0.key.rawValue): \($0.value)" }
 
         return [status] + headers + ["\r\n"]
     }
 
-    static func encodeResponse(_ response: HTTPResponse) throws -> Data {
+    static func encodeResponse(_ response: HTTPResponse) -> Data {
         var data = makeHeaderLines(from: response)
             .joined(separator: "\r\n")
             .data(using: .utf8)!
 
-        data.append(response.body)
+        if let body = response.body {
+            data.append(body)
+        }
 
         return data
     }

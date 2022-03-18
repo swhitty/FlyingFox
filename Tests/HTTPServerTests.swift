@@ -186,6 +186,52 @@ final class HTTPServerTests: XCTestCase {
     }
 #endif
 
+#if canImport(Darwin) && compiler(>=5.6)
+    func testServer_ResturnsWebSocketFramesToURLSession() async throws {
+        let server = HTTPServer(port: 8080)
+        await server.appendRoute("GET /socket", to: .webSocket(WebSocketEchoHandler()))
+        let task = try await server.startDetached()
+
+        let wsTask = URLSession.shared.webSocketTask(with: URL(string: "ws://localhost:8080/socket")!)
+        wsTask.resume()
+
+        try await wsTask.send(.string("Hello"))
+        await XCTAssertEqualAsync(try await wsTask.receive(), .string("Hello"))
+
+        task.cancel()
+    }
+#endif
+
+    func testServer_ResturnsWebSocketFrames() async throws {
+        let server = HTTPServer(port: 8080)
+        await server.appendRoute("GET /socket", to: .webSocket(WebSocketEchoHandler()))
+        let task = try await server.startDetached()
+
+        let addr = try Socket.makeAddressINET(fromIP4: "127.0.0.1", port: 8080)
+        let socket = try await AsyncSocket(connectedTo: addr, pool: .polling)
+
+        var request = HTTPRequest.make(path: "/socket")
+        request.headers[.upgrade] = "websocket"
+        request.headers[.connection] = "Upgrade"
+        request.headers[.webSocketVersion] = "13"
+        request.headers[.webSocketKey] = "ABC"
+        try await socket.writeRequest(request)
+
+        let response = try await socket.readResponse()
+        XCTAssertEqual(response.headers[.webSocketAccept], "YaxQU85y1o0znnviL0CeoKg7QTM=")
+        XCTAssertEqual(response.headers[.connection], "upgrade")
+        XCTAssertEqual(response.headers[.upgrade], "websocket")
+
+        let frame = WSFrame.make(fin: true, opcode: .text, mask: .mock, payload: "FlyingFox".data(using: .utf8)!)
+        try await socket.writeFrame(frame)
+
+        await XCTAssertEqualAsync(
+            try await socket.readFrame(),
+            WSFrame(fin: true, opcode: .text, mask: nil, payload: "FlyingFox".data(using: .utf8)!)
+        )
+        task.cancel()
+    }
+
 #if canImport(Darwin)
     func testDefaultLogger_IsOSLog() async throws {
         XCTAssertTrue(HTTPServer.defaultLogger() is OSLogHTTPLogging)
@@ -313,3 +359,18 @@ extension HTTPServer {
         }
     }
 }
+
+#if canImport(Darwin)
+extension URLSessionWebSocketTask.Message: Equatable {
+    public static func == (lhs: URLSessionWebSocketTask.Message, rhs: URLSessionWebSocketTask.Message) -> Bool {
+        switch (lhs, rhs) {
+        case (.string(let lval), .string(let rval)):
+            return lval == rval
+        case (.data(let lval), .data(let rval)):
+            return lval == rval
+        default:
+            return false
+        }
+    }
+}
+#endif

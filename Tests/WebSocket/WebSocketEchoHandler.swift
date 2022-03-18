@@ -1,8 +1,8 @@
 //
-//  HTTPResponse.swift
+//  WebSocketEchoHandlerTests.swift
 //  FlyingFox
 //
-//  Created by Simon Whitty on 13/02/2022.
+//  Created by Simon Whitty on 19/03/2022.
 //  Copyright © 2022 Simon Whitty. All rights reserved.
 //
 //  Distributed under the permissive MIT license
@@ -29,49 +29,19 @@
 //  SOFTWARE.
 //
 
+@testable import FlyingFox
 import Foundation
+import XCTest
 
-public struct HTTPResponse: Sendable {
-    public var version: HTTPVersion
-    public var statusCode: HTTPStatusCode
-    public var headers: [HTTPHeader: String]
-    public var payload: Payload
+final class WebSocketEchoHandlerTests: XCTestCase {
 
-    public enum Payload: @unchecked Sendable {
-        case body(Data)
-        case webSocket(WSHandler)
-    }
+    func testEcho() async throws {
+        let request = WSFrameSequence.make([.fish, .chips, .ping, .fish, .pong, .chips, .close])
+        let response = WebSocketEchoHandler().makeSocketFrames(for: request)
 
-    public var body: Data? {
-        switch payload {
-        case .body(let body):
-            return body
-        case .webSocket:
-            return nil
-        }
-    }
-
-    public init(version: HTTPVersion = .http11,
-                statusCode: HTTPStatusCode,
-                headers: [HTTPHeader: String] = [:],
-                body: Data = Data()) {
-        self.version = version
-        self.statusCode = statusCode
-        self.headers = headers
-        self.payload = .body(body)
-    }
-
-    public init(headers: [HTTPHeader: String] = [:],
-                webSocket handler: WSHandler) {
-        self.version = .http11
-        self.statusCode = .switchingProtocols
-        self.headers = headers
-        self.payload = .webSocket(handler)
-    }
-}
-
-extension HTTPResponse {
-    var shouldKeepAlive: Bool {
-        headers[.connection]?.caseInsensitiveCompare("keep-alive") == .orderedSame
+        await XCTAssertEqualAsync(
+            try await response.collectAll(),
+            [.fish, .chips, .pong, .fish, .chips, .close(message: "Goodbye")]
+        )
     }
 }

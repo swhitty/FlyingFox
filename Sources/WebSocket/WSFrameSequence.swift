@@ -1,8 +1,8 @@
 //
-//  HTTPResponse.swift
+//  WSFrameSequence.swift
 //  FlyingFox
 //
-//  Created by Simon Whitty on 13/02/2022.
+//  Created by Simon Whitty on 18/03/2022.
 //  Copyright © 2022 Simon Whitty. All rights reserved.
 //
 //  Distributed under the permissive MIT license
@@ -31,47 +31,45 @@
 
 import Foundation
 
-public struct HTTPResponse: Sendable {
-    public var version: HTTPVersion
-    public var statusCode: HTTPStatusCode
-    public var headers: [HTTPHeader: String]
-    public var payload: Payload
+// some AsyncSequence<WSFrame>
+public struct WSFrameSequence: AsyncSequence, AsyncIteratorProtocol {
+    public typealias Element = WSFrame
 
-    public enum Payload: @unchecked Sendable {
-        case body(Data)
-        case webSocket(WSHandler)
+    private let inner: AnyAsyncSequence<WSFrame>
+
+    public init<S: AsyncSequence>(_ sequence: S) where S.Element == WSFrame {
+        self.inner = AnyAsyncSequence(sequence)
     }
 
-    public var body: Data? {
-        switch payload {
-        case .body(let body):
-            return body
-        case .webSocket:
-            return nil
-        }
+    init<S: ChunkedAsyncSequence>(_ sequence: S) where S.Element == UInt8 {
+        self.init(DecodeFrameSequence(bytes: sequence))
     }
 
-    public init(version: HTTPVersion = .http11,
-                statusCode: HTTPStatusCode,
-                headers: [HTTPHeader: String] = [:],
-                body: Data = Data()) {
-        self.version = version
-        self.statusCode = statusCode
-        self.headers = headers
-        self.payload = .body(body)
+    public func makeAsyncIterator() -> Self {
+        self
     }
 
-    public init(headers: [HTTPHeader: String] = [:],
-                webSocket handler: WSHandler) {
-        self.version = .http11
-        self.statusCode = .switchingProtocols
-        self.headers = headers
-        self.payload = .webSocket(handler)
+    public mutating func next() async throws -> WSFrame? {
+        var iterator = inner.makeAsyncIterator()
+        return try await iterator.next()
     }
 }
 
-extension HTTPResponse {
-    var shouldKeepAlive: Bool {
-        headers[.connection]?.caseInsensitiveCompare("keep-alive") == .orderedSame
+private struct DecodeFrameSequence<S: ChunkedAsyncSequence>: AsyncSequence, AsyncIteratorProtocol where S.Element == UInt8 {
+    typealias Element = WSFrame
+    let bytes: S
+
+    func makeAsyncIterator() -> Self {
+        self
+    }
+
+    public mutating func next() async throws -> WSFrame? {
+        do {
+            return try await WSFrameEncoder.decodeFrame(from: bytes)
+        } catch SocketError.disconnected, is SequenceTerminationError {
+            return nil
+        } catch {
+            throw error
+        }
     }
 }
