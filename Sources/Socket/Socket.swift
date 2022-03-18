@@ -245,15 +245,20 @@ extension Socket {
 }
 
 extension Socket {
-    struct Events: OptionSet, Hashable {
-        var rawValue: Int32
 
-        static let read = Events(rawValue: POLLIN)
-        static let write = Events(rawValue: POLLOUT)
-        static let error = Events(rawValue: POLLERR)
-        static let disconnected = Events(rawValue: POLLHUP)
-        static let invalid = Events(rawValue: POLLNVAL)
+    enum Event {
+        case read
+        case write
+        case connection
     }
+
+    typealias Events = Set<Event>
+}
+
+extension Socket.Events {
+    static let read: Self = [.read]
+    static let write: Self = [.write]
+    static let connection: Self = [.connection]
 }
 
 protocol SocketOption {

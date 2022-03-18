@@ -49,7 +49,7 @@ struct AsyncSocket: Sendable {
     }
 
     func accept() async throws -> AsyncSocket {
-        try await pool.loopUntilReady(for: [.read, .write], on: socket) {
+        try await pool.loopUntilReady(for: .connection, on: socket) {
             let file = try socket.accept().file
             let socket = Socket(file: file)
             return try AsyncSocket(socket: socket, pool: pool)

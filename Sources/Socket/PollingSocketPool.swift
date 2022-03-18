@@ -106,36 +106,31 @@ final actor PollingSocketPool: AsyncSocketPool {
     private func poll() async throws {
         repeat {
             try Task.checkCancellation()
-            var buffer = waiting.keys.map {
-                pollfd(fd: $0.file, events: Int16($0.events.rawValue), revents: 0)
+            let sockets = waiting.keys
+            var buffer = sockets.map {
+                pollfd(fd: $0.file, events: Int16($0.events.pollEvents.rawValue), revents: 0)
             }
-
             if Socket.poll(&buffer, nfds_t(buffer.count), interval.milliseconds) > 0 {
-                processPoll(buffer)
+                for (socket, pollfd) in zip(sockets, buffer) {
+                    processPoll(socket: socket, revents: .makeRevents(pollfd.revents, for: socket.events))
+                }
             }
             await Task.yield()
         } while true
     }
 
-    private func processPoll(_ buffer: [pollfd]) {
-        for file in buffer {
-            let events = Socket.Events(rawValue: Int32(file.events))
-            let revents = Socket.Events(rawValue: Int32(file.revents))
-
-            if !revents.intersection(events).isEmpty {
-                let socket = SuspendedSocket(file: file.fd, events: events)
-                let continuations = waiting[socket]
-                waiting[socket] = nil
-                continuations?.forEach {
-                    $0.resume()
-                }
-            } else if !revents.intersection([.disconnected, .error, .invalid]).isEmpty {
-                let socket = SuspendedSocket(file: file.fd, events: events)
-                let continuations = waiting[socket]
-                waiting[socket] = nil
-                continuations?.forEach {
-                    $0.disconnected()
-                }
+    private func processPoll(socket: SuspendedSocket, revents: POLLEvents) {
+        if revents.intersects(with: socket.events.pollEvents) {
+            let continuations = waiting[socket]
+            waiting[socket] = nil
+            continuations?.forEach {
+                $0.resume()
+            }
+        } else if revents.intersects(with: .errors) {
+            let continuations = waiting[socket]
+            waiting[socket] = nil
+            continuations?.forEach {
+                $0.disconnected()
             }
         }
     }
@@ -186,7 +181,6 @@ extension PollingSocketPool.Interval {
     }
 }
 
-
 extension PollingSocketPool {
 
     struct Error: LocalizedError {
@@ -195,5 +189,49 @@ extension PollingSocketPool {
         init(_ description: String) {
             self.errorDescription = description
         }
+    }
+}
+
+private struct POLLEvents: OptionSet, Hashable {
+    var rawValue: Int32
+
+    static let read = POLLEvents(rawValue: POLLIN)
+    static let write = POLLEvents(rawValue: POLLOUT)
+    static let err = POLLEvents(rawValue: POLLERR)
+    static let hup = POLLEvents(rawValue: POLLHUP)
+    static let nval = POLLEvents(rawValue: POLLNVAL)
+
+    static let errors: POLLEvents = [.err, .hup, .nval]
+
+    func intersects(with events: POLLEvents) -> Bool {
+        !intersection(events).isEmpty
+    }
+
+    static func makeRevents(_ revents: Int16, for requested: Socket.Events) -> POLLEvents {
+        let events = POLLEvents(rawValue: Int32(revents))
+        let errors = events.intersection(.errors)
+        if requested == .connection && !errors.isEmpty {
+            return errors
+        }
+        return events
+    }
+}
+
+private extension Socket.Event {
+    var pollEvents: POLLEvents {
+        switch self {
+        case .read:
+            return .read
+        case .write:
+            return .write
+        case .connection:
+            return [.read, .write]
+        }
+    }
+}
+
+private extension Socket.Events {
+    var pollEvents: POLLEvents {
+        reduce(POLLEvents()) { [$0, $1.pollEvents] }
     }
 }
