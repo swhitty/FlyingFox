@@ -314,24 +314,18 @@ final class WSFrameEncoderTests: XCTestCase {
         ) { XCTAssertEqual($0, .disconnected) }
     }
 
-#if canImport(Darwin)
-    func testEchoVIServer() async throws {
-        let task = URLSession.shared.webSocketTask(with: URL(string: "ws://ws.vi-server.org/mirror")!)
-        task.resume()
-        try await task.send(.string("Hello"))
-        try await print("Receive", task.receive())
-    }
-#endif
+//#if canImport(Darwin)
+//    func testEchoVIServer() async throws {
+//        let task = URLSession.shared.webSocketTask(with: URL(string: "ws://ws.vi-server.org/mirror")!)
+//        task.resume()
+//        try await task.send(.string("Hello"))
+//        try await print("Receive", task.receive())
+//    }
+//#endif
 
     func testWebSocketConnection() async throws {
-        let pool = PollingSocketPool()
-        let poolTask = Task { try await pool.run() }
-
-        var addr = Socket.makeAddressINET(port: 80)
-        addr.sin_addr = try Socket.makeInAddr(fromIP4: "192.236.209.31")
-        let sock = try Socket(domain: AF_INET, type: Socket.stream)
-        try sock.connect(to: addr)
-        let socket = try AsyncSocket(socket: sock, pool: pool)
+        let addr = try Socket.makeAddressINET(fromIP4: "192.236.209.31", port: 80)
+        let socket = try await AsyncSocket(connectedTo: addr, pool: .polling)
 
         let key = withUnsafeBytes(of: UUID().uuid) {
             Data($0).base64EncodedString()
@@ -364,8 +358,6 @@ final class WSFrameEncoderTests: XCTestCase {
         frame = WSFrame.close(mask: .mock)
         try await socket.writeFrame(frame)
         try await print("Frame", socket.readFrame())
-
-        poolTask.cancel()
     }
 }
 
