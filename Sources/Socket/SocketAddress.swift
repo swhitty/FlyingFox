@@ -107,7 +107,7 @@ extension Socket {
 
         case AF_INET6:
             var addr_in6 = try sockaddr_in6.make(from: addr)
-            let maxLength = socklen_t(INET_ADDRSTRLEN)
+            let maxLength = socklen_t(INET6_ADDRSTRLEN)
             let buffer = UnsafeMutablePointer<CChar>.allocate(capacity: Int(maxLength))
             try Socket.inet_ntop(AF_INET6, &addr_in6.sin6_addr, buffer, maxLength)
             return .ip6(String(cString: buffer), port: UInt16(addr_in6.sin6_port).byteSwapped)
