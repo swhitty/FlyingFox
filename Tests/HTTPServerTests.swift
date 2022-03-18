@@ -137,8 +137,7 @@ final class HTTPServerTests: XCTestCase {
             return HTTPResponse.make(statusCode: .accepted)
         }
         let task = try await server.startDetached()
-        let socket = try AsyncSocket(socket: Socket(domain: AF_UNIX, type: Socket.stream), pool: .polling)
-        try await socket.connect(to: address)
+        let socket = try await AsyncSocket(connectedTo: address, pool: .polling)
         try await socket.writeRequest(.make())
 
         await XCTAssertEqualAsync(
@@ -154,9 +153,8 @@ final class HTTPServerTests: XCTestCase {
             return HTTPResponse.make(statusCode: .accepted)
         }
         let task = try await server.startDetached()
-        let socket = try AsyncSocket(socket: Socket(domain: AF_INET, type: Socket.stream), pool: .polling)
         let address = try Socket.makeAddressINET(fromIP4: "127.0.0.1", port: 8080)
-        try await socket.connect(to: address)
+        let socket = try await AsyncSocket(connectedTo: address, pool: .polling)
         try await socket.writeRequest(.make())
 
         await XCTAssertEqualAsync(

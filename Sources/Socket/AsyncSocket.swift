@@ -48,6 +48,12 @@ struct AsyncSocket: Sendable {
         try socket.setFlags(.nonBlocking)
     }
 
+    init<A: SocketAddress>(connectedTo address: A,  pool: AsyncSocketPool) async throws {
+        let socket = try Socket(domain: Int32(address.makeStorage().ss_family), type: Socket.stream)
+        try self.init(socket: socket, pool: pool)
+        try await connect(to: address)
+    }
+
     func accept() async throws -> AsyncSocket {
         try await pool.loopUntilReady(for: .connection, on: socket) {
             let file = try socket.accept().file
