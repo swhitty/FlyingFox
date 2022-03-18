@@ -187,7 +187,7 @@ final class HTTPServerTests: XCTestCase {
 #endif
 
 #if canImport(Darwin) && compiler(>=5.6)
-    func testServer_ResturnsWebSocketFramesToURLSession() async throws {
+    func testServer_ReturnsWebSocketFramesToURLSession() async throws {
         let server = HTTPServer(port: 8080)
         await server.appendRoute("GET /socket", to: .webSocket(WebSocketEchoHandler()))
         let task = try await server.startDetached()
@@ -202,13 +202,14 @@ final class HTTPServerTests: XCTestCase {
     }
 #endif
 
-    func testServer_ResturnsWebSocketFrames() async throws {
-        let server = HTTPServer(port: 8080)
+    func testServer_ReturnsWebSocketFrames() async throws {
+        var address = Socket.makeAddressUnix(path: "flyingfox")
+        _ = Socket.unlink(&address.sun_path.0)
+        let server = HTTPServer.make(address: address)
         await server.appendRoute("GET /socket", to: .webSocket(WebSocketEchoHandler()))
         let task = try await server.startDetached()
 
-        let addr = try Socket.makeAddressINET(fromIP4: "127.0.0.1", port: 8080)
-        let socket = try await AsyncSocket(connectedTo: addr, pool: .polling)
+        let socket = try await AsyncSocket(connectedTo: address, pool: .polling)
 
         var request = HTTPRequest.make(path: "/socket")
         request.headers[.upgrade] = "websocket"
