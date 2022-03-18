@@ -161,3 +161,35 @@ struct AsyncSocketReadSequence: ChunkedAsyncSequence, ChunkedAsyncIteratorProtoc
         }
     }
 }
+
+struct AnyChunkedAsyncSequence<Element>: ChunkedAsyncSequence {
+
+    private let _makeIterator: () -> AsyncIterator
+
+    init<S: ChunkedAsyncSequence>(_ sequence: S) where S.Element == Element {
+        self._makeIterator = { AsyncIterator(sequence.makeAsyncIterator()) }
+    }
+
+    func makeAsyncIterator() -> AsyncIterator {
+        _makeIterator()
+    }
+
+    struct AsyncIterator: ChunkedAsyncIteratorProtocol {
+        private let _next: () async throws -> Element?
+        private let _nextChunk: (Int) async throws -> [Element]?
+
+        init<I: ChunkedAsyncIteratorProtocol>(_ iterator: I) where I.Element == Element {
+            var iterator = iterator
+            self._next = { try await iterator.next() }
+            self._nextChunk = { try await iterator.nextChunk(count: $0) }
+        }
+
+        mutating func next() async throws -> Element? {
+            try await _next()
+        }
+
+        mutating func nextChunk(count: Int) async throws -> [Element]? {
+            try await _nextChunk(count)
+        }
+    }
+}
