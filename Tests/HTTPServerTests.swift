@@ -136,8 +136,8 @@ final class HTTPServerTests: XCTestCase {
         await server.appendRoute("*") { _ in
             return HTTPResponse.make(statusCode: .accepted)
         }
-        let (task, pool) = try await server.startDetached()
-        let socket = try AsyncSocket(socket: Socket(domain: AF_UNIX, type: Socket.stream), pool: pool)
+        let task = try await server.startDetached()
+        let socket = try AsyncSocket(socket: Socket(domain: AF_UNIX, type: Socket.stream), pool: .polling)
         try await socket.connect(to: address)
         try await socket.writeRequest(.make())
 
@@ -153,8 +153,8 @@ final class HTTPServerTests: XCTestCase {
         await server.appendRoute("*") { _ in
             return HTTPResponse.make(statusCode: .accepted)
         }
-        let (task, pool) = try await server.startDetached()
-        let socket = try AsyncSocket(socket: Socket(domain: AF_INET, type: Socket.stream), pool: pool)
+        let task = try await server.startDetached()
+        let socket = try AsyncSocket(socket: Socket(domain: AF_INET, type: Socket.stream), pool: .polling)
         let address = try Socket.makeAddressINET(fromIP4: "127.0.0.1", port: 8080)
         try await socket.connect(to: address)
         try await socket.writeRequest(.make())
@@ -306,14 +306,9 @@ extension HTTPServer {
 
     // Ensures server is listening before returning
     // clients can then immediatley connect
-    func startDetached() throws -> (task: Task<Void, Error>, pool: AsyncSocketPool) {
-        let pool = PollingSocketPool()
-        let task = try startDetached(pool: pool)
-        return (task, pool)
-    }
-
-    func startDetached(pool: AsyncSocketPool) throws -> Task<Void, Error>{
+    func startDetached() throws -> Task<Void, Error>{
         let socket = try makeSocketAndListen()
+        let pool = PollingSocketPool()
         return Task {
             defer { try? socket.close() }
             try await start(on: socket, pool: pool)

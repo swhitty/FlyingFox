@@ -56,7 +56,26 @@ final actor PollingSocketPool: AsyncSocketPool {
     }
 
     private let interval: Interval
-    private var waiting: [SuspendedSocket: Set<Continuation>] = [:]
+    private var waiting: [SuspendedSocket: Set<Continuation>] = [:] {
+        didSet {
+            if !waiting.isEmpty, let continuation = loop {
+                loop = nil
+                continuation.resume()
+            }
+        }
+    }
+
+    private var loop: Continuation?
+
+    private func suspendLoopUntilSocketsExist() async throws {
+        try await withCancellingContinuation(returning: Void.self) { continuation, handler in
+            let continuation = Continuation(continuation)
+            loop = continuation
+            handler.onCancel {
+                continuation.cancel()
+            }
+        }
+    }
 
     private func appendContinuation(_ continuation: Continuation, for socket: SuspendedSocket) {
         guard state != .complete else {
@@ -98,6 +117,7 @@ final actor PollingSocketPool: AsyncSocketPool {
             }
             waiting = [:]
             state = .complete
+            loop = nil
         }
 
         try await poll()
@@ -115,7 +135,12 @@ final actor PollingSocketPool: AsyncSocketPool {
                     processPoll(socket: socket, revents: .makeRevents(pollfd.revents, for: socket.events))
                 }
             }
-            await Task.yield()
+
+            if waiting.isEmpty {
+                try await suspendLoopUntilSocketsExist()
+            } else {
+                await Task.yield()
+            }
         } while true
     }
 
