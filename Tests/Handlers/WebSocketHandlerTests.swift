@@ -78,7 +78,7 @@ private extension WebSocketHTTPHander {
 }
 
 private struct MockHandler: WSHandler {
-    func makeSocketFrames(for request: WSFrameSequence) async throws -> WSFrameSequence {
-        request
+    func makeFrames(for client: WSFrameSequence) async throws -> WSFrameSequence {
+        client
     }
 }

@@ -57,7 +57,7 @@ struct HTTPConnection {
         logger?.logSwitchProtocol(self, to: "websocket")
 
         requests.isComplete = true
-        for try await frame in try await handler.makeSocketFrames(for: WSFrameSequence(socket.bytes)) {
+        for try await frame in try await handler.makeFrames(for: WSFrameSequence(socket.bytes)) {
             try await socket.write(WSFrameEncoder.encodeFrame(frame))
         }
     }
