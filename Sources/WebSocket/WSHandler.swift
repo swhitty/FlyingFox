@@ -30,13 +30,13 @@
 //
 
 public protocol WSHandler: Sendable {
-    func makeFrames(for client: WSFrameSequence) async throws -> WSFrameSequence
+    func makeFrames(for client: AsyncThrowingStream<WSFrame, Error>) async throws -> AsyncStream<WSFrame>
 }
 
 public struct WSFrameEchoHandler: WSHandler {
 
-    public func makeFrames(for client: WSFrameSequence) -> WSFrameSequence {
-        WSFrameSequence(client.compactMap(Self.makeEchoFrame))
+    public func makeFrames(for client: AsyncThrowingStream<WSFrame, Error>) -> AsyncStream<WSFrame> {
+        AsyncStream<WSFrame>.protocolFrames(from: client.compactMap(Self.makeEchoFrame))
     }
 
     private static func makeEchoFrame(for frame: WSFrame) -> WSFrame? {

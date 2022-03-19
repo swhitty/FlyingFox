@@ -1,5 +1,5 @@
 //
-//  WSFrameSequenceTests.swift
+//  AsyncStream+WSFrameTests.swift
 //  FlyingFox
 //
 //  Created by Simon Whitty on 18/03/2022.
@@ -37,15 +37,15 @@ final class WSFrameSequenceTests: XCTestCase {
 
     func testSequenceDecodesFramesFromBytes() async throws {
         await XCTAssertEqualAsync(
-            try await WSFrameSequence.make([.fish, .chips, .close]).collectAll(),
+            try await AsyncThrowingStream.make([.fish, .chips, .close]).collectAll(),
             [.fish, .chips, .close]
         )
         await XCTAssertEqualAsync(
-            try await WSFrameSequence.make([.close]).collectAll(),
+            try await AsyncThrowingStream.make([.close]).collectAll(),
             [.close]
         )
         await XCTAssertEqualAsync(
-            try await WSFrameSequence.make([]).collectAll(),
+            try await AsyncThrowingStream.make([]).collectAll(),
             []
         )
     }
@@ -59,10 +59,10 @@ extension WSFrame {
     static let pong = WSFrame.make(opcode: .pong)
 }
 
-extension WSFrameSequence {
-    static func make(_ frames: [WSFrame]) -> WSFrameSequence {
+extension AsyncThrowingStream where Element == WSFrame, Failure == Error {
+    static func make(_ frames: [WSFrame]) -> Self {
         let bytes = ConsumingAsyncSequence(frames.flatMap(WSFrameEncoder.encodeFrame))
-        return WSFrameSequence(bytes)
+        return AsyncThrowingStream.decodingFrames(from: bytes)
     }
 }
 

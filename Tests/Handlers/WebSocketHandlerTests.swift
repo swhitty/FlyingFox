@@ -78,7 +78,10 @@ private extension WebSocketHTTPHander {
 }
 
 private struct MockHandler: WSHandler {
-    func makeFrames(for client: WSFrameSequence) async throws -> WSFrameSequence {
-        client
+    func makeFrames(for client: AsyncThrowingStream<WSFrame, Error>) async throws -> AsyncStream<WSFrame> {
+        var iterator = client.makeAsyncIterator()
+        return AsyncStream<WSFrame> {
+            try? await iterator.next()
+        }
     }
 }

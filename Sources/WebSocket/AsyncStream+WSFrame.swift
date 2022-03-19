@@ -1,5 +1,5 @@
 //
-//  WSFrameSequence.swift
+//  AsyncStream+WSFrame.swift
 //  FlyingFox
 //
 //  Created by Simon Whitty on 18/03/2022.
@@ -29,47 +29,34 @@
 //  SOFTWARE.
 //
 
-import Foundation
+extension AsyncThrowingStream where Element == WSFrame, Failure == Error {
 
-// some AsyncSequence<WSFrame>
-public struct WSFrameSequence: AsyncSequence, AsyncIteratorProtocol {
-    public typealias Element = WSFrame
-
-    private let inner: AnyAsyncSequence<WSFrame>
-
-    public init<S: AsyncSequence>(_ sequence: S) where S.Element == WSFrame {
-        self.inner = AnyAsyncSequence(sequence)
-    }
-
-    init<S: ChunkedAsyncSequence>(_ sequence: S) where S.Element == UInt8 {
-        self.init(DecodeFrameSequence(bytes: sequence))
-    }
-
-    public func makeAsyncIterator() -> Self {
-        self
-    }
-
-    public mutating func next() async throws -> WSFrame? {
-        var iterator = inner.makeAsyncIterator()
-        return try await iterator.next()
+    static func decodingFrames<S: ChunkedAsyncSequence>(from bytes: S) -> Self where S.Element == UInt8 {
+        AsyncThrowingStream<WSFrame, Error> {
+            do {
+                return try await WSFrameEncoder.decodeFrame(from: bytes)
+            } catch SocketError.disconnected, is SequenceTerminationError {
+                return nil
+            } catch {
+                throw error
+            }
+        }
     }
 }
 
-private struct DecodeFrameSequence<S: ChunkedAsyncSequence>: AsyncSequence, AsyncIteratorProtocol where S.Element == UInt8 {
-    typealias Element = WSFrame
-    let bytes: S
+extension AsyncStream where Element == WSFrame {
 
-    func makeAsyncIterator() -> Self {
-        self
-    }
-
-    public mutating func next() async throws -> WSFrame? {
-        do {
-            return try await WSFrameEncoder.decodeFrame(from: bytes)
-        } catch SocketError.disconnected, is SequenceTerminationError {
-            return nil
-        } catch {
-            throw error
+    static func protocolFrames<S: AsyncSequence>(from frames: S) -> Self where S.Element == WSFrame {
+        var iterator: S.AsyncIterator? = frames.makeAsyncIterator()
+        return AsyncStream<WSFrame> {
+            do {
+                return try await iterator?.next()
+            } catch SocketError.disconnected, is SequenceTerminationError {
+                return nil
+            } catch {
+                iterator = nil
+                return .close(message: "Protocol Error")
+            }
         }
     }
 }

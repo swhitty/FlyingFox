@@ -36,7 +36,7 @@ import XCTest
 final class WebSocketEchoHandlerTests: XCTestCase {
 
     func testEcho() async throws {
-        let request = WSFrameSequence.make([.fish, .chips, .ping, .fish, .pong, .chips, .close])
+        let request = AsyncThrowingStream.make([.fish, .chips, .ping, .fish, .pong, .chips, .close])
         let response = WSFrameEchoHandler().makeFrames(for: request)
 
         await XCTAssertEqualAsync(
