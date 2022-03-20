@@ -23,7 +23,7 @@ let package = Package(
             dependencies: ["FlyingFox"],
             path: "Tests",
             resources: [
-                .process("Stubs")
+                .copy("Stubs")
             ]
         )
     ]

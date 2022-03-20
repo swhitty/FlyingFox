@@ -67,14 +67,15 @@ final class HTTPHandlerTests: XCTestCase {
         XCTAssertEqual(handler.contentType, expectedContentType)
     }
     
-    func testFileHandler_init_namedInBundle() {
-        let handler = FileHTTPHandler(named: "fish.json", in: .module)
-        XCTAssertTrue(handler.path!.absoluteString.hasSuffix("fish.json"))
+    func testFileHandler_init_namedInBundle() throws {
+        let handler = FileHTTPHandler(named: "Stubs/fish.json", in: .module)
+        let path = try XCTUnwrap(handler.path?.absoluteString)
+        XCTAssertTrue(path.hasSuffix("fish.json"))
         XCTAssertEqual(handler.contentType, "application/json")
     }
     
     func testFileHandler_Returns200WithData() async throws {
-        let handler = FileHTTPHandler(named: "fish.json", in: .module)
+        let handler = FileHTTPHandler(named: "Stubs/fish.json", in: .module)
 
         let response = try await handler.handleRequest(.make())
         XCTAssertEqual(response.statusCode, .ok)
@@ -83,7 +84,7 @@ final class HTTPHandlerTests: XCTestCase {
     }
 
     func testFileHandler_ReturnsSuppliedContentType() async throws {
-        let handler = FileHTTPHandler(named: "fish.json", in: .module, contentType: "chips")
+        let handler = FileHTTPHandler(named: "Stubs/fish.json", in: .module, contentType: "chips")
 
         let response = try await handler.handleRequest(.make())
         XCTAssertEqual(response.headers[.contentType], "chips")
@@ -121,6 +122,26 @@ final class HTTPHandlerTests: XCTestCase {
             FileHTTPHandler.makeContentType(for: "fish.somefile"),
             "application/octet-stream"
         )
+    }
+
+    //MARK: - DirectoryHTTPHandler
+
+    func testDirectoryHandler_ReturnsFile() async throws {
+        let handler = DirectoryHTTPHandler(bundle: .module, subPath: "Stubs", serverPath: "server/path")
+
+        let response = try await handler.handleRequest(.make(path: "server/path/fish.json"))
+        XCTAssertEqual(response.statusCode, .ok)
+        XCTAssertEqual(response.headers[.contentType], "application/json")
+        XCTAssertEqual(response.body, #"{"fish": "cakes"}"#.data(using: .utf8))
+    }
+
+    func testDirectoryHandler_ReturnsSubDirectoryFile() async throws {
+        let handler = DirectoryHTTPHandler(bundle: .module, subPath: "Stubs", serverPath: "server/path")
+
+        let response = try await handler.handleRequest(.make(path: "server/path/subdir/vinegar.json"))
+        XCTAssertEqual(response.statusCode, .ok)
+        XCTAssertEqual(response.headers[.contentType], "application/json")
+        XCTAssertEqual(response.body, #"{"type": "malt"}"#.data(using: .utf8))
     }
 
     //MARK: - ProxyHTTPHandler
