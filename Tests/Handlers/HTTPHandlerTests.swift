@@ -119,6 +119,22 @@ final class HTTPHandlerTests: XCTestCase {
             "application/javascript"
         )
         XCTAssertEqual(
+            FileHTTPHandler.makeContentType(for: "fish.png"),
+            "image/png"
+        )
+        XCTAssertEqual(
+            FileHTTPHandler.makeContentType(for: "fish.jpeg"),
+            "image/jpeg"
+        )
+        XCTAssertEqual(
+            FileHTTPHandler.makeContentType(for: "fish.jpg"),
+            "image/jpeg"
+        )
+        XCTAssertEqual(
+            FileHTTPHandler.makeContentType(for: "fish.pdf"),
+            "application/pdf"
+        )
+        XCTAssertEqual(
             FileHTTPHandler.makeContentType(for: "fish.somefile"),
             "application/octet-stream"
         )
