@@ -47,8 +47,8 @@ public extension HTTPHandler where Self == FileHTTPHandler {
 }
 
 public extension HTTPHandler where Self == DirectoryHTTPHandler {
-    static func directory(for bundle: Bundle = .main, serverPath: String = "") -> DirectoryHTTPHandler {
-        DirectoryHTTPHandler(bundle: bundle, serverPath: serverPath)
+    static func directory(for bundle: Bundle = .main, subPath: String? = nil, serverPath: String = "") -> DirectoryHTTPHandler {
+        DirectoryHTTPHandler(bundle: bundle, subPath: subPath, serverPath: serverPath)
     }
 }
 

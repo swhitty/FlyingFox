@@ -129,6 +129,21 @@ final class HTTPServerTests: XCTestCase {
         task.cancel()
     }
 
+    func testServer_ReturnsFile_WhenDirectoryHandlerIsMatched() async throws {
+        let server = HTTPServer.make(port: 8019)
+        await server.appendRoute("*", to: .directory(for: .module, subPath: "Stubs", serverPath: "/server/path/"))
+        let task = Task { try await server.start() }
+
+        let request = URLRequest(url: URL(string: "http://localhost:8019/server/path/subdir/vinegar.json")!)
+        let (data, _) = try await URLSession.shared.makeData(for: request)
+
+        XCTAssertEqual(
+            data,
+            #"{"type": "malt"}"#.data(using: .utf8)
+        )
+        task.cancel()
+    }
+
     func testServer_StartsOnUnixSocket() async throws {
         var address = sockaddr_un.makeUnix(path: "flyingfox")
         _ = Socket.unlink(&address.sun_path.0)
