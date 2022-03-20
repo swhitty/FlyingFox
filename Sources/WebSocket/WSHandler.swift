@@ -91,7 +91,8 @@ public struct WSDefaultHandler: WSHandler {
                     }
                 }
             }
-            await group.waitForAll()
+            await group.next()!
+            group.cancelAll()
         }
     }
 
