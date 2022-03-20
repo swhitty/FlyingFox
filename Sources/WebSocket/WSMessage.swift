@@ -1,5 +1,5 @@
 //
-//  WebSocketEchoHandlerTests.swift
+//  WSMessage.swift
 //  FlyingFox
 //
 //  Created by Simon Whitty on 19/03/2022.
@@ -29,19 +29,19 @@
 //  SOFTWARE.
 //
 
-@testable import FlyingFox
 import Foundation
-import XCTest
 
-final class WebSocketEchoHandlerTests: XCTestCase {
+public enum WSMessage: @unchecked Sendable, Hashable {
+    case text(String)
+    case data(Data)
+}
 
-    func testEcho() async throws {
-        let request = AsyncThrowingStream.make([.fish, .chips, .ping, .fish, .pong, .chips, .close])
-        let response = WSFrameEchoHandler().makeFrames(for: request)
+public protocol WSMessageHandler: Sendable {
+    func makeMessages(for request: AsyncStream<WSMessage>) async throws -> AsyncStream<WSMessage>
+}
 
-        await XCTAssertEqualAsync(
-            try await response.collectAll(),
-            [.fish, .chips, .pong, .fish, .chips, .close(message: "Goodbye")]
-        )
+public struct WSMessageEchoHandler: WSMessageHandler {
+    public func makeMessages(for request: AsyncStream<WSMessage>) async throws -> AsyncStream<WSMessage> {
+        request
     }
 }

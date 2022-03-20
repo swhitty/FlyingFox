@@ -49,6 +49,22 @@ final class WSFrameSequenceTests: XCTestCase {
             []
         )
     }
+
+    func testProtocolFrames_CatchErrors_AndCloseStream() async throws {
+        var continuation: AsyncThrowingStream<WSFrame, Error>.Continuation!
+        let stream = AsyncThrowingStream<WSFrame, Error> {
+            continuation = $0
+        }
+
+        continuation.yield(.fish)
+        continuation.yield(.chips)
+        continuation.finish(throwing: SocketError.unsupportedAddress)
+
+        await XCTAssertEqualAsync(
+            try await AsyncStream.protocolFrames(from: stream).collectAll(),
+            [.fish, .chips, .close(message: "Protocol Error")]
+        )
+    }
 }
 
 extension WSFrame {

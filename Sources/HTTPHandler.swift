@@ -71,7 +71,7 @@ public extension HTTPHandler where Self == ClosureHTTPHandler {
 }
 
 public extension HTTPHandler where Self == WebSocketHTTPHander {
-    static func webSocket(_ handler: WSHandler) -> WebSocketHTTPHander {
-        WebSocketHTTPHander(handler: handler)
+    static func webSocket(_ handler: WSMessageHandler, frameSize: Int = 16384) -> WebSocketHTTPHander {
+        WebSocketHTTPHander(handler: WSDefaultHandler(handler: handler, frameSize: frameSize))
     }
 }

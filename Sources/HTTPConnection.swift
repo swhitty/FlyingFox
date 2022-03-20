@@ -46,20 +46,21 @@ struct HTTPConnection {
     }
 
     func sendResponse(_ response: HTTPResponse) async throws {
-        try await socket.write(HTTPEncoder.encodeResponse(response))
-
-        if case let .webSocket(handler) = response.payload {
-            try await switchToWebSocket(with: handler)
+        let data = HTTPEncoder.encodeResponse(response)
+        switch response.payload {
+        case .body:
+            try await socket.write(data)
+        case .webSocket(let handler):
+            try await switchToWebSocket(with: handler, response: data)
         }
     }
 
-    func switchToWebSocket(with handler: WSHandler) async throws {
-        logger?.logSwitchProtocol(self, to: "websocket")
-
-        requests.isComplete = true
-
+    func switchToWebSocket(with handler: WSHandler, response: Data) async throws {
         let client = AsyncThrowingStream.decodingFrames(from: socket.bytes)
         let server = try await handler.makeFrames(for: client)
+        try await socket.write(response)
+        logger?.logSwitchProtocol(self, to: "websocket")
+        requests.isComplete = true
         for await frame in server {
             try await socket.write(WSFrameEncoder.encodeFrame(frame))
         }

@@ -51,8 +51,6 @@ extension AsyncStream where Element == WSFrame {
         return AsyncStream<WSFrame> {
             do {
                 return try await iterator?.next()
-            } catch SocketError.disconnected, is SequenceTerminationError {
-                return nil
             } catch {
                 iterator = nil
                 return .close(message: "Protocol Error")

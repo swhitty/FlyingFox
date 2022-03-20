@@ -29,30 +29,138 @@
 //  SOFTWARE.
 //
 
+import Foundation
+
 public protocol WSHandler: Sendable {
     func makeFrames(for client: AsyncThrowingStream<WSFrame, Error>) async throws -> AsyncStream<WSFrame>
 }
 
-public struct WSFrameEchoHandler: WSHandler {
+public struct WSDefaultHandler: WSHandler {
 
-    public func makeFrames(for client: AsyncThrowingStream<WSFrame, Error>) -> AsyncStream<WSFrame> {
-        AsyncStream<WSFrame>.protocolFrames(from: client.compactMap(Self.makeEchoFrame))
+    private let handler: WSMessageHandler
+    private let frameSize: Int
+
+    public init(handler: WSMessageHandler, frameSize: Int = 16384) {
+        self.handler = handler
+        self.frameSize = frameSize
     }
 
-    private static func makeEchoFrame(for frame: WSFrame) -> WSFrame? {
-        var response = frame
-        response.mask = nil
+    public func makeFrames(for client: AsyncThrowingStream<WSFrame, Error>) async throws -> AsyncStream<WSFrame> {
+        let framesIn = WSFrameValidator.validateFrames(from: client)
 
+        var messagesIn: AsyncStream<WSMessage>.Continuation!
+        let messages = AsyncStream<WSMessage> {
+            messagesIn = $0
+        }
+
+        let messagesOut = try await handler.makeMessages(for: messages)
+        let serverFrames = AsyncThrowingStream<WSFrame, Error> { [messagesIn] continuation in
+            let task = Task {
+                await start(framesIn: framesIn, framesOut: continuation,
+                            messagesIn: messagesIn!, messagesOut: messagesOut)
+            }
+            continuation.onTermination = { @Sendable _ in task.cancel() }
+        }
+
+        return AsyncStream.protocolFrames(from: serverFrames)
+    }
+
+    func start<S: AsyncSequence>(framesIn: S,
+                                 framesOut: AsyncThrowingStream<WSFrame, Error>.Continuation,
+                                 messagesIn: AsyncStream<WSMessage>.Continuation,
+                                 messagesOut: AsyncStream<WSMessage>) async where S.Element == WSFrame {
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask {
+                do {
+                    for try await frame in framesIn {
+                        if let message = try makeMessage(for: frame) {
+                            messagesIn.yield(message)
+                        } else if let frame = try makeResponseFrames(for: frame) {
+                            framesOut.yield(frame)
+                        }
+                    }
+                } catch FrameError.closed {
+                    framesOut.yield(.close(message: "Goodbye"))
+                    framesOut.finish(throwing: nil)
+                } catch {
+                    framesOut.finish(throwing: error)
+                }
+            }
+            group.addTask {
+                for await message in messagesOut {
+                    for frame in makeFrames(for: message) {
+                        framesOut.yield(frame)
+                    }
+                }
+            }
+            await group.next()!
+            group.cancelAll()
+        }
+    }
+
+    func makeMessage(for frame: WSFrame) throws -> WSMessage? {
+        switch frame.opcode {
+        case .text:
+            guard let string = String(data: frame.payload, encoding: .utf8) else {
+                throw FrameError.invalid("Invalid UTF8 Sequence")
+            }
+            return .text(string)
+        case .binary:
+            return .data(frame.payload)
+        default:
+            return nil
+        }
+    }
+
+    func makeResponseFrames(for frame: WSFrame) throws -> WSFrame? {
         switch frame.opcode {
         case .ping:
+            var response = frame
             response.opcode = .pong
             return response
         case .pong:
             return nil
         case .close:
-            return .close(message: "Goodbye")
+            throw FrameError.closed
         default:
-            return response
+            throw FrameError.invalid("Unexpected Frame")
         }
+    }
+
+    func makeFrames(for message: WSMessage) -> [WSFrame] {
+        switch message {
+        case .text(let string):
+            return Self.makeFrames(opcode: .text, payload: string.data(using: .utf8)!, size: frameSize)
+        case .data(let data):
+            return Self.makeFrames(opcode: .binary, payload: data, size: frameSize)
+        }
+    }
+
+    static func makeFrames(opcode: WSFrame.Opcode, payload: Data, size: Int) -> [WSFrame] {
+        var frames = payload.chunked(size: size).enumerated().map { idx, chunk in
+            WSFrame(fin: false, opcode: idx == 0 ? opcode : .continuation, mask: nil, payload: chunk)
+        }
+        if let last = frames.indices.last {
+            frames[last].fin = true
+        }
+        return frames
+    }
+}
+
+extension WSDefaultHandler {
+
+    enum FrameError: Error {
+        case closed
+        case invalid(String)
+    }
+}
+
+extension Collection {
+    func chunked(size: Int) -> [SubSequence] {
+        stride(from: 0, to: count, by: size).map { idx in
+            let start = index(startIndex, offsetBy: idx)
+            let end = index(start, offsetBy: size, limitedBy: endIndex) ?? endIndex
+            return self[start..<end]
+       }
     }
 }

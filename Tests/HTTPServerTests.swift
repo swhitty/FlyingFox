@@ -208,7 +208,7 @@ final class HTTPServerTests: XCTestCase {
 #if canImport(Darwin) && compiler(>=5.6)
     func testServer_ReturnsWebSocketFramesToURLSession() async throws {
         let server = HTTPServer(port: 8080)
-        await server.appendRoute("GET /socket", to: .webSocket(WSFrameEchoHandler()))
+        await server.appendRoute("GET /socket", to: .webSocket(WSMessageEchoHandler()))
         let task = try await server.startDetached()
 
         let wsTask = URLSession.shared.webSocketTask(with: URL(string: "ws://localhost:8080/socket")!)
@@ -225,7 +225,7 @@ final class HTTPServerTests: XCTestCase {
         var address = Socket.makeAddressUnix(path: "flyingfox")
         _ = Socket.unlink(&address.sun_path.0)
         let server = HTTPServer.make(address: address)
-        await server.appendRoute("GET /socket", to: .webSocket(WSFrameEchoHandler()))
+        await server.appendRoute("GET /socket", to: .webSocket(WSMessageEchoHandler()))
         let task = try await server.startDetached()
         defer { task.cancel() }
 

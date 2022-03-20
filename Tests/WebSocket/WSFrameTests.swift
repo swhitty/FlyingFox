@@ -95,4 +95,27 @@ extension WSFrame {
                 mask: mask,
                 payload: payload)
     }
+
+    static func make(fin: Bool = true,
+                     isContinuation: Bool = false,
+                     text: String) -> Self {
+        WSFrame(fin: fin,
+                rsv1: false,
+                rsv2: false,
+                rsv3: false,
+                opcode: isContinuation ? .continuation : .text,
+                mask: nil,
+                payload: text.data(using: .utf8)!)
+    }
+
+    static func makeTextFrames(_ payload: String, maxCharacters: Int) -> [WSFrame] {
+        var messages = payload.chunked(size: maxCharacters).enumerated().map { idx, substring in
+            WSFrame.make(fin: false, isContinuation: idx != 0, text: String(substring))
+        }
+
+        if let last = messages.indices.last {
+            messages[last].fin = true
+        }
+        return messages
+    }
 }
