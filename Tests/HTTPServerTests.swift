@@ -225,7 +225,7 @@ final class HTTPServerTests: XCTestCase {
         var address = Socket.makeAddressUnix(path: "flyingfox")
         _ = Socket.unlink(&address.sun_path.0)
         let server = HTTPServer.make(address: address)
-        await server.appendRoute("GET /socket", to: .webSocket(WSFrameEchoHandler()))
+        await server.appendRoute("GET /socket", to: .webSocket(WSMessageEchoHandler()))
         let task = try await server.startDetached()
         defer { task.cancel() }
 
