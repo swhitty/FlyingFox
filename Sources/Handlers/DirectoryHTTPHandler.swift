@@ -42,8 +42,8 @@ public struct DirectoryHTTPHandler: HTTPHandler {
         self.serverPath = serverPath
     }
 
-    public init(bundle: Bundle, subPath: String? = nil, serverPath: String) {
-        self.root = bundle.resourceURL?.appendingPathComponent(subPath ?? "")
+    public init(bundle: Bundle, subPath: String = "", serverPath: String) {
+        self.root = bundle.resourceURL?.appendingPathComponent(subPath)
         self.serverPath = serverPath
     }
 

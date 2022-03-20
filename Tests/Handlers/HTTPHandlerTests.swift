@@ -151,6 +151,16 @@ final class HTTPHandlerTests: XCTestCase {
         XCTAssertEqual(response.body, #"{"fish": "cakes"}"#.data(using: .utf8))
     }
 
+    func testDirectoryHandler_PlainInitialiser_ReturnsFile() async throws {
+        let root = try XCTUnwrap(Bundle.module.url(forResource: "Stubs", withExtension: nil))
+        let handler = DirectoryHTTPHandler(root: root, serverPath: "server/path")
+
+        let response = try await handler.handleRequest(.make(path: "server/path/fish.json"))
+        XCTAssertEqual(response.statusCode, .ok)
+        XCTAssertEqual(response.headers[.contentType], "application/json")
+        XCTAssertEqual(response.body, #"{"fish": "cakes"}"#.data(using: .utf8))
+    }
+
     func testDirectoryHandler_ReturnsSubDirectoryFile() async throws {
         let handler = DirectoryHTTPHandler(bundle: .module, subPath: "Stubs", serverPath: "server/path")
 
@@ -158,6 +168,20 @@ final class HTTPHandlerTests: XCTestCase {
         XCTAssertEqual(response.statusCode, .ok)
         XCTAssertEqual(response.headers[.contentType], "application/json")
         XCTAssertEqual(response.body, #"{"type": "malt"}"#.data(using: .utf8))
+    }
+
+    func testDirectoryHandler_Returns404WhenFileDoesNotExist() async throws {
+        let handler = DirectoryHTTPHandler(bundle: .module, subPath: "Stubs", serverPath: "server/path")
+
+        let response = try await handler.handleRequest(.make())
+        XCTAssertEqual(response.statusCode, .notFound)
+    }
+
+    func testDirectoryHandler_Returns404WhenRequestHasPathButFileDoesNotExist() async throws {
+        let handler = DirectoryHTTPHandler(bundle: .module, subPath: "Stubs", serverPath: "server/path")
+
+        let response = try await handler.handleRequest(.make(path: "server/path/subdir/guitars.json"))
+        XCTAssertEqual(response.statusCode, .notFound)
     }
 
     //MARK: - ProxyHTTPHandler
