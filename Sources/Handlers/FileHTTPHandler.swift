@@ -57,6 +57,12 @@ public struct FileHTTPHandler: HTTPHandler {
             return "text/html"
         case "js", "javascript":
             return "application/javascript"
+        case "png":
+            return "image/png"
+        case "jpeg", "jpg":
+            return "image/jpeg"
+        case "pdf":
+            return "application/pdf"
         default:
             return "application/octet-stream"
         }
