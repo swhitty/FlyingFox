@@ -119,13 +119,3 @@ extension WSFrame {
         return messages
     }
 }
-
-private extension String {
-    func chunked(size: Int) -> [Substring] {
-        stride(from: 0, to: count, by: size).map { idx in
-            let start = index(startIndex, offsetBy: idx)
-            let end = index(start, offsetBy: size, limitedBy: endIndex) ?? endIndex
-            return self[start..<end]
-       }
-    }
-}

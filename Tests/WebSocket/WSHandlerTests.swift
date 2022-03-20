@@ -62,7 +62,7 @@ final class WSHandlerTests: XCTestCase {
         )
     }
 
-    func testMesages_CreateExpectedFrames() {
+    func testMessages_CreateExpectedFrames() {
         let handler = WSDefaultHandler.make()
         XCTAssertEqual(
             handler.makeFrames(for: .text("Jack of Hearts")),
@@ -71,6 +71,18 @@ final class WSHandlerTests: XCTestCase {
         XCTAssertEqual(
             handler.makeFrames(for: .data(Data([0x01, 0x02]))),
             [.make(fin: true, opcode: .binary, payload: Data([0x01, 0x02]))]
+        )
+    }
+
+    func testMessages_AreSplitIntoMultipleFrames() {
+        let handler = WSDefaultHandler.make(frameSize: 4)
+
+        XCTAssertEqual(
+            handler.makeFrames(for: .text("Jack of Hearts")),
+            [.make(fin: false, opcode: .text, payload: "Jack".data(using: .utf8)!),
+             .make(fin: false, opcode: .continuation, payload: " of ".data(using: .utf8)!),
+             .make(fin: false, opcode: .continuation, payload: "Hear".data(using: .utf8)!),
+             .make(fin: true, opcode: .continuation, payload: "ts".data(using: .utf8)!)]
         )
     }
 
@@ -100,8 +112,10 @@ final class WSHandlerTests: XCTestCase {
 
 private extension WSDefaultHandler {
 
-    static func make(handler: WSMessageHandler = Messages()) -> Self {
-        WSDefaultHandler(handler: handler)
+    static func make(handler: WSMessageHandler = Messages(),
+                     frameSize: Int = 1024) -> Self {
+        WSDefaultHandler(handler: handler,
+                         frameSize: frameSize)
     }
 
     func makeFrames(for frames: [WSFrame]) async throws -> AsyncStream<WSFrame> {

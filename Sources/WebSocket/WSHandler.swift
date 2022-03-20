@@ -37,10 +37,12 @@ public protocol WSHandler: Sendable {
 
 public struct WSDefaultHandler: WSHandler {
 
-    let handler: WSMessageHandler
+    private let handler: WSMessageHandler
+    private let frameSize: Int
 
-    public init(handler: WSMessageHandler) {
+    public init(handler: WSMessageHandler, frameSize: Int = 16384) {
         self.handler = handler
+        self.frameSize = frameSize
     }
 
     public func makeFrames(for client: AsyncThrowingStream<WSFrame, Error>) async throws -> AsyncStream<WSFrame> {
@@ -128,13 +130,22 @@ public struct WSDefaultHandler: WSHandler {
     func makeFrames(for message: WSMessage) -> [WSFrame] {
         switch message {
         case .text(let string):
-            return [WSFrame(fin: true, opcode: .text, mask: nil, payload: string.data(using: .utf8)!)]
+            return Self.makeFrames(opcode: .text, payload: string.data(using: .utf8)!, size: frameSize)
         case .data(let data):
-            return [WSFrame(fin: true, opcode: .binary, mask: nil, payload: data)]
+            return Self.makeFrames(opcode: .binary, payload: data, size: frameSize)
         }
     }
-}
 
+    static func makeFrames(opcode: WSFrame.Opcode, payload: Data, size: Int) -> [WSFrame] {
+        var frames = payload.chunked(size: size).enumerated().map { idx, chunk in
+            WSFrame(fin: false, opcode: idx == 0 ? opcode : .continuation, mask: nil, payload: chunk)
+        }
+        if let last = frames.indices.last {
+            frames[last].fin = true
+        }
+        return frames
+    }
+}
 
 extension WSDefaultHandler {
 
@@ -144,3 +155,12 @@ extension WSDefaultHandler {
     }
 }
 
+extension Collection {
+    func chunked(size: Int) -> [SubSequence] {
+        stride(from: 0, to: count, by: size).map { idx in
+            let start = index(startIndex, offsetBy: idx)
+            let end = index(start, offsetBy: size, limitedBy: endIndex) ?? endIndex
+            return self[start..<end]
+       }
+    }
+}
