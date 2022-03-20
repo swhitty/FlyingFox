@@ -152,7 +152,9 @@ final class HTTPServerTests: XCTestCase {
             return HTTPResponse.make(statusCode: .accepted)
         }
         let task = try await server.startDetached()
+        defer { task.cancel() }
         let socket = try await AsyncSocket(connectedTo: address, pool: .polling)
+        defer { try? socket.close() }
         try await socket.writeRequest(.make())
 
         await XCTAssertEqualAsync(
@@ -167,18 +169,20 @@ final class HTTPServerTests: XCTestCase {
         await server.appendRoute("*") { _ in
             return HTTPResponse.make(statusCode: .accepted)
         }
+
         let task = try await server.startDetached()
+        defer { task.cancel( )}
+
         let address = try Socket.makeAddressINET(fromIP4: "127.0.0.1", port: 8080)
         let socket = try await AsyncSocket(connectedTo: address, pool: .polling)
+        defer { try? socket.close() }
+
         try await socket.writeRequest(.make())
 
         await XCTAssertEqualAsync(
             try await socket.readResponse().statusCode,
             .accepted
         )
-        try? socket.close()
-        task.cancel()
-        try? await task.value
     }
 
 #if canImport(Darwin)
@@ -223,8 +227,10 @@ final class HTTPServerTests: XCTestCase {
         let server = HTTPServer.make(address: address)
         await server.appendRoute("GET /socket", to: .webSocket(WSFrameEchoHandler()))
         let task = try await server.startDetached()
+        defer { task.cancel() }
 
         let socket = try await AsyncSocket(connectedTo: address, pool: .polling)
+        defer { try? socket.close() }
 
         var request = HTTPRequest.make(path: "/socket")
         request.headers[.upgrade] = "websocket"
@@ -245,7 +251,6 @@ final class HTTPServerTests: XCTestCase {
             try await socket.readFrame(),
             WSFrame(fin: true, opcode: .text, mask: nil, payload: "FlyingFox".data(using: .utf8)!)
         )
-        task.cancel()
     }
 
 #if canImport(Darwin)
