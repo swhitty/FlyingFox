@@ -86,6 +86,14 @@ final class WSHandlerTests: XCTestCase {
         )
     }
 
+    func testMessages_ThrowError_WhenAttemptedToBeConvertedToResponseFrames() {
+        let handler = WSDefaultHandler.make()
+        XCTAssertThrowsError(
+            try handler.makeResponseFrames(for: .make(fin: true, opcode: .text, payload: "Lily".data(using: .utf8)!)),
+            of: WSDefaultHandler.FrameError.self
+        )
+    }
+
     func testResponseFrames() async throws {
         let messages = Messages()
         let handler = WSDefaultHandler.make(handler: messages)
