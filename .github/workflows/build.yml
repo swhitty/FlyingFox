@@ -7,10 +7,12 @@ on:
 
 jobs:
   macos:
-    runs-on: macos-latest
+    runs-on: macos-12
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+      - name: Version
+        run: swift --version
       - name: Build and Test
         run: swift test --enable-code-coverage
       - name: Gather code coverage
