@@ -8,9 +8,13 @@ on:
 jobs:
   macos:
     runs-on: macos-12
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_13.3.app/Contents/Developer
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+      - name: xcode-select
+        run: xcode-select -p
       - name: Version
         run: swift --version
       - name: Build and Test
