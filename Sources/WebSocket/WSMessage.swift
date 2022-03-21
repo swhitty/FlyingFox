@@ -37,11 +37,11 @@ public enum WSMessage: @unchecked Sendable, Hashable {
 }
 
 public protocol WSMessageHandler: Sendable {
-    func makeMessages(for request: AsyncStream<WSMessage>) async throws -> AsyncStream<WSMessage>
+    func makeMessages(for client: AsyncStream<WSMessage>) async throws -> AsyncStream<WSMessage>
 }
 
 public struct WSMessageEchoHandler: WSMessageHandler {
-    public func makeMessages(for request: AsyncStream<WSMessage>) async throws -> AsyncStream<WSMessage> {
-        request
+    public func makeMessages(for client: AsyncStream<WSMessage>) async throws -> AsyncStream<WSMessage> {
+        client
     }
 }
