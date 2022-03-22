@@ -56,6 +56,16 @@ extension Socket {
         )
     }
 
+    static func makeAddressLoopback(port: UInt16) -> Glibc.sockaddr_in6 {
+        Glibc.sockaddr_in6(
+            sin6_family: sa_family_t(AF_INET6),
+            sin6_port: port.bigEndian,
+            sin6_flowinfo: 0,
+            sin6_addr: in6addr_loopback,
+            sin6_scope_id: 0
+        )
+    }
+
     static func makeAddressUnix(path: String) -> Glibc.sockaddr_un {
         var addr = Glibc.sockaddr_un()
         addr.sun_family = sa_family_t(AF_UNIX)

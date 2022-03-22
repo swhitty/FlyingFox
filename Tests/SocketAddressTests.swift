@@ -116,6 +116,15 @@ final class SocketAddressTests: XCTestCase {
         )
     }
 
+    func testLoopbackAddress_DecodesIP6() throws {
+        let loopback = Socket.makeAddressLoopback(port: 5060)
+
+        XCTAssertEqual(
+            try Socket.makeAddress(from: loopback.makeStorage()),
+            .ip6("::1", port: 5060)
+        )
+    }
+
     func testInvalidIP6_ThrowsError() {
         XCTAssertThrowsError(
             try Socket.makeInAddr(fromIP6: "192.168.0")
