@@ -45,6 +45,10 @@ public extension SocketAddress where Self == sockaddr_in6 {
     static func makeINET6(port: UInt16) -> Self {
         Socket.makeAddressINET6(port: port)
     }
+
+    static func loopback(port: UInt16) -> Self {
+        Socket.makeAddressLoopback(port: port)
+    }
 }
 
 public extension SocketAddress where Self == sockaddr_un {

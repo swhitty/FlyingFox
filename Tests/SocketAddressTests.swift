@@ -117,7 +117,7 @@ final class SocketAddressTests: XCTestCase {
     }
 
     func testLoopbackAddress_DecodesIP6() throws {
-        let loopback = Socket.makeAddressLoopback(port: 5060)
+        let loopback = sockaddr_in6.loopback(port: 5060)
 
         XCTAssertEqual(
             try Socket.makeAddress(from: loopback.makeStorage()),
