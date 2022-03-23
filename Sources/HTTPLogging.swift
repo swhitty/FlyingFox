@@ -29,7 +29,7 @@
 //  SOFTWARE.
 //
 
-public protocol HTTPLogging {
+public protocol HTTPLogging: Sendable {
     func logDebug(_ debug: String)
     func logInfo(_ info: String)
     func logWarning(_ warning: String)

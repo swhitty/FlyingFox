@@ -31,7 +31,7 @@
 
 import Foundation
 
-struct HTTPConnection {
+struct HTTPConnection: Sendable {
 
     let hostname: String
     private let socket: AsyncSocket
@@ -71,10 +71,11 @@ struct HTTPConnection {
     }
 }
 
-final class HTTPRequestSequence<S: ChunkedAsyncSequence>: AsyncSequence, AsyncIteratorProtocol where S.Element == UInt8 {
+final class HTTPRequestSequence<S: ChunkedAsyncSequence & Sendable>: AsyncSequence, AsyncIteratorProtocol, @unchecked Sendable where S.Element == UInt8 {
     typealias Element = HTTPRequest
     private let bytes: S
-    fileprivate var isComplete: Bool
+
+    @Locked fileprivate var isComplete: Bool
 
     init(bytes: S) {
         self.bytes = bytes

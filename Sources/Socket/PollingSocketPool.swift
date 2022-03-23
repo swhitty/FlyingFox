@@ -165,7 +165,7 @@ final actor PollingSocketPool: AsyncSocketPool {
         var events: Socket.Events
     }
 
-    final class Continuation: Hashable {
+    final class Continuation: Hashable, Sendable {
 
         private let continuation: CheckedContinuation<Void, Swift.Error>
 

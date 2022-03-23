@@ -1,8 +1,8 @@
 //
-//  HTTPLogging+OSLog.swift
+//  Locked.swift
 //  FlyingFox
 //
-//  Created by Simon Whitty on 19/02/2022.
+//  Created by Simon Whitty on 24/03/2022.
 //  Copyright © 2022 Simon Whitty. All rights reserved.
 //
 //  Distributed under the permissive MIT license
@@ -29,51 +29,41 @@
 //  SOFTWARE.
 //
 
-#if canImport(OSLog)
-#if compiler(>=5.6)
-@preconcurrency import OSLog
-#else
-import OSLog
-#endif
+import Foundation
 
-@available(macOS 11.0, iOS 14.0, tvOS 14.0, *)
-public struct OSLogHTTPLogging: HTTPLogging {
+@propertyWrapper
+final class Locked<Value> {
+  private var value: Value
 
-    private let logger: Logger
+  init(wrappedValue initialValue: Value) {
+    self.value = initialValue
+  }
 
-    public init(logger: Logger) {
-        self.logger = logger
+  @available(*, unavailable, message: "@Locked can only be applied to classes")
+  var wrappedValue: Value { get { fatalError() } set { fatalError() } }
+
+    // Classes get and set `wrappedValue` using this subscript.
+  static subscript<T>(_enclosingInstance instance: T,
+                      wrapped wrappedKeyPath: ReferenceWritableKeyPath<T, Value>,
+                      storage storageKeyPath: ReferenceWritableKeyPath<T, Locked>) -> Value {
+    get {
+        instance[keyPath: storageKeyPath].unlock { $0 }
     }
+    set {
+        instance[keyPath: storageKeyPath].unlock {
+            $0 = newValue
+        }
+    }
+  }
 
-    public func logDebug(_ debug: String) {
-        logger.debug("\(debug, privacy: .public)")
-    }
-        
-    public func logInfo(_ info: String) {
-        logger.info("\(info, privacy: .public)")
-    }
+  @discardableResult
+  func unlock<U>(_ transform: (inout Value) throws -> U) rethrows -> U {
+    lock.lock()
+    defer { lock.unlock() }
+    return try transform(&value)
+  }
 
-    public func logWarning(_ warning: String) {
-        logger.warning("\(warning, privacy: .public)")
-    }
-
-    public func logError(_ error: String) {
-        logger.error("\(error, privacy: .public)")
-    }
-    
-    public func logCritical(_ critical: String) {
-        logger.critical("\(critical, privacy: .public)")
-    }
-
+  private let lock = NSLock()
 }
 
-@available(macOS 11.0, iOS 14.0, tvOS 14.0, *)
-public extension HTTPLogging where Self == OSLogHTTPLogging {
-
-    static func oslog(bundle: Bundle = .main, category: String = "FlyingFox") -> Self {
-        let logger = Logger(subsystem: bundle.bundleIdentifier ?? category, category: category)
-        return OSLogHTTPLogging(logger: logger)
-    }
-}
-
-#endif
+extension Locked: @unchecked Sendable where Value: Sendable { }
