@@ -39,7 +39,7 @@ import OSLog
 @available(macOS 11.0, iOS 14.0, tvOS 14.0, *)
 public struct OSLogHTTPLogging: HTTPLogging {
 
-    private let logger: Logger
+    @UncheckedSendable private var logger: Logger
 
     public init(logger: Logger) {
         self.logger = logger
