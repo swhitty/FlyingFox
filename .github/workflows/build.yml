@@ -13,8 +13,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - name: xcode-select
-        run: xcode-select -p
       - name: Version
         run: swift --version
       - name: Build and Test
