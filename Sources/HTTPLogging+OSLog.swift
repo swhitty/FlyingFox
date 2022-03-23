@@ -30,11 +30,7 @@
 //
 
 #if canImport(OSLog)
-#if compiler(>=5.6)
-@preconcurrency import OSLog
-#else
 import OSLog
-#endif
 
 @available(macOS 11.0, iOS 14.0, tvOS 14.0, *)
 public struct OSLogHTTPLogging: HTTPLogging {
