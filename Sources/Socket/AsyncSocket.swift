@@ -34,7 +34,7 @@ import Foundation
 protocol AsyncSocketPool: Sendable {
     func run() async throws
 
-    func suspendUntilReady(for events: Socket.Events, on socket: Socket) async throws
+    func suspendSocket(_ socket: Socket, untilReadyFor events: Socket.Events) async throws
 }
 
 struct AsyncSocket: Sendable {
@@ -83,7 +83,7 @@ struct AsyncSocket: Sendable {
             do {
                 try buffer.append(contentsOf: socket.read(atMost: toRead))
             } catch SocketError.blocked {
-                try await pool.suspendUntilReady(for: .read, on: socket)
+                try await pool.suspendSocket(socket, untilReadyFor: .read)
             } catch {
                 throw error
             }
@@ -125,7 +125,7 @@ private extension AsyncSocketPool {
             do {
                 result = try body()
             } catch SocketError.blocked {
-                try await suspendUntilReady(for: events, on: socket)
+                try await suspendSocket(socket, untilReadyFor: events)
             } catch {
                 throw error
             }

@@ -70,7 +70,7 @@ final class PollingSocketPoolTests: XCTestCase {
 
         let task = Task {
             let socket = try Socket(domain: AF_UNIX, type: Socket.stream)
-            try await pool.suspendUntilReady(for: .read, on: socket)
+            try await pool.suspendSocket(socket, untilReadyFor: .read)
         }
 
         task.cancel()
@@ -86,7 +86,7 @@ final class PollingSocketPoolTests: XCTestCase {
         }
 
         let (s1, s2) = try Socket.makeNonBlockingPair()
-        await XCTAssertThrowsError(try await pool.suspendUntilReady(for: .read, on: s1), of: CancellationError.self)
+        await XCTAssertThrowsError(try await pool.suspendSocket(s1, untilReadyFor: .read), of: CancellationError.self)
         try s1.close()
         try s2.close()
     }
@@ -101,7 +101,7 @@ final class PollingSocketPoolTests: XCTestCase {
         try? await task.value
 
         let socket = try Socket(domain: AF_UNIX, type: Socket.stream)
-        await XCTAssertThrowsError(try await pool.suspendUntilReady(for: .read, on: socket), of: CancellationError.self)
+        await XCTAssertThrowsError(try await pool.suspendSocket(socket, untilReadyFor: .read), of: CancellationError.self)
     }
 
     func testPoolResumesSocket_WhenReadingAndSocketClosed() async throws {
@@ -113,7 +113,7 @@ final class PollingSocketPoolTests: XCTestCase {
             try await pool.run()
         }
 
-        try await pool.suspendUntilReady(for: .read, on: s1)
+        try await pool.suspendSocket(s1, untilReadyFor: .read)
         task.cancel()
     }
 
@@ -126,7 +126,7 @@ final class PollingSocketPoolTests: XCTestCase {
             try await pool.run()
         }
 
-        await XCTAssertThrowsError(try await pool.suspendUntilReady(for: .connection, on: s1), of: SocketError.self) {
+        await XCTAssertThrowsError(try await pool.suspendSocket(s1, untilReadyFor: .connection), of: SocketError.self) {
             XCTAssertEqual($0, .disconnected)
         }
         task.cancel()
