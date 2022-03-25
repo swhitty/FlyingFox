@@ -247,17 +247,12 @@ let route = HTTPRoute("POST *", body: .json(where: "food == 'fish'"))
 `HTTPResponse` can switch the connection to the [WebSocket](https://datatracker.ietf.org/doc/html/rfc6455) protocol by provding a `WSHandler` within the response payload
 
 ```swift
-enum Payload {
-  case body(Data)
-  case webSocket(WSHandler)
-}
-
 protocol WSHandler {
   func makeFrames(for client: AsyncThrowingStream<WSFrame, Error>) async throws -> AsyncStream<WSFrame>
 }
 ```
 
-`WSHandler` facilitates the exchange of a pair `AsyncStream<WSFrame>` that contain the raw websocket frames sent over the connection.  While powerful, it is more convenient to use `WSMessageHandler` to exchange streams of websocket messages via [`WebSocketHTTPHandler`](#websockethttphandler)
+`WSHandler` facilitates the exchange of a pair `AsyncStream<WSFrame>` containing the raw websocket frames sent over the connection.  While powerful, it is more convenient to use `WSMessageHandler` to exchange streams of websocket messages via [`WebSocketHTTPHandler`](#websockethttphandler)
 
 ## SocketAddress
 
