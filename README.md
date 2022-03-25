@@ -114,8 +114,8 @@ Requests can be switched into a websocket by providing a `WSMessageHandler` wher
 await server.appendRoute("GET /socket", to: .webSocket(WSMessageEchoHandler()))
 
 enum WSMessage {
-    case text(String)
-    case data(Data)
+  case text(String)
+  case data(Data)
 }
 
 protocol WSMessageHandler {
