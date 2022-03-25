@@ -9,6 +9,7 @@
 - [Handlers](#handlers)
 - [Routes](#routes)
 - [WebSockets](#websockets)
+- [SocketAddress](#socketaddress)
 - [Credits](#credits)
 
 # Introduction
@@ -257,6 +258,23 @@ protocol WSHandler {
 ```
 
 `WSHandler` facilitates the exchange of a pair `AsyncStream<WSFrame>` that contain the raw websocket frames sent over the connection.  While powerful, it is more convenient to use `WSMessageHandler` to exchange streams of websocket messages via [`WebSocketHTTPHandler`](#websockethttphandler)
+
+## SocketAddress
+
+`protocol SocketAddress` is used to group the cluster of address structures `sockaddr_in`, `sockaddr_in6` and `sockaddr_un`. This allows `HTTPServer` to only listen on a specific interface;
+
+```swift
+// only listens on localhost 8080
+let server = HTTPServer(address: .looback(port: 8080))
+```
+
+It can even be started on [UNIX-domain](https://www.freebsd.org/cgi/man.cgi?query=unix) addresses, allowing private IPC over a socket stream:
+
+```swift
+var addr = sockaddr_un.makeUnix(path: "mySocket")
+unlink(&addr.sun_path.0)
+let server = HTTPServer(address: addr)
+```
 
 ## AsyncSocket / PollingSocketPool
 
