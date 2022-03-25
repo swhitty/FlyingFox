@@ -266,7 +266,7 @@ The `sockaddr` cluster of structures are grouped via conformance to `SocketAddre
 - `sockaddr_in6`
 - `sockaddr_un`
 
-This allows `HTTPServer` to only listen on a specific interface;
+This allows `HTTPServer` to be started with any of these configured addresses:
 
 ```swift
 // only listens on localhost 8080
