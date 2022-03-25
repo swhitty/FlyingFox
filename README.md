@@ -265,7 +265,7 @@ protocol WSHandler {
 
 ```swift
 // only listens on localhost 8080
-let server = HTTPServer(address: .looback(port: 8080))
+let server = HTTPServer(address: .loopback(port: 8080))
 ```
 
 It can even be started on [UNIX-domain](https://www.freebsd.org/cgi/man.cgi?query=unix) addresses, allowing private IPC over a socket stream:
