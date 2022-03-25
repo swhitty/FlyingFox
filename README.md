@@ -271,7 +271,13 @@ let server = HTTPServer(address: .looback(port: 8080))
 It can even be started on [UNIX-domain](https://www.freebsd.org/cgi/man.cgi?query=unix) addresses, allowing private IPC over a socket stream:
 
 ```swift
+// only listens on Unix socket "Ants"
 let server = HTTPServer(address: .unix(path: "Ants"))
+```
+
+You can then [netcat](https://www.freebsd.org/cgi/man.cgi?query=nc) to the socket:
+```
+% nc -U Ants
 ```
 
 ## AsyncSocket / PollingSocketPool
