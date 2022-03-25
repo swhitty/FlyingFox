@@ -261,14 +261,19 @@ protocol WSHandler {
 
 ## SocketAddress
 
-`protocol SocketAddress` is used to group the cluster of address structures `sockaddr_in`, `sockaddr_in6` and `sockaddr_un`. This allows `HTTPServer` to only listen on a specific interface;
+The `sockaddr` cluster of structures are grouped via conformance to `SocketAddress`
+- `sockaddr_in`
+- `sockaddr_in6`
+- `sockaddr_un`
+
+This allows `HTTPServer` to only listen on a specific interface;
 
 ```swift
 // only listens on localhost 8080
 let server = HTTPServer(address: .loopback(port: 8080))
 ```
 
-It can also be used with [UNIX-domain](https://www.freebsd.org/cgi/man.cgi?query=unix) addresses, allowing private IPC over a socket stream:
+It can also be used with [UNIX-domain](https://www.freebsd.org/cgi/man.cgi?query=unix) addresses, allowing private IPC over a socket:
 
 ```swift
 // only listens on Unix socket "Ants"
