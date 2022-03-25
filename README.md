@@ -106,6 +106,22 @@ await server.appendRoute("GET /fish/*", to: .redirect(to: "https://pie.dev/get")
 //                        Location: https://pie.dev/get
 ```
 
+### WebSocketHTTPHandler
+
+Requests can switch the connection into a websocket by providing a `WSMessageHandler` where a pair of `AsyncStream<WSMessage>` are exchanged:
+```swift
+await server.appendRoute("GET /socket", to: .webSocket(WSMessageEchoHandler()))
+
+enum WSMessage {
+    case text(String)
+    case data(Data)
+}
+
+protocol WSMessageHandler {
+  func makeMessages(for client: AsyncStream<WSMessage>) async throws -> AsyncStream<WSMessage>
+}
+```
+
 ### RoutedHTTPHandler
 
 Multiple handlers can be grouped with requests and matched against `HTTPRoute` using `RoutedHTTPHandler`.
@@ -222,6 +238,22 @@ let route = HTTPRoute("POST *", body: .json(where: "food == 'fish'"))
 ```json
 {"side": "chips", "food": "fish"}
 ```
+
+## WebSockets
+`HTTPResponse` can switch the connection to the [WebSocket](https://datatracker.ietf.org/doc/html/rfc6455) protocol by provding a `WSHandler` within the response payload
+
+```swift
+enum Payload {
+  case body(Data)
+  case webSocket(WSHandler)
+}
+
+protocol WSHandler {
+  func makeFrames(for client: AsyncThrowingStream<WSFrame, Error>) async throws -> AsyncStream<WSFrame>
+}
+```
+
+`WSHandler` facilitates the exchange of streams of the raw websocket frames sent over the connection.  While powerful it is more convenient to instead use `WSMessageHandler` to exchange streams of websocket messages via [`MessageFrameWSHandler`](https://github.com/swhitty/FlyingFox/README.md#websockethttphandler)
 
 ## AsyncSocket / PollingSocketPool
 
