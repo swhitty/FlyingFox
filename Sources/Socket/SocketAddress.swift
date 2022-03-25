@@ -56,7 +56,7 @@ public extension SocketAddress where Self == sockaddr_in6 {
 }
 
 public extension SocketAddress where Self == sockaddr_un {
-    static func makeUnix(path: String) -> Self {
+    static func unix(path: String) -> Self {
         Socket.makeAddressUnix(path: path)
     }
 }
@@ -149,5 +149,12 @@ extension Socket {
             throw SocketError.makeFailed("inet_pton AF_INET6")
         }
         return addr
+    }
+
+    static func unlink(_ address: sockaddr_un) throws {
+        var address = address
+        guard Socket.unlink(&address.sun_path.0) == 0 else {
+            throw SocketError.makeFailed("unlink")
+        }
     }
 }

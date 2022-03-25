@@ -50,7 +50,7 @@ final class SocketAddressTests: XCTestCase {
 
     func testINET_ThrowsInvalidAddress_WhenFamilyIncorrect() {
         let storage = sockaddr_un
-            .makeUnix(path: "/var")
+            .unix(path: "/var")
             .makeStorage()
 
         XCTAssertThrowsError(
@@ -95,7 +95,7 @@ final class SocketAddressTests: XCTestCase {
 
     func testINET6_ThrowsInvalidAddress_WhenFamilyIncorrect() throws {
         let storage = sockaddr_un
-            .makeUnix(path: "/var")
+            .unix(path: "/var")
             .makeStorage()
 
         XCTAssertThrowsError(
@@ -136,7 +136,7 @@ final class SocketAddressTests: XCTestCase {
 
     func testUnix_IsCorrectlyDecodedFromStorage() throws {
         let storage = sockaddr_un
-            .makeUnix(path: "/var")
+            .unix(path: "/var")
             .makeStorage()
 
         var unix = try sockaddr_un.make(from: storage)
@@ -157,6 +157,13 @@ final class SocketAddressTests: XCTestCase {
         ) {
             XCTAssertEqual($0, .unsupportedAddress)
         }
+    }
+
+    func testUnlinkUnix_Throws_WhenPathIsInvalid() {
+        XCTAssertThrowsError(
+            try Socket.unlink(sockaddr_un()),
+            of: SocketError.self
+        )
     }
 
     func testIPX_ThrowsInvalidAddress() {

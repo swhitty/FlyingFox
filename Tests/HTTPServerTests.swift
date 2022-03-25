@@ -145,8 +145,8 @@ final class HTTPServerTests: XCTestCase {
     }
 
     func testServer_StartsOnUnixSocket() async throws {
-        var address = sockaddr_un.makeUnix(path: "flyingfox")
-        _ = Socket.unlink(&address.sun_path.0)
+        let address = sockaddr_un.unix(path: "flyingfox")
+        try? Socket.unlink(address)
         let server = HTTPServer.make(address: address)
         await server.appendRoute("*") { _ in
             return HTTPResponse.make(statusCode: .accepted)
@@ -222,8 +222,8 @@ final class HTTPServerTests: XCTestCase {
 #endif
 
     func testServer_ReturnsWebSocketFrames() async throws {
-        var address = Socket.makeAddressUnix(path: "flyingfox")
-        _ = Socket.unlink(&address.sun_path.0)
+        let address = Socket.makeAddressUnix(path: "flyingfox")
+        try? Socket.unlink(address)
         let server = HTTPServer.make(address: address)
         await server.appendRoute("GET /socket", to: .webSocket(WSMessageEchoHandler()))
         let task = try await server.startDetached()

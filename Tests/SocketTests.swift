@@ -143,7 +143,7 @@ final class SocketTests: XCTestCase {
     func testSocketConnect_ThrowsError_WhenInvalid() {
         let socket = Socket(file: -1)
         XCTAssertThrowsError(
-            try socket.connect(to: .makeUnix(path: "test"))
+            try socket.connect(to: .unix(path: "test"))
         )
     }
 
