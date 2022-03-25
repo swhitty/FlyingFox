@@ -114,13 +114,13 @@ Requests can be routed to a websocket by providing a `WSMessageHandler` where a 
 ```swift
 await server.appendRoute("GET /socket", to: .webSocket(WSMessageEchoHandler()))
 
+protocol WSMessageHandler {
+  func makeMessages(for client: AsyncStream<WSMessage>) async throws -> AsyncStream<WSMessage>
+}
+
 enum WSMessage {
   case text(String)
   case data(Data)
-}
-
-protocol WSMessageHandler {
-  func makeMessages(for client: AsyncStream<WSMessage>) async throws -> AsyncStream<WSMessage>
 }
 ```
 
