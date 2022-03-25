@@ -36,7 +36,7 @@ import XCTest
 final class WSHandlerTests: XCTestCase {
 
     func testFrames_CreateExpectedMessages() {
-        let handler = WSDefaultHandler.make()
+        let handler = MessageFrameWSHandler.make()
 
         XCTAssertEqual(
             try handler.makeMessage(for: .make(fin: true, opcode: .text, payload: "Hello".data(using: .utf8)!)),
@@ -63,7 +63,7 @@ final class WSHandlerTests: XCTestCase {
     }
 
     func testMessages_CreateExpectedFrames() {
-        let handler = WSDefaultHandler.make()
+        let handler = MessageFrameWSHandler.make()
         XCTAssertEqual(
             handler.makeFrames(for: .text("Jack of Hearts")),
             [.make(fin: true, opcode: .text, payload: "Jack of Hearts".data(using: .utf8)!)]
@@ -75,7 +75,7 @@ final class WSHandlerTests: XCTestCase {
     }
 
     func testMessages_AreSplitIntoMultipleFrames() {
-        let handler = WSDefaultHandler.make(frameSize: 4)
+        let handler = MessageFrameWSHandler.make(frameSize: 4)
 
         XCTAssertEqual(
             handler.makeFrames(for: .text("Jack of Hearts")),
@@ -87,16 +87,16 @@ final class WSHandlerTests: XCTestCase {
     }
 
     func testMessages_ThrowError_WhenAttemptedToBeConvertedToResponseFrames() {
-        let handler = WSDefaultHandler.make()
+        let handler = MessageFrameWSHandler.make()
         XCTAssertThrowsError(
             try handler.makeResponseFrames(for: .make(fin: true, opcode: .text, payload: "Lily".data(using: .utf8)!)),
-            of: WSDefaultHandler.FrameError.self
+            of: MessageFrameWSHandler.FrameError.self
         )
     }
 
     func testResponseFrames() async throws {
         let messages = Messages()
-        let handler = WSDefaultHandler.make(handler: messages)
+        let handler = MessageFrameWSHandler.make(handler: messages)
 
         let frames = try await handler.makeFrames(for: [.fish, .ping, .pong, .chips, .close])
 
@@ -118,12 +118,12 @@ final class WSHandlerTests: XCTestCase {
 
 }
 
-private extension WSDefaultHandler {
+private extension MessageFrameWSHandler {
 
     static func make(handler: WSMessageHandler = Messages(),
                      frameSize: Int = 1024) -> Self {
-        WSDefaultHandler(handler: handler,
-                         frameSize: frameSize)
+        MessageFrameWSHandler(handler: handler,
+                              frameSize: frameSize)
     }
 
     func makeFrames(for frames: [WSFrame]) async throws -> AsyncStream<WSFrame> {

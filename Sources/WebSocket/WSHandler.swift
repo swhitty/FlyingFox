@@ -35,7 +35,7 @@ public protocol WSHandler: Sendable {
     func makeFrames(for client: AsyncThrowingStream<WSFrame, Error>) async throws -> AsyncStream<WSFrame>
 }
 
-public struct WSDefaultHandler: WSHandler {
+public struct MessageFrameWSHandler: WSHandler {
 
     private let handler: WSMessageHandler
     private let frameSize: Int
@@ -147,7 +147,7 @@ public struct WSDefaultHandler: WSHandler {
     }
 }
 
-extension WSDefaultHandler {
+extension MessageFrameWSHandler {
 
     enum FrameError: Error {
         case closed
