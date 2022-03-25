@@ -8,6 +8,7 @@
 - [Usage](#usage)
 - [Handlers](#handlers)
 - [Routes](#routes)
+- [WebSockets](#websockets)
 - [Credits](#credits)
 
 # Introduction
@@ -121,6 +122,8 @@ protocol WSMessageHandler {
   func makeMessages(for client: AsyncStream<WSMessage>) async throws -> AsyncStream<WSMessage>
 }
 ```
+
+Raw WebSocket frames can also be [provided](#websockets).
 
 ### RoutedHTTPHandler
 
@@ -253,7 +256,7 @@ protocol WSHandler {
 }
 ```
 
-`WSHandler` facilitates the exchange of streams of the raw websocket frames sent over the connection.  While powerful it is more convenient to instead use `WSMessageHandler` to exchange streams of websocket messages via [`MessageFrameWSHandler`](https://github.com/swhitty/FlyingFox/README.md#websockethttphandler)
+`WSHandler` facilitates the exchange of streams of the raw websocket frames sent over the connection.  While powerful it is more convenient to instead use `WSMessageHandler` to exchange streams of websocket messages via [`MessageFrameWSHandler`](#websockethttphandler)
 
 ## AsyncSocket / PollingSocketPool
 
