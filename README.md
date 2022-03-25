@@ -256,7 +256,7 @@ protocol WSHandler {
 }
 ```
 
-`WSHandler` facilitates the exchange of streams of the raw websocket frames sent over the connection.  While powerful it is more convenient to instead use `WSMessageHandler` to exchange streams of websocket messages via [`MessageFrameWSHandler`](#websockethttphandler)
+`WSHandler` facilitates the exchange of streams of the raw websocket frames sent over the connection.  While powerful it is more convenient to instead use `WSMessageHandler` to exchange streams of websocket messages via [`WebSocketHTTPHandler`](#websockethttphandler)
 
 ## AsyncSocket / PollingSocketPool
 
