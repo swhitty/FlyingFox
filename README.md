@@ -110,7 +110,7 @@ await server.appendRoute("GET /fish/*", to: .redirect(to: "https://pie.dev/get")
 
 ### WebSocketHTTPHandler
 
-Requests can be switched into a websocket by providing a `WSMessageHandler` where a pair of `AsyncStream<WSMessage>` are exchanged:
+Requests can be routed to a websocket by providing a `WSMessageHandler` where a pair of `AsyncStream<WSMessage>` are exchanged:
 ```swift
 await server.appendRoute("GET /socket", to: .webSocket(WSMessageEchoHandler()))
 
