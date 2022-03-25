@@ -244,7 +244,7 @@ let route = HTTPRoute("POST *", body: .json(where: "food == 'fish'"))
 ```
 
 ## WebSockets
-`HTTPResponse` can switch the connection to the [WebSocket](https://datatracker.ietf.org/doc/html/rfc6455) protocol by provding a `WSHandler` within the response payload
+`HTTPResponse` can switch the connection to the [WebSocket](https://datatracker.ietf.org/doc/html/rfc6455) protocol by provding a `WSHandler` within the response payload.
 
 ```swift
 protocol WSHandler {
