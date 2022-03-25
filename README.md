@@ -166,7 +166,7 @@ route ~= HTTPRequest(method: .GET, path: "/hello/world") // true
 route ~= HTTPRequest(method: .POST, path: "/hello/world") // false
 ```
 
-They can also use wildcards within the path
+They can also use wildcards within the path:
 
 ```swift
 let route = HTTPRoute("GET /hello/*/world")
