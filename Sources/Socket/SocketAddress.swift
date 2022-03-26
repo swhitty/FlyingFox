@@ -36,18 +36,28 @@ public protocol SocketAddress {
 }
 
 public extension SocketAddress where Self == sockaddr_in {
-    static func makeINET(port: UInt16) -> Self {
+
+    static func inet(port: UInt16) -> Self {
         Socket.makeAddressINET(port: port)
+    }
+
+    static func inet(ip4: String, port: UInt16) throws -> Self {
+        var addr = Socket.makeAddressINET(port: port)
+        addr.sin_addr = try Socket.makeInAddr(fromIP4: ip4)
+        return addr
     }
 }
 
 public extension SocketAddress where Self == sockaddr_in6 {
-    static func makeINET6(port: UInt16) -> Self {
+
+    static func inet6(port: UInt16) -> Self {
         Socket.makeAddressINET6(port: port)
     }
 
-    static func any(port: UInt16) -> Self {
-        Socket.makeAddressINET6(port: port)
+    static func inet6(ip6: String, port: UInt16) throws -> Self {
+        var addr = Socket.makeAddressINET6(port: port)
+        addr.sin6_addr = try Socket.makeInAddr(fromIP6: ip6)
+        return addr
     }
 
     static func loopback(port: UInt16) -> Self {
@@ -56,6 +66,7 @@ public extension SocketAddress where Self == sockaddr_in6 {
 }
 
 public extension SocketAddress where Self == sockaddr_un {
+
     static func unix(path: String) -> Self {
         Socket.makeAddressUnix(path: path)
     }

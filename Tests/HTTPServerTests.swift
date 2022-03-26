@@ -165,7 +165,7 @@ final class HTTPServerTests: XCTestCase {
     }
 
     func testServer_StartsOnIP4Socket() async throws {
-        let server = HTTPServer.make(address: .makeINET(port: 8080))
+        let server = HTTPServer.make(address: .inet(port: 8080))
         await server.appendRoute("*") { _ in
             return HTTPResponse.make(statusCode: .accepted)
         }
@@ -173,8 +173,7 @@ final class HTTPServerTests: XCTestCase {
         let task = try await server.startDetached()
         defer { task.cancel( )}
 
-        let address = try Socket.makeAddressINET(fromIP4: "127.0.0.1", port: 8080)
-        let socket = try await AsyncSocket(connectedTo: address, pool: .polling)
+        let socket = try await AsyncSocket(connectedTo: .inet(ip4: "127.0.0.1", port: 8080), pool: .polling)
         defer { try? socket.close() }
 
         try await socket.writeRequest(.make())
@@ -288,8 +287,7 @@ final class HTTPServerTests: XCTestCase {
     }
 
     func testListeningLog_INET6() throws {
-        var addr = Socket.makeAddressINET6(port: 1234)
-        addr.sin6_addr = try Socket.makeInAddr(fromIP6: "::1")
+        let addr = try sockaddr_in6.inet6(ip6: "::1", port: 1234)
         XCTAssertEqual(
             PrintHTTPLogger.makeListening(on: addr.makeStorage()),
             "starting server ::1:1234"

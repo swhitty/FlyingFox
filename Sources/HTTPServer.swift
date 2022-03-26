@@ -52,7 +52,7 @@ public final actor HTTPServer {
                             timeout: TimeInterval = 15,
                             logger: HTTPLogging? = defaultLogger(),
                             handler: HTTPHandler? = nil) {
-        self.init(address: .any(port: port),
+        self.init(address: .inet6(port: port),
                   timeout: timeout,
                   logger: logger,
                   handler: handler)

@@ -37,7 +37,7 @@ final class SocketAddressTests: XCTestCase {
 
     func testINET_IsCorrectlyDecodedFromStorage() {
         let storage = sockaddr_in
-            .makeINET(port: 8001)
+            .inet(port: 8001)
             .makeStorage()
 
         XCTAssertEqual(
@@ -76,13 +76,13 @@ final class SocketAddressTests: XCTestCase {
             try Socket.makeInAddr(fromIP4: "192.168.0")
         )
         XCTAssertThrowsError(
-            try Socket.makeInAddr(fromIP4: "::1")
+            try sockaddr_in.inet(ip4: "::1", port: 80)
         )
     }
 
     func testINET6_IsCorrectlyDecodedFromStorage() throws {
         let storage = sockaddr_in6
-            .makeINET6(port: 8080)
+            .inet6(port: 8080)
             .makeStorage()
 
         XCTAssertEqual(
@@ -130,7 +130,7 @@ final class SocketAddressTests: XCTestCase {
             try Socket.makeInAddr(fromIP6: "192.168.0")
         )
         XCTAssertThrowsError(
-            try Socket.makeInAddr(fromIP6: ":10:::::")
+            try sockaddr_in6.inet6(ip6: ":10:::::", port: 80)
         )
     }
 
@@ -148,7 +148,7 @@ final class SocketAddressTests: XCTestCase {
 
     func testUnix_ThrowsInvalidAddress_WhenFamilyIncorrect() {
         let storage = sockaddr_in6
-            .makeINET6(port: 8080)
+            .inet6(port: 8080)
             .makeStorage()
 
         XCTAssertThrowsError(
