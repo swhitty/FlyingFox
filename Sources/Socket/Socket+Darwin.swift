@@ -34,6 +34,7 @@ import Darwin
 
 extension Socket {
 
+    typealias FileDescriptorType = Int32
     static let stream = Int32(SOCK_STREAM)
     static let in_addr_any = Darwin.in_addr(s_addr: Darwin.in_addr_t(0))
 
@@ -83,33 +84,33 @@ extension Socket {
         return addr
     }
 
-    static func socket(_ domain: Int32, _ type: Int32, _ protocol: Int32) -> Int32 {
+    static func socket(_ domain: Int32, _ type: Int32, _ protocol: Int32) -> FileDescriptorType {
         Darwin.socket(domain, type, `protocol`)
     }
 
-    static func fcntl(_ fd: Int32, _ cmd: Int32) -> Int32 {
+    static func fcntl(_ fd: FileDescriptorType, _ cmd: Int32) -> Int32 {
         Darwin.fcntl(fd, cmd)
     }
 
-    static func fcntl(_ fd: Int32, _ cmd: Int32, _ value: Int32) -> Int32 {
+    static func fcntl(_ fd: FileDescriptorType, _ cmd: Int32, _ value: Int32) -> Int32 {
         Darwin.fcntl(fd, cmd, value)
     }
 
-    static func setsockopt(_ fd: Int32, _ level: Int32, _ name: Int32,
+    static func setsockopt(_ fd: FileDescriptorType, _ level: Int32, _ name: Int32,
                            _ value: UnsafeRawPointer!, _ len: socklen_t) -> Int32 {
         Darwin.setsockopt(fd, level, name, value, len)
     }
 
-    static func getsockopt(_ fd: Int32, _ level: Int32, _ name: Int32,
+    static func getsockopt(_ fd: FileDescriptorType, _ level: Int32, _ name: Int32,
                            _ value: UnsafeMutableRawPointer!, _ len: UnsafeMutablePointer<socklen_t>!) -> Int32 {
         Darwin.getsockopt(fd, level, name, value, len)
     }
 
-    static func getpeername(_ fd: Int32, _ addr: UnsafeMutablePointer<sockaddr>!, _ len: UnsafeMutablePointer<socklen_t>!) -> Int32 {
+    static func getpeername(_ fd: FileDescriptorType, _ addr: UnsafeMutablePointer<sockaddr>!, _ len: UnsafeMutablePointer<socklen_t>!) -> Int32 {
         Darwin.getpeername(fd, addr, len)
     }
 
-    static func getsockname(_ fd: Int32, _ addr: UnsafeMutablePointer<sockaddr>!, _ len: UnsafeMutablePointer<socklen_t>!) -> Int32 {
+    static func getsockname(_ fd: FileDescriptorType, _ addr: UnsafeMutablePointer<sockaddr>!, _ len: UnsafeMutablePointer<socklen_t>!) -> Int32 {
         Darwin.getsockname(fd, addr, len)
     }
 
@@ -124,31 +125,31 @@ extension Socket {
         Darwin.inet_pton(domain, buffer, addr)
     }
 
-    static func bind(_ fd: Int32, _ addr: UnsafePointer<sockaddr>!, _ len: socklen_t) -> Int32 {
+    static func bind(_ fd: FileDescriptorType, _ addr: UnsafePointer<sockaddr>!, _ len: socklen_t) -> Int32 {
         Darwin.bind(fd, addr, len)
     }
 
-    static func listen(_ fd: Int32, _ backlog: Int32) -> Int32 {
+    static func listen(_ fd: FileDescriptorType, _ backlog: Int32) -> Int32 {
         Darwin.listen(fd, backlog)
     }
 
-    static func accept(_ fd: Int32, _ addr: UnsafeMutablePointer<sockaddr>!, _ len: UnsafeMutablePointer<socklen_t>!) -> Int32 {
+    static func accept(_ fd: FileDescriptorType, _ addr: UnsafeMutablePointer<sockaddr>!, _ len: UnsafeMutablePointer<socklen_t>!) -> Int32 {
         Darwin.accept(fd, addr, len)
     }
 
-    static func connect(_ fd: Int32, _ addr: UnsafePointer<sockaddr>!, _ len: socklen_t) -> Int32 {
+    static func connect(_ fd: FileDescriptorType, _ addr: UnsafePointer<sockaddr>!, _ len: socklen_t) -> Int32 {
         Darwin.connect(fd, addr, len)
     }
 
-    static func read(_ fd: Int32, _ buffer: UnsafeMutableRawPointer!, _ nbyte: Int) -> Int {
+    static func read(_ fd: FileDescriptorType, _ buffer: UnsafeMutableRawPointer!, _ nbyte: Int) -> Int {
         Darwin.read(fd, buffer, nbyte)
     }
 
-    static func write(_ fd: Int32, _ buffer: UnsafeRawPointer!, _ nbyte: Int) -> Int {
+    static func write(_ fd: FileDescriptorType, _ buffer: UnsafeRawPointer!, _ nbyte: Int) -> Int {
         Darwin.write(fd, buffer, nbyte)
     }
 
-    static func close(_ fd: Int32) -> Int32 {
+    static func close(_ fd: FileDescriptorType) -> Int32 {
         Darwin.close(fd)
     }
 
@@ -158,6 +159,10 @@ extension Socket {
 
     static func poll(_ fds: UnsafeMutablePointer<pollfd>!, _ nfds: nfds_t, _ tmo_p: Int32) -> Int32 {
         Darwin.poll(fds, nfds, tmo_p)
+    }
+
+    static func pollfd(fd: FileDescriptorType, events: Int16, revents: Int16) -> Darwin.pollfd {
+        Darwin.pollfd(fd: fd, events: events, revents: revents)
     }
 }
 

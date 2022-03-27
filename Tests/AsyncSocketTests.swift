@@ -160,7 +160,7 @@ extension AsyncSocket {
 
     static func makePair(pool: AsyncSocketPool = .polling) throws -> (AsyncSocket, AsyncSocket) {
         let (file1, file2) = Socket.socketpair(AF_UNIX, Socket.stream, 0)
-        guard file1 > -1, file2 > -1 else {
+        guard file1.rawValue > -1, file2.rawValue > -1 else {
             throw SocketError.makeFailed("SocketPair")
         }
 

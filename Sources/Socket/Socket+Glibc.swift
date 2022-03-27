@@ -34,6 +34,7 @@ import Glibc
 
 extension Socket {
 
+    typealias FileDescriptorType = Int32
     static let stream = Int32(SOCK_STREAM.rawValue)
     static let in_addr_any = Glibc.in_addr(s_addr: Glibc.in_addr_t(0))
 
@@ -154,6 +155,10 @@ extension Socket {
 
     static func poll(_ fds: UnsafeMutablePointer<pollfd>!, _ nfds: nfds_t, _ tmo_p: Int32) -> Int32 {
         Glibc.poll(fds, nfds, tmo_p)
+    }
+
+    static func pollfd(fd: FileDescriptorType, events: Int16, revents: Int16) -> Glibc.pollfd {
+        Glibc.pollfd(fd: fd, events: events, revents: revents)
     }
 }
 

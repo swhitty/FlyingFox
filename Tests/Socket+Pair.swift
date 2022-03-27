@@ -39,19 +39,19 @@ import Glibc
 
 extension Socket {
 
-    static func socketpair(_ domain: Int32, _ type: Int32, _ protocol: Int32) -> (Int32, Int32) {
+    static func socketpair(_ domain: Int32, _ type: Int32, _ protocol: Int32) -> (FileDescriptor, FileDescriptor) {
         var sockets: [Int32] = [-1, -1]
         #if canImport(Darwin)
         _ = Darwin.socketpair(domain, type, `protocol`, &sockets)
         #else
         _ = Glibc.socketpair(domain, type, `protocol`, &sockets)
         #endif
-        return (sockets[0], sockets[1])
+        return (FileDescriptor(rawValue: sockets[0]), FileDescriptor(rawValue: sockets[1]))
     }
 
     static func makeNonBlockingPair() throws -> (Socket, Socket) {
         let (file1, file2) = Socket.socketpair(AF_UNIX, Socket.stream, 0)
-        guard file1 > -1, file2 > -1 else {
+        guard file1.rawValue > -1, file2.rawValue > -1 else {
             throw SocketError.makeFailed("SocketPair")
         }
 

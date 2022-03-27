@@ -253,3 +253,9 @@ final class SocketTests: XCTestCase {
 extension Socket.Flags {
     static let append = Socket.Flags(rawValue: O_APPEND)
 }
+
+private extension Socket {
+    init(file: Int32) {
+        self.init(file: .init(rawValue: file))
+    }
+}

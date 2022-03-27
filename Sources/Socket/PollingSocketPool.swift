@@ -128,7 +128,7 @@ final actor PollingSocketPool: AsyncSocketPool {
             try Task.checkCancellation()
             let sockets = waiting.keys
             var buffer = sockets.map {
-                pollfd(fd: $0.file, events: Int16($0.events.pollEvents.rawValue), revents: 0)
+                Socket.pollfd(fd: $0.file.rawValue, events: Int16($0.events.pollEvents.rawValue), revents: 0)
             }
             if Socket.poll(&buffer, nfds_t(buffer.count), interval.milliseconds) > 0 {
                 for (socket, pollfd) in zip(sockets, buffer) {
@@ -161,7 +161,7 @@ final actor PollingSocketPool: AsyncSocketPool {
     }
 
     private struct SuspendedSocket: Hashable {
-        var file: Int32
+        var file: Socket.FileDescriptor
         var events: Socket.Events
     }
 

@@ -33,22 +33,27 @@ import Foundation
 
 struct Socket: Sendable, Hashable {
 
-    let file: Int32
+    let file: FileDescriptor
 
-    init(file: Int32) {
+    struct FileDescriptor: RawRepresentable, Hashable {
+        var rawValue: Socket.FileDescriptorType
+    }
+
+    init(file: FileDescriptor) {
         self.file = file
     }
 
     init(domain: Int32, type: Int32) throws {
-        self.file = Socket.socket(domain, type, 0)
-        if file == -1 {
+        let descriptor = Socket.socket(domain, type, 0)
+        if descriptor == -1 {
             throw SocketError.makeFailed("CreateSocket")
         }
+        self.file = FileDescriptor(rawValue: descriptor)
     }
 
     var flags: Flags {
         get throws {
-            let flags = Socket.fcntl(file, F_GETFL)
+            let flags = Socket.fcntl(file.rawValue, F_GETFL)
             if flags == -1 {
                 throw SocketError.makeFailed("GetFlags")
             }
@@ -57,7 +62,7 @@ struct Socket: Sendable, Hashable {
     }
 
     func setFlags(_ flags: Flags) throws {
-        if Socket.fcntl(file, F_SETFL, flags.rawValue) == -1 {
+        if Socket.fcntl(file.rawValue, F_SETFL, flags.rawValue) == -1 {
             throw SocketError.makeFailed("SetFlags")
         }
     }
@@ -65,7 +70,7 @@ struct Socket: Sendable, Hashable {
     func setValue<O: SocketOption>(_ value: O.Value, for option: O) throws {
         var value = option.makeSocketValue(from: value)
         let length = socklen_t(MemoryLayout<O.SocketValue>.size)
-        guard Socket.setsockopt(file, SOL_SOCKET, option.name, &value, length) >= 0 else {
+        guard Socket.setsockopt(file.rawValue, SOL_SOCKET, option.name, &value, length) >= 0 else {
             throw SocketError.makeFailed("SetOption")
         }
     }
@@ -73,7 +78,7 @@ struct Socket: Sendable, Hashable {
     func getValue<O: SocketOption>(for option: O) throws -> O.Value {
         let valuePtr = UnsafeMutablePointer<O.SocketValue>.allocate(capacity: 1)
         var length = socklen_t(MemoryLayout<O.SocketValue>.size)
-        guard Socket.getsockopt(file, SOL_SOCKET, option.name, valuePtr, &length) >= 0 else {
+        guard Socket.getsockopt(file.rawValue, SOL_SOCKET, option.name, valuePtr, &length) >= 0 else {
             throw SocketError.makeFailed("GetOption")
         }
         return option.makeValue(from: valuePtr.pointee)
@@ -83,7 +88,7 @@ struct Socket: Sendable, Hashable {
         var addr = address
         let result = withUnsafePointer(to: &addr) {
             $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-                Socket.bind(file, $0, socklen_t(MemoryLayout<A>.size))
+                Socket.bind(file.rawValue, $0, socklen_t(MemoryLayout<A>.size))
             }
         }
         guard result >= 0 else {
@@ -105,7 +110,7 @@ struct Socket: Sendable, Hashable {
     }
 
     func listen(maxPendingConnection: Int32 = SOMAXCONN) throws {
-        if Socket.listen(file, maxPendingConnection) == -1 {
+        if Socket.listen(file.rawValue, maxPendingConnection) == -1 {
             let error = SocketError.makeFailed("Listen")
             try close()
             throw error
@@ -118,7 +123,7 @@ struct Socket: Sendable, Hashable {
 
         let result = withUnsafeMutablePointer(to: &addr) {
             $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-                Socket.getpeername(file, $0, &len)
+                Socket.getpeername(file.rawValue, $0, &len)
             }
         }
         if result != 0 {
@@ -133,7 +138,7 @@ struct Socket: Sendable, Hashable {
 
         let result = withUnsafeMutablePointer(to: &addr) {
             $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-                Socket.getsockname(file, $0, &len)
+                Socket.getsockname(file.rawValue, $0, &len)
             }
         }
         if result != 0 {
@@ -142,13 +147,13 @@ struct Socket: Sendable, Hashable {
         return try Self.makeAddress(from: addr)
     }
 
-    func accept() throws -> (file: Int32, addr: sockaddr_storage) {
+    func accept() throws -> (file: FileDescriptor, addr: sockaddr_storage) {
         var addr = sockaddr_storage()
         var len = socklen_t(MemoryLayout<sockaddr_storage>.size)
 
         let newFile = withUnsafeMutablePointer(to: &addr) {
             $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-                Socket.accept(file, $0, &len)
+                Socket.accept(file.rawValue, $0, &len)
             }
         }
 
@@ -160,14 +165,14 @@ struct Socket: Sendable, Hashable {
             }
         }
 
-        return (newFile, addr)
+        return (FileDescriptor(rawValue: newFile), addr)
     }
 
     func connect<A: SocketAddress>(to address: A) throws {
         var addr = address
         let result = withUnsafePointer(to: &addr) {
             $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-                Socket.connect(file, $0, socklen_t(MemoryLayout<A>.size))
+                Socket.connect(file.rawValue, $0, socklen_t(MemoryLayout<A>.size))
             }
         }
         guard result >= 0 || errno == EISCONN else {
@@ -194,7 +199,7 @@ struct Socket: Sendable, Hashable {
     }
 
     private func read(into buffer: UnsafeMutablePointer<UInt8>, length: Int) throws -> Int {
-        let count = Socket.read(file, buffer, length)
+        let count = Socket.read(file.rawValue, buffer, length)
         guard count > 0 else {
             if errno == EWOULDBLOCK {
                 throw SocketError.blocked
@@ -216,7 +221,7 @@ struct Socket: Sendable, Hashable {
     }
 
     private func write(_ pointer: UnsafeRawPointer, length: Int) throws -> Int {
-        let sent = Socket.write(file, pointer, length)
+        let sent = Socket.write(file.rawValue, pointer, length)
         guard sent > 0 else {
             if errno == EWOULDBLOCK {
                 throw SocketError.blocked
@@ -230,7 +235,7 @@ struct Socket: Sendable, Hashable {
     }
 
     func close() throws {
-        if Socket.close(file) == -1 {
+        if Socket.close(file.rawValue) == -1 {
             throw SocketError.makeFailed("Close")
         }
     }
