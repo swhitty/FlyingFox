@@ -30,6 +30,9 @@
 //
 
 import Foundation
+#if canImport(WinSDK)
+import WinSDK.WinSock2
+#endif
 
 public final actor HTTPServer {
 
@@ -52,7 +55,12 @@ public final actor HTTPServer {
                             timeout: TimeInterval = 15,
                             logger: HTTPLogging? = defaultLogger(),
                             handler: HTTPHandler? = nil) {
-        self.init(address: .inet6(port: port),
+        #if canImport(WinSDK)
+        let address = sockaddr_in.inet(port: port)
+        #else
+        let address = sockaddr_in6.inet6(port: port)
+        #endif
+        self.init(address: address,
                   timeout: timeout,
                   logger: logger,
                   handler: handler)
