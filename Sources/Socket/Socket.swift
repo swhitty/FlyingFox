@@ -320,8 +320,4 @@ extension SocketOption where Self == Int32SocketOption {
     static var receiveBufferSize: Self {
         Int32SocketOption(name: SO_RCVBUF)
     }
-
-    static var error: Self {
-        Int32SocketOption(name: SO_RCVBUF)
-    }
 }
