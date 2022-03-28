@@ -29,6 +29,9 @@
 //  SOFTWARE.
 //
 
+#if canImport(WinSDK)
+import WinSDK.WinSock2
+#endif
 import Foundation
 
 struct Socket: Sendable, Hashable {
@@ -44,11 +47,11 @@ struct Socket: Sendable, Hashable {
     }
 
     init(domain: Int32, type: Int32) throws {
-        let descriptor = Socket.socket(domain, type, 0)
-        if descriptor == -1 {
+        let descriptor = FileDescriptor(rawValue: Socket.socket(domain, type, 0))
+        guard descriptor != .invalid else {
             throw SocketError.makeFailed("CreateSocket")
         }
-        self.file = FileDescriptor(rawValue: descriptor)
+        self.file = descriptor
     }
 
     var flags: Flags {
@@ -153,11 +156,11 @@ struct Socket: Sendable, Hashable {
 
         let newFile = withUnsafeMutablePointer(to: &addr) {
             $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-                Socket.accept(file.rawValue, $0, &len)
+                FileDescriptor(rawValue: Socket.accept(file.rawValue, $0, &len))
             }
         }
 
-        guard newFile >= 0 else {
+        guard newFile != .invalid else {
             if errno == EWOULDBLOCK {
                 throw SocketError.blocked
             } else {
@@ -165,7 +168,7 @@ struct Socket: Sendable, Hashable {
             }
         }
 
-        return (FileDescriptor(rawValue: newFile), addr)
+        return (newFile, addr)
     }
 
     func connect<A: SocketAddress>(to address: A) throws {

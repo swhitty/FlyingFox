@@ -32,6 +32,10 @@
 #if canImport(Darwin)
 import Darwin
 
+extension Socket.FileDescriptor {
+    static let invalid = Socket.FileDescriptor(rawValue: -1)
+}
+
 extension Socket {
 
     typealias FileDescriptorType = Int32
@@ -157,7 +161,7 @@ extension Socket {
         return Darwin.unlink(addr)
     }
 
-    static func poll(_ fds: UnsafeMutablePointer<pollfd>!, _ nfds: nfds_t, _ tmo_p: Int32) -> Int32 {
+    static func poll(_ fds: UnsafeMutablePointer<pollfd>!, _ nfds: UInt32, _ tmo_p: Int32) -> Int32 {
         Darwin.poll(fds, nfds, tmo_p)
     }
 

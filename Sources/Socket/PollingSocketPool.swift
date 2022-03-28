@@ -130,7 +130,7 @@ final actor PollingSocketPool: AsyncSocketPool {
             var buffer = sockets.map {
                 Socket.pollfd(fd: $0.file.rawValue, events: Int16($0.events.pollEvents.rawValue), revents: 0)
             }
-            if Socket.poll(&buffer, nfds_t(buffer.count), interval.milliseconds) > 0 {
+            if Socket.poll(&buffer, UInt32(buffer.count), interval.milliseconds) > 0 {
                 for (socket, pollfd) in zip(sockets, buffer) {
                     processPoll(socket: socket, revents: .makeRevents(pollfd.revents, for: socket.events))
                 }

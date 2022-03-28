@@ -32,6 +32,10 @@
 #if canImport(Glibc)
 import Glibc
 
+extension Socket.FileDescriptor {
+    static let invalid = Socket.FileDescriptor(rawValue: -1)
+}
+
 extension Socket {
 
     typealias FileDescriptorType = Int32
@@ -153,8 +157,8 @@ extension Socket {
         return Glibc.unlink(addr)
     }
 
-    static func poll(_ fds: UnsafeMutablePointer<pollfd>!, _ nfds: nfds_t, _ tmo_p: Int32) -> Int32 {
-        Glibc.poll(fds, nfds, tmo_p)
+    static func poll(_ fds: UnsafeMutablePointer<pollfd>!, _ nfds: UInt32, _ tmo_p: Int32) -> Int32 {
+        Glibc.poll(fds, UInt(nfds), tmo_p)
     }
 
     static func pollfd(fd: FileDescriptorType, events: Int16, revents: Int16) -> Glibc.pollfd {
