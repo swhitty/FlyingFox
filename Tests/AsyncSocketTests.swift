@@ -107,16 +107,15 @@ final class AsyncSocketTests: XCTestCase {
         await XCTAssertThrowsError(try await s1.read(bytes: 5), of: SocketError.self)
     }
 
-    func testSocketBytesReadChunk_ReturnsNil_WhenSocketIsClosed() async throws {
+    func testSocketBytesReadChunk_Throws_WhenSocketIsClosed() async throws {
         let s1 = try AsyncSocket.make()
         try s1.close()
 
         var bytes = s1.bytes
-        let chunk = try await bytes.nextChunk(count: 1)
-        XCTAssertNil(chunk)
+        await XCTAssertThrowsError(try await bytes.nextChunk(count: 1), of: SocketError.self)
     }
 
-    func testSocketBytesReadChunk_Throws_WhenSocketIsClosed() async throws {
+    func testSocketBytesReadChunk_Throws_WhenSocketIsNotOpen() async throws {
         let s1 = try AsyncSocket.make()
 
         var bytes = s1.bytes

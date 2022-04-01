@@ -142,22 +142,10 @@ struct AsyncSocketReadSequence: ChunkedAsyncSequence, ChunkedAsyncIteratorProtoc
     func makeAsyncIterator() -> AsyncSocketReadSequence { self }
 
     mutating func next() async throws -> UInt8? {
-        do {
-            return try await socket.read()
-        } catch SocketError.disconnected {
-            return nil
-        } catch {
-            throw error
-        }
+        return try await socket.read()
     }
 
     mutating func nextChunk(count: Int) async throws -> [Element]? {
-        do {
-            return try await socket.read(bytes: count)
-        } catch SocketError.disconnected {
-            return nil
-        } catch {
-            throw error
-        }
+        return try await socket.read(bytes: count)
     }
 }
