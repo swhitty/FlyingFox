@@ -35,6 +35,32 @@ public protocol WSHandler: Sendable {
     func makeFrames(for client: AsyncThrowingStream<WSFrame, Error>) async throws -> AsyncStream<WSFrame>
 }
 
+/// `MessageFrameWSHandler` manages the websocket protocol by splitting the messages from the incoming frames into a separate stream,
+///  and merging the output with any frames from the output messges stream.
+///
+///
+/// ```
+///  ┌───────────┐
+///  │ Frames In │
+///  └───────────┘
+///        │
+///        │
+///        ▼
+///     ┌─────┐       ┌────────────┐
+///     │Split│──────▶│Messages In │
+///     └─────┘       └────────────┘
+///        │
+///        ▼
+///     ┌─────┐       ┌────────────┐
+///     │Merge│◀──────│Messages Out│
+///     └─────┘       └────────────┘
+///        │
+///        ▼
+///  ┌──────────┐
+///  │Frames Out│
+///  └──────────┘
+/// ```
+
 public struct MessageFrameWSHandler: WSHandler {
 
     private let handler: WSMessageHandler
