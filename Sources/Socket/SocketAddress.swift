@@ -30,6 +30,10 @@
 //
 
 import Foundation
+#if canImport(WinSDK)
+import WinSDK.WinSock2
+#endif
+
 
 public protocol SocketAddress {
     static var family: sa_family_t { get }

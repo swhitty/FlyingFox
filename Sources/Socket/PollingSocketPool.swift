@@ -30,6 +30,9 @@
 //
 
 import Foundation
+#if canImport(WinSDK)
+import WinSDK.WinSock2
+#endif
 
 final actor PollingSocketPool: AsyncSocketPool {
 
