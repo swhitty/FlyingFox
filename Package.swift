@@ -11,20 +11,34 @@ let package = Package(
         .library(
             name: "FlyingFox",
             targets: ["FlyingFox"]
+        ),
+        .library(
+            name: "FlyingSocks",
+            targets: ["FlyingSocks"]
         )
     ],
     targets: [
         .target(
             name: "FlyingFox",
-            path: "Sources"
+            dependencies: ["FlyingSocks"],
+            path: "FlyingFox/Sources"
         ),
         .testTarget(
             name: "FlyingFoxTests",
             dependencies: ["FlyingFox"],
-            path: "Tests",
+            path: "FlyingFox/Tests",
             resources: [
                 .copy("Stubs")
             ]
+        ),
+        .target(
+            name: "FlyingSocks",
+            path: "FlyingSocks/Sources"
+        ),
+        .testTarget(
+            name: "FlyingSocksTests",
+            dependencies: ["FlyingSocks"],
+            path: "FlyingSocks/Tests"
         )
     ]
 )
