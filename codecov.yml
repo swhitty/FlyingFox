@@ -1,4 +1,4 @@
 ignore:
-  - FlyingFox/Sources/Continuation+Extensions.swift #symlinked from FlyingSocks
+  - FlyingFox/Sources/Continuation*.swift
   - FlyingFox/Tests
   - FlyingSocks/Tests
