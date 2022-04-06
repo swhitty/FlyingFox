@@ -40,7 +40,7 @@ final class URLSessionAsyncTests: XCTestCase {
 
     func testURLSession_MakesRequest() async throws {
         let request = URLRequest(url: URL(string: "https://pie.dev/status/208")!)
-        let (_, response) = try await URLSession.shared.data(for: request, forceFallback: false)
+        let (_, response) = try await URLSession.shared.getData(for: request, forceFallback: false)
 
         XCTAssertEqual(
             (response as! HTTPURLResponse).statusCode,
@@ -50,7 +50,7 @@ final class URLSessionAsyncTests: XCTestCase {
 
     func testURLSessionFallback_MakesRequest() async throws {
         let request = URLRequest(url: URL(string: "https://pie.dev/status/208")!)
-        let (_, response) = try await URLSession.shared.data(for: request, forceFallback: true)
+        let (_, response) = try await URLSession.shared.getData(for: request, forceFallback: true)
 
         XCTAssertEqual(
             (response as! HTTPURLResponse).statusCode,
@@ -60,14 +60,14 @@ final class URLSessionAsyncTests: XCTestCase {
 
     func testURLSessionFallback_ReturnsError() async throws {
         let request = URLRequest(url: URL(string: "https://flying.fox.invalid/")!)
-        await XCTAssertThrowsError(try await URLSession.shared.data(for: request, forceFallback: true), of: URLError.self)
+        await XCTAssertThrowsError(try await URLSession.shared.getData(for: request, forceFallback: true), of: URLError.self)
     }
 
     func testURLSession_CancelsRequest() async throws {
         let request = URLRequest(url: URL(string: "https://httpstat.us/200?sleep=10000")!)
 
         let task = Task {
-            _ = try await URLSession.shared.data(for: request)
+            _ = try await URLSession.shared.getData(for: request)
         }
 
         task.cancel()

@@ -39,7 +39,7 @@ import FoundationNetworking
 @available(macOS, deprecated: 12.0, message: "use data(for request: URLRequest) directly")
 extension URLSession {
 
-    func data(for request: URLRequest, forceFallback: Bool = false) async throws -> (Data, URLResponse) {
+    func getData(for request: URLRequest, forceFallback: Bool = false) async throws -> (Data, URLResponse) {
         guard !forceFallback, #available(macOS 12.0, iOS 15.0, tvOS 15.0, *) else {
             return try await makeData(for: request)
         }

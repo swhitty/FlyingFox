@@ -48,7 +48,7 @@ public struct ProxyHTTPHandler: HTTPHandler, Sendable {
 
     public func handleRequest(_ request: HTTPRequest) async throws -> HTTPResponse {
         let req = try makeURLRequest(for: request)
-        let (data, response) = try await session.data(for: req)
+        let (data, response) = try await session.getData(for: req)
         return makeResponse(for: response as! HTTPURLResponse, data: data)
     }
 
