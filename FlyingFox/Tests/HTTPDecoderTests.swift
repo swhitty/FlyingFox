@@ -98,6 +98,26 @@ final class HTTPDecoderTests: XCTestCase {
         )
     }
 
+    func testNaughtyPath_IsParsed() async throws {
+        let request = try await HTTPDecoder.decodeRequestFromString(
+            """
+            GET /../a/b/../c/./d.html?fish=Chips&with=Mushy%20Peas HTTP/1.1\r
+            \r
+            """
+        )
+
+        XCTAssertEqual(
+            request.path,
+            "a/c/d.html"
+        )
+
+        XCTAssertEqual(
+            request.query,
+            [.init(name: "fish", value: "Chips"),
+             .init(name: "with", value: "Mushy Peas")]
+        )
+    }
+
     func testHeaders_AreParsed() async throws {
         let request = try await HTTPDecoder.decodeRequestFromString(
             """
