@@ -254,7 +254,7 @@ final class HTTPServerTests: XCTestCase {
 
 #if canImport(Darwin)
     func testDefaultLogger_IsOSLog() async throws {
-        if #available(iOS 14.0, *) {
+        if #available(iOS 14.0, tvOS 14.0, *) {
             XCTAssertTrue(HTTPServer.defaultLogger() is OSLogHTTPLogging)
         }
     }
