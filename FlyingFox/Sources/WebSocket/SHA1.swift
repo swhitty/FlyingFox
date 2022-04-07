@@ -97,8 +97,7 @@ extension SHA1 {
 
     static func hash<D: DataProtocol>(data: D) -> Data where D.Index == Int {
         // Convert the data to regular data in case it was a slice because slices can crash this hash algorithm
-        var data = Data()
-        data.append(data)
+        let data = Data(data)
 
         var digest = Digest()
         var w = ContiguousArray<UInt32>(repeating: 0, count: 80)
