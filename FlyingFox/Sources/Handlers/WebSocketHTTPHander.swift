@@ -40,12 +40,30 @@ public struct WebSocketHTTPHander: HTTPHandler, Sendable {
     }
 
     public func handleRequest(_ request: HTTPRequest) async throws -> HTTPResponse {
+        guard request.headers[.host] != nil else {
+            return Self.makeBadRequestResponse("Host missing")
+        }
+
+        guard request.headers[.upgrade]?.lowercased() == "websocket" else {
+            return Self.makeBadRequestResponse("Upgrade must be 'websocket'")
+        }
+
+        guard request.headers[.connection]?.lowercased() == "upgrade" else {
+            return Self.makeBadRequestResponse("Connection must be 'Upgrade'")
+        }
+
+        guard request.headers[.webSocketVersion] == "13" else {
+            return Self.makeBadRequestResponse("Sec-WebSocket-Version must be '13'")
+        }
+
+        guard let key = request.headers[.webSocketKey] else {
+            return Self.makeBadRequestResponse("Sec-WebSocket-Key missing")
+        }
+
         var response = HTTPResponse(webSocket: handler)
         response.headers[.connection] = "upgrade"
         response.headers[.upgrade] = "websocket"
-        if let key = request.headers[.webSocketKey] {
-            response.headers[.webSocketAccept] = Self.makeSecWebSocketAcceptValue(for: key)
-        }
+        response.headers[.webSocketAccept] = Self.makeSecWebSocketAcceptValue(for: key)
 
         return response
     }
@@ -60,5 +78,14 @@ public struct WebSocketHTTPHander: HTTPHandler, Sendable {
         withUnsafeBytes(of: uuid.uuid) {
             Data($0).base64EncodedString()
         }
+    }
+
+    private static func makeBadRequestResponse(_ message: String) -> HTTPResponse {
+        HTTPResponse(
+            version: .http11,
+            statusCode: .badRequest,
+            headers: [:],
+            body: message.data(using: .utf8)!
+        )
     }
 }

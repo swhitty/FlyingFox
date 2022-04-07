@@ -232,6 +232,7 @@ final class HTTPServerTests: XCTestCase {
         defer { try? socket.close() }
 
         var request = HTTPRequest.make(path: "/socket")
+        request.headers[.host] = "localhost"
         request.headers[.upgrade] = "websocket"
         request.headers[.connection] = "Upgrade"
         request.headers[.webSocketVersion] = "13"
