@@ -106,10 +106,17 @@ final class HTTPDecoderTests: XCTestCase {
             """
         )
 
+#if canImport(Darwin)
         XCTAssertEqual(
             request.path,
             "a/c/d.html"
         )
+#else
+        XCTAssertEqual(
+            request.path,
+            "/a/c/d.html"
+        )
+#endif
 
         XCTAssertEqual(
             request.query,
