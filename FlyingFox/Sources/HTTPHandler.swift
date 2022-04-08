@@ -70,8 +70,8 @@ public extension HTTPHandler where Self == ClosureHTTPHandler {
     }
 }
 
-public extension HTTPHandler where Self == WebSocketHTTPHander {
-    static func webSocket(_ handler: WSMessageHandler, frameSize: Int = 16384) -> WebSocketHTTPHander {
-        WebSocketHTTPHander(handler: MessageFrameWSHandler(handler: handler, frameSize: frameSize))
+public extension HTTPHandler where Self == WebSocketHTTPHandler {
+    static func webSocket(_ handler: WSMessageHandler, frameSize: Int = 16384) -> WebSocketHTTPHandler {
+        WebSocketHTTPHandler(handler: MessageFrameWSHandler(handler: handler, frameSize: frameSize))
     }
 }

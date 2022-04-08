@@ -1,5 +1,5 @@
 //
-//  WebSocketHTTPHander.swift
+//  WebSocketHTTPHandler.swift
 //  FlyingFox
 //
 //  Created by Simon Whitty on 19/03/2022.
@@ -39,7 +39,7 @@ public struct InvalidWebSocketHandshakeError: LocalizedError {
     }
 }
 
-public struct WebSocketHTTPHander: HTTPHandler, Sendable {
+public struct WebSocketHTTPHandler: HTTPHandler, Sendable {
 
     private let handler: WSHandler
 
@@ -132,3 +132,6 @@ public struct WebSocketHTTPHander: HTTPHandler, Sendable {
         }
     }
 }
+
+@available(*, unavailable, renamed: "WebSocketHTTPHandler")
+public typealias WebSocketHTTPHander = WebSocketHTTPHandler
