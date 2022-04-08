@@ -35,7 +35,7 @@ import XCTest
 final class WebSocketHandlerTests: XCTestCase {
 
     func testResponseIncludesExpectedHeaders() async throws {
-        let handler = WebSocketHTTPHander.make()
+        let handler = WebSocketHTTPHandler.make()
 
         let response = try await handler.handleRequest(.make(
             headers: [
@@ -68,7 +68,7 @@ final class WebSocketHandlerTests: XCTestCase {
     func testHandlerVerifiesHeaders() async throws {
         // Checks for conformance to RFC 6455 section 4.2.1 (https://datatracker.ietf.org/doc/html/rfc6455#section-4.2.1)
 
-        let handler = WebSocketHTTPHander.make()
+        let handler = WebSocketHTTPHandler.make()
 
         let headers: [HTTPHeader: String] = [
             .host: "localhost",
@@ -126,21 +126,21 @@ final class WebSocketHandlerTests: XCTestCase {
 
     func testWebSocketKey_IsCreatedFromUUID() async throws {
         XCTAssertEqual(
-            WebSocketHTTPHander.makeSecWebSocketKeyValue(for: UUID(uuidString: "123e4567-e89b-12d3-a456-426614174000")!),
+            WebSocketHTTPHandler.makeSecWebSocketKeyValue(for: UUID(uuidString: "123e4567-e89b-12d3-a456-426614174000")!),
             "Ej5FZ+ibEtOkVkJmFBdAAA=="
         )
 
         XCTAssertNotEqual(
-            WebSocketHTTPHander.makeSecWebSocketKeyValue(),
+            WebSocketHTTPHandler.makeSecWebSocketKeyValue(),
             "Ej5FZ+ibEtOkVkJmFBdAAA=="
         )
     }
 
 }
 
-private extension WebSocketHTTPHander {
-    static func make(handler: WSHandler = MockHandler()) -> WebSocketHTTPHander {
-        WebSocketHTTPHander(handler: MockHandler())
+private extension WebSocketHTTPHandler {
+    static func make(handler: WSHandler = MockHandler()) -> WebSocketHTTPHandler {
+        WebSocketHTTPHandler(handler: MockHandler())
     }
 }
 

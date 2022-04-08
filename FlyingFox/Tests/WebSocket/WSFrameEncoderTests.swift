@@ -320,7 +320,7 @@ final class WSFrameEncoderTests: XCTestCase {
         let socket = try await AsyncSocket.connected(to: addr, pool: .polling)
         defer { try? socket.close() }
 
-        let key = WebSocketHTTPHander.makeSecWebSocketKeyValue()
+        let key = WebSocketHTTPHandler.makeSecWebSocketKeyValue()
 
         var request = HTTPRequest.make(path: "/mirror")
         request.headers[.host] = "ws.vi-server.org"
@@ -335,7 +335,7 @@ final class WSFrameEncoderTests: XCTestCase {
 
         XCTAssertEqual(
             response.headers[.webSocketAccept],
-            WebSocketHTTPHander.makeSecWebSocketAcceptValue(for: key)
+            WebSocketHTTPHandler.makeSecWebSocketAcceptValue(for: key)
         )
         print(String(data: HTTPEncoder.encodeResponse(response), encoding: .utf8)!)
 
