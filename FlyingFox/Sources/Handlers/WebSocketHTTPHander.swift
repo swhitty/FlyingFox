@@ -31,6 +31,14 @@
 
 import Foundation
 
+public struct InvalidWebSocketHandshakeError: LocalizedError {
+    public var message: String
+
+    public var errorDescription: String? {
+        message
+    }
+}
+
 public struct WebSocketHTTPHander: HTTPHandler, Sendable {
 
     private let handler: WSHandler
@@ -40,32 +48,76 @@ public struct WebSocketHTTPHander: HTTPHandler, Sendable {
     }
 
     public func handleRequest(_ request: HTTPRequest) async throws -> HTTPResponse {
-        guard request.headers[.host] != nil else {
-            return Self.makeBadRequestResponse("Host missing")
+        // Get the request's key and verify the headers
+        let key: String
+        do {
+            key = try Self.verifyHandshakeRequestHeaders(request.headers)
+        } catch {
+            return HTTPResponse(
+                version: .http11,
+                statusCode: .badRequest,
+                headers: [:],
+                body: error.localizedDescription.data(using: .utf8)!
+            )
         }
 
-        guard request.headers[.upgrade]?.lowercased() == "websocket" else {
-            return Self.makeBadRequestResponse("Upgrade must be 'websocket'")
-        }
-
-        guard request.headers[.connection]?.lowercased() == "upgrade" else {
-            return Self.makeBadRequestResponse("Connection must be 'Upgrade'")
-        }
-
-        guard request.headers[.webSocketVersion] == "13" else {
-            return Self.makeBadRequestResponse("Sec-WebSocket-Version must be '13'")
-        }
-
-        guard let key = request.headers[.webSocketKey] else {
-            return Self.makeBadRequestResponse("Sec-WebSocket-Key missing")
-        }
-
+        // Create the response
         var response = HTTPResponse(webSocket: handler)
         response.headers[.connection] = "upgrade"
         response.headers[.upgrade] = "websocket"
         response.headers[.webSocketAccept] = Self.makeSecWebSocketAcceptValue(for: key)
 
         return response
+    }
+
+    /// Verifies a handshake request's headers and returns the request's key.
+    /// - Parameter headers: The headers of the request to verify.
+    /// - Returns: The request's key.
+    /// - Throws: An ``InvalidWebSocketHandshakeError`` if the headers are invalid.
+    static func verifyHandshakeRequestHeaders(_ headers: [HTTPHeader: String]) throws -> String {
+        // Verify the headers according to RFC 6455 section 4.2.1 (https://datatracker.ietf.org/doc/html/rfc6455#section-4.2.1)
+        // Rule 1 isn't verified because the socket method is specified elsewhere
+
+        // 2. A |Host| header field containing the server's authority.
+        guard headers[.host] != nil else {
+            throw InvalidWebSocketHandshakeError(message: "Host header must be present")
+        }
+
+        // 3. An |Upgrade| header field containing the value "websocket", treated as an ASCII
+        //    case-insensitive value.
+        guard headers[.upgrade]?.lowercased() == "websocket" else {
+            throw InvalidWebSocketHandshakeError(message: "Upgrade header must be 'websocket'")
+        }
+
+        // 4. A |Connection| header field that includes the token "Upgrade", treated as an ASCII
+        //    case-insensitive value.
+        guard let connectionHeader = headers[.connection] else {
+            throw InvalidWebSocketHandshakeError(message: "Connection header must must be present")
+        }
+
+        let connectionHeaderTokens = connectionHeader.lowercased().split(separator: ",").map { token in
+            token.trimmingCharacters(in: .whitespaces)
+        }
+        guard connectionHeaderTokens.contains("upgrade") else {
+            throw InvalidWebSocketHandshakeError(message: "Connection header must include 'Upgrade'")
+        }
+
+        // 5. A |Sec-WebSocket-Key| header field with a base64-encoded (see Section 4 of [RFC4648]) value that,
+        //    when decoded, is 16 bytes in length.
+        guard let key = headers[.webSocketKey] else {
+            throw InvalidWebSocketHandshakeError(message: "Sec-WebSocket-Key header must be present")
+        }
+
+        guard Data(base64Encoded: key)?.count == 16 else {
+            throw InvalidWebSocketHandshakeError(message: "Sec-WebSocket-Key header must be 16 bytes encoded as base64")
+        }
+
+        // 6. A |Sec-WebSocket-Version| header field, with a value of 13.
+        guard headers[.webSocketVersion] == "13" else {
+            throw InvalidWebSocketHandshakeError(message: "Sec-WebSocket-Version header must be '13'")
+        }
+
+        return key
     }
 
     static func makeSecWebSocketAcceptValue(for key: String) -> String {
@@ -78,14 +130,5 @@ public struct WebSocketHTTPHander: HTTPHandler, Sendable {
         withUnsafeBytes(of: uuid.uuid) {
             Data($0).base64EncodedString()
         }
-    }
-
-    private static func makeBadRequestResponse(_ message: String) -> HTTPResponse {
-        HTTPResponse(
-            version: .http11,
-            statusCode: .badRequest,
-            headers: [:],
-            body: message.data(using: .utf8)!
-        )
     }
 }

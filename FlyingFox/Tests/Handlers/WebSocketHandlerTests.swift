@@ -40,9 +40,9 @@ final class WebSocketHandlerTests: XCTestCase {
         let response = try await handler.handleRequest(.make(
             headers: [
                 .host: "localhost",
-                .connection: "uPgRaDe", // case-insensitive
+                .connection: "uPgRaDe,Keep-Alive", // case-insensitive and can be a list of values
                 .upgrade: "WeBsOcKeT", // case-insensitive
-                .webSocketKey: "ABC",
+                .webSocketKey: "ABCDEFGHIJKLMNOP".data(using: .utf8)!.base64EncodedString(),
                 .webSocketVersion: "13"
             ]
         ))
@@ -53,7 +53,7 @@ final class WebSocketHandlerTests: XCTestCase {
         )
         XCTAssertEqual(
             response.headers[.webSocketAccept],
-            "YaxQU85y1o0znnviL0CeoKg7QTM="
+            "9twnCz4Oi2Q3EuDqLAETCuip07c="
         )
         XCTAssertEqual(
             response.headers[.connection],
@@ -74,7 +74,7 @@ final class WebSocketHandlerTests: XCTestCase {
             .host: "localhost",
             .connection: "Upgrade",
             .upgrade: "websocket",
-            .webSocketKey: "ABC",
+            .webSocketKey: "ABCDEFGHIJKLMNOP".data(using: .utf8)!.base64EncodedString(),
             .webSocketVersion: "13"
         ]
 
@@ -87,8 +87,8 @@ final class WebSocketHandlerTests: XCTestCase {
         var incorrectUpgradeHeaders = headers
         incorrectUpgradeHeaders[.upgrade] = "webplugs"
 
-        var missingSocketKeyHeaders = headers
-        missingSocketKeyHeaders[.webSocketKey] = nil
+        var incorrectSocketKeyHeaders = headers
+        incorrectSocketKeyHeaders[.webSocketKey] = "ABC"
 
         var incorrectSocketVersionHeaders = headers
         incorrectSocketVersionHeaders[.webSocketVersion] = "-1"
@@ -111,9 +111,9 @@ final class WebSocketHandlerTests: XCTestCase {
             .badRequest
         )
 
-        let missingSocketKeyResponse = try await handler.handleRequest(.make(headers: missingSocketKeyHeaders))
+        let incorrectSocketKeyResponse = try await handler.handleRequest(.make(headers: incorrectSocketKeyHeaders))
         XCTAssertEqual(
-            missingSocketKeyResponse.statusCode,
+            incorrectSocketKeyResponse.statusCode,
             .badRequest
         )
 
