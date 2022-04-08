@@ -37,7 +37,15 @@ final class WebSocketHandlerTests: XCTestCase {
     func testResponseIncludesExpectedHeaders() async throws {
         let handler = WebSocketHTTPHander.make()
 
-        let response = try await handler.handleRequest(.make(headers: [.webSocketKey: "ABC"]))
+        let response = try await handler.handleRequest(.make(
+            headers: [
+                .host: "localhost",
+                .connection: "uPgRaDe,Keep-Alive", // case-insensitive and can be a list of values
+                .upgrade: "WeBsOcKeT", // case-insensitive
+                .webSocketKey: "ABCDEFGHIJKLMNOP".data(using: .utf8)!.base64EncodedString(),
+                .webSocketVersion: "13"
+            ]
+        ))
 
         XCTAssertEqual(
             response.statusCode,
@@ -45,7 +53,7 @@ final class WebSocketHandlerTests: XCTestCase {
         )
         XCTAssertEqual(
             response.headers[.webSocketAccept],
-            "YaxQU85y1o0znnviL0CeoKg7QTM="
+            "9twnCz4Oi2Q3EuDqLAETCuip07c="
         )
         XCTAssertEqual(
             response.headers[.connection],
@@ -54,6 +62,65 @@ final class WebSocketHandlerTests: XCTestCase {
         XCTAssertEqual(
             response.headers[.upgrade],
             "websocket"
+        )
+    }
+
+    func testHandlerVerifiesHeaders() async throws {
+        // Checks for conformance to RFC 6455 section 4.2.1 (https://datatracker.ietf.org/doc/html/rfc6455#section-4.2.1)
+
+        let handler = WebSocketHTTPHander.make()
+
+        let headers: [HTTPHeader: String] = [
+            .host: "localhost",
+            .connection: "Upgrade",
+            .upgrade: "websocket",
+            .webSocketKey: "ABCDEFGHIJKLMNOP".data(using: .utf8)!.base64EncodedString(),
+            .webSocketVersion: "13"
+        ]
+
+        var withoutHostHeaders = headers
+        withoutHostHeaders[.host] = nil
+
+        var incorrectConnectionHeaders = headers
+        incorrectConnectionHeaders[.connection] = "Downgrade"
+
+        var incorrectUpgradeHeaders = headers
+        incorrectUpgradeHeaders[.upgrade] = "webplugs"
+
+        var incorrectSocketKeyHeaders = headers
+        incorrectSocketKeyHeaders[.webSocketKey] = "ABC"
+
+        var incorrectSocketVersionHeaders = headers
+        incorrectSocketVersionHeaders[.webSocketVersion] = "-1"
+
+        let withoutHostResponse = try await handler.handleRequest(.make(headers: withoutHostHeaders))
+        XCTAssertEqual(
+            withoutHostResponse.statusCode,
+            .badRequest
+        )
+
+        let incorrectConnectionResponse = try await handler.handleRequest(.make(headers: incorrectConnectionHeaders))
+        XCTAssertEqual(
+            incorrectConnectionResponse.statusCode,
+            .badRequest
+        )
+
+        let incorrectUpgradeResponse = try await handler.handleRequest(.make(headers: incorrectUpgradeHeaders))
+        XCTAssertEqual(
+            incorrectUpgradeResponse.statusCode,
+            .badRequest
+        )
+
+        let incorrectSocketKeyResponse = try await handler.handleRequest(.make(headers: incorrectSocketKeyHeaders))
+        XCTAssertEqual(
+            incorrectSocketKeyResponse.statusCode,
+            .badRequest
+        )
+
+        let incorrectSocketVersionResponse = try await handler.handleRequest(.make(headers: incorrectSocketVersionHeaders))
+        XCTAssertEqual(
+            incorrectSocketVersionResponse.statusCode,
+            .badRequest
         )
     }
 

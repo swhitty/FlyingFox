@@ -232,14 +232,15 @@ final class HTTPServerTests: XCTestCase {
         defer { try? socket.close() }
 
         var request = HTTPRequest.make(path: "/socket")
+        request.headers[.host] = "localhost"
         request.headers[.upgrade] = "websocket"
-        request.headers[.connection] = "Upgrade"
+        request.headers[.connection] = "Keep-Alive, Upgrade"
         request.headers[.webSocketVersion] = "13"
-        request.headers[.webSocketKey] = "ABC"
+        request.headers[.webSocketKey] = "ABCDEFGHIJKLMNOP".data(using: .utf8)!.base64EncodedString()
         try await socket.writeRequest(request)
 
         let response = try await socket.readResponse()
-        XCTAssertEqual(response.headers[.webSocketAccept], "YaxQU85y1o0znnviL0CeoKg7QTM=")
+        XCTAssertEqual(response.headers[.webSocketAccept], "9twnCz4Oi2Q3EuDqLAETCuip07c=")
         XCTAssertEqual(response.headers[.connection], "upgrade")
         XCTAssertEqual(response.headers[.upgrade], "websocket")
 
