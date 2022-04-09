@@ -223,7 +223,8 @@ public struct Socket: Sendable, Hashable {
         return count
     }
 
-    public func write(_ data: Data, from index: Data.Index) throws -> Data.Index {
+    public func write(_ data: Data, from index: Data.Index = 0) throws -> Data.Index {
+        precondition(index >= 0)
         guard index < data.endIndex else { return data.endIndex }
         return try data.withUnsafeBytes { buffer in
             let sent = try write(buffer.baseAddress! + index - data.startIndex, length: data.endIndex - index)
