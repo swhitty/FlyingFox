@@ -154,7 +154,7 @@ final class HTTPServerTests: XCTestCase {
         }
         let task = try await server.startDetached()
         defer { task.cancel() }
-        let socket = try await AsyncSocket.connected(to: address, pool: .polling)
+        let socket = try await AsyncSocket.connected(to: address)
         defer { try? socket.close() }
         try await socket.writeRequest(.make())
 
@@ -173,7 +173,7 @@ final class HTTPServerTests: XCTestCase {
         let task = try await server.startDetached()
         defer { task.cancel( )}
 
-        let socket = try await AsyncSocket.connected(to: .inet(ip4: "127.0.0.1", port: 8080), pool: .polling)
+        let socket = try await AsyncSocket.connected(to: .inet(ip4: "127.0.0.1", port: 8080))
         defer { try? socket.close() }
 
         try await socket.writeRequest(.make())
@@ -228,7 +228,7 @@ final class HTTPServerTests: XCTestCase {
         let task = try await server.startDetached()
         defer { task.cancel() }
 
-        let socket = try await AsyncSocket.connected(to: address, pool: .polling)
+        let socket = try await AsyncSocket.connected(to: address)
         defer { try? socket.close() }
 
         var request = HTTPRequest.make(path: "/socket")

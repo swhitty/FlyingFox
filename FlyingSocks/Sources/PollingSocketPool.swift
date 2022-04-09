@@ -43,8 +43,9 @@ public final actor PollingSocketPool: AsyncSocketPool {
         public static let `default` = Interval.seconds(0.1)
     }
 
-    public init(interval: Interval = .default) {
-        self.interval = interval
+    public init(pollInterval: Interval = .default, loopInterval: Interval = .immediate) {
+        self.pollInterval = pollInterval
+        self.loopInterval = loopInterval
     }
 
     public func suspendSocket(_ socket: Socket, untilReadyFor events: Socket.Events) async throws {
@@ -58,7 +59,8 @@ public final actor PollingSocketPool: AsyncSocketPool {
         }
     }
 
-    private let interval: Interval
+    private let pollInterval: Interval
+    private let loopInterval: Interval
     private var waiting: [SuspendedSocket: Set<Continuation>] = [:] {
         didSet {
             if !waiting.isEmpty, let continuation = loop {
@@ -133,7 +135,7 @@ public final actor PollingSocketPool: AsyncSocketPool {
             var buffer = sockets.map {
                 Socket.pollfd(fd: $0.file.rawValue, events: Int16($0.events.pollEvents.rawValue), revents: 0)
             }
-            if Socket.poll(&buffer, UInt32(buffer.count), interval.milliseconds) > 0 {
+            if Socket.poll(&buffer, UInt32(buffer.count), pollInterval.milliseconds) > 0 {
                 for (socket, pollfd) in zip(sockets, buffer) {
                     processPoll(socket: socket, revents: .makeRevents(pollfd.revents, for: socket.events))
                 }
@@ -142,7 +144,12 @@ public final actor PollingSocketPool: AsyncSocketPool {
             if waiting.isEmpty {
                 try await suspendLoopUntilSocketsExist()
             } else {
-                await Task.yield()
+                switch loopInterval {
+                case .immediate:
+                    await Task.yield()
+                case .seconds(let seconds):
+                    try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+                }
             }
         } while true
     }
@@ -199,8 +206,8 @@ public final actor PollingSocketPool: AsyncSocketPool {
 }
 
 extension PollingSocketPool {
-    static let shared: PollingSocketPool = {
-        let pool = PollingSocketPool()
+    static let client: PollingSocketPool = {
+        let pool = PollingSocketPool(pollInterval: .immediate, loopInterval: .seconds(0.1))
         Task { try await pool.run() }
         return pool
     }()

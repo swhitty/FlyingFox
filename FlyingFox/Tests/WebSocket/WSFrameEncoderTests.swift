@@ -317,7 +317,7 @@ final class WSFrameEncoderTests: XCTestCase {
 
     func debug_testWebSocketConnectionToVI() async throws {
         let addr = try Socket.makeAddressINET(fromIP4: "192.236.209.31", port: 80)
-        let socket = try await AsyncSocket.connected(to: addr, pool: .polling)
+        let socket = try await AsyncSocket.connected(to: addr)
         defer { try? socket.close() }
 
         let key = WebSocketHTTPHandler.makeSecWebSocketKeyValue()

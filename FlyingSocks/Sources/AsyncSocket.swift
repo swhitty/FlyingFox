@@ -38,8 +38,8 @@ public protocol AsyncSocketPool: Sendable {
 }
 
 public extension AsyncSocketPool where Self == PollingSocketPool {
-    static var polling: AsyncSocketPool {
-        PollingSocketPool.shared
+    static var pollingClient: AsyncSocketPool {
+        PollingSocketPool.client
     }
 }
 
@@ -48,13 +48,13 @@ public struct AsyncSocket: Sendable {
     public let socket: Socket
     let pool: AsyncSocketPool
 
-    public init(socket: Socket, pool: AsyncSocketPool = .polling) throws {
+    public init(socket: Socket, pool: AsyncSocketPool = .pollingClient) throws {
         self.socket = socket
         self.pool = pool
         try socket.setFlags(.nonBlocking)
     }
 
-    public static func connected<A: SocketAddress>(to address: A,  pool: AsyncSocketPool = .polling) async throws -> Self {
+    public static func connected<A: SocketAddress>(to address: A,  pool: AsyncSocketPool = .pollingClient) async throws -> Self {
         let socket = try Socket(domain: Int32(address.makeStorage().ss_family), type: Socket.stream)
         let asyncSocket = try AsyncSocket(socket: socket, pool: pool)
         try await asyncSocket.connect(to: address)

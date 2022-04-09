@@ -35,12 +35,12 @@ import Foundation
 
 extension AsyncSocket {
 
-    static func make(pool: AsyncSocketPool = .polling) throws -> AsyncSocket {
+    static func make(pool: AsyncSocketPool = .pollingClient) throws -> AsyncSocket {
         let socket = try Socket(domain: AF_UNIX, type: Socket.stream)
         return try AsyncSocket(socket: socket, pool: pool)
     }
 
-    static func makePair(pool: AsyncSocketPool = .polling) throws -> (AsyncSocket, AsyncSocket) {
+    static func makePair(pool: AsyncSocketPool = .pollingClient) throws -> (AsyncSocket, AsyncSocket) {
         let (file1, file2) = Socket.socketpair(AF_UNIX, Socket.stream, 0)
         guard file1.rawValue > -1, file2.rawValue > -1 else {
             throw SocketError.makeFailed("SocketPair")
