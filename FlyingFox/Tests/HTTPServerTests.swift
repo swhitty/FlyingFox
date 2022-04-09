@@ -374,7 +374,7 @@ extension HTTPServer {
     // clients can then immediatley connect
     func startDetached() throws -> Task<Void, Error>{
         let socket = try makeSocketAndListen()
-        let pool = PollingSocketPool()
+        let pool = HTTPServer.defaultPool()
         return Task {
             defer { try? socket.close() }
             try await start(on: socket, pool: pool)

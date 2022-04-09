@@ -45,7 +45,7 @@ public final actor HTTPServer {
 
     public init<A: SocketAddress>(address: A,
                                   timeout: TimeInterval = 15,
-                                  pool: AsyncSocketPool = PollingSocketPool(),
+                                  pool: AsyncSocketPool = defaultPool(),
                                   logger: HTTPLogging? = defaultLogger(),
                                   handler: HTTPHandler? = nil) {
         self.address = address.makeStorage()
@@ -57,7 +57,7 @@ public final actor HTTPServer {
 
     public convenience init(port: UInt16,
                             timeout: TimeInterval = 15,
-                            pool: AsyncSocketPool = PollingSocketPool(),
+                            pool: AsyncSocketPool = defaultPool(),
                             logger: HTTPLogging? = defaultLogger(),
                             handler: HTTPHandler? = nil) {
         #if canImport(WinSDK)
@@ -74,7 +74,7 @@ public final actor HTTPServer {
 
     public convenience init(port: UInt16,
                             timeout: TimeInterval = 15,
-                            pool: AsyncSocketPool = PollingSocketPool(),
+                            pool: AsyncSocketPool = defaultPool(),
                             logger: HTTPLogging? = defaultLogger(),
                             handler: @Sendable @escaping (HTTPRequest) async throws -> HTTPResponse) {
         self.init(port: port,
@@ -189,6 +189,10 @@ public final actor HTTPServer {
             root.appendRoute("*", to: handler)
         }
         return root
+    }
+
+    public static func defaultPool() -> AsyncSocketPool {
+        PollingSocketPool(pollInterval: .seconds(0.1), loopInterval: .immediate)
     }
 }
 

@@ -35,7 +35,7 @@ import XCTest
 final class PollingSocketPoolTests: XCTestCase {
 
     func testPoolThowsError_WhenAlreadyRunning() async throws {
-        let pool = PollingSocketPool()
+        let pool = PollingSocketPool(pollInterval: .immediate, loopInterval: .immediate)
 
         let task = Task {
             try await withThrowingTaskGroup(of: Void.self) { group in
@@ -130,5 +130,12 @@ final class PollingSocketPoolTests: XCTestCase {
             XCTAssertEqual($0, .disconnected)
         }
         task.cancel()
+    }
+}
+
+private extension PollingSocketPool {
+
+    convenience init() {
+        self.init(pollInterval: .immediate, loopInterval: .immediate)
     }
 }

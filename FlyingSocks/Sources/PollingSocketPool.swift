@@ -43,7 +43,7 @@ public final actor PollingSocketPool: AsyncSocketPool {
         public static let `default` = Interval.seconds(0.1)
     }
 
-    public init(pollInterval: Interval = .default, loopInterval: Interval = .immediate) {
+    public init(pollInterval: Interval, loopInterval: Interval) {
         self.pollInterval = pollInterval
         self.loopInterval = loopInterval
     }
