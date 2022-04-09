@@ -39,21 +39,25 @@ public final actor HTTPServer {
 
     private let address: sockaddr_storage
     private let timeout: TimeInterval
+    private let pool: AsyncSocketPool
     private let logger: HTTPLogging?
     private var handlers: RoutedHTTPHandler
 
     public init<A: SocketAddress>(address: A,
                                   timeout: TimeInterval = 15,
+                                  pool: AsyncSocketPool = PollingSocketPool(),
                                   logger: HTTPLogging? = defaultLogger(),
                                   handler: HTTPHandler? = nil) {
         self.address = address.makeStorage()
         self.timeout = timeout
+        self.pool = pool
         self.logger = logger
         self.handlers = Self.makeRootHandler(to: handler)
     }
 
     public convenience init(port: UInt16,
                             timeout: TimeInterval = 15,
+                            pool: AsyncSocketPool = PollingSocketPool(),
                             logger: HTTPLogging? = defaultLogger(),
                             handler: HTTPHandler? = nil) {
         #if canImport(WinSDK)
@@ -63,16 +67,19 @@ public final actor HTTPServer {
         #endif
         self.init(address: address,
                   timeout: timeout,
+                  pool: pool,
                   logger: logger,
                   handler: handler)
     }
 
     public convenience init(port: UInt16,
                             timeout: TimeInterval = 15,
+                            pool: AsyncSocketPool = PollingSocketPool(),
                             logger: HTTPLogging? = defaultLogger(),
                             handler: @Sendable @escaping (HTTPRequest) async throws -> HTTPResponse) {
         self.init(port: port,
                   timeout: timeout,
+                  pool: pool,
                   logger: logger,
                   handler: ClosureHTTPHandler(handler))
     }
@@ -88,7 +95,7 @@ public final actor HTTPServer {
     public func start() async throws {
         let socket = try makeSocketAndListen()
         do {
-            try await start(on: socket, pool: PollingSocketPool())
+            try await start(on: socket, pool: pool)
         } catch {
             logger?.logCritical("server error: \(error.localizedDescription)")
             try? socket.close()
