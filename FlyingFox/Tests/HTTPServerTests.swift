@@ -221,7 +221,7 @@ final class HTTPServerTests: XCTestCase {
 #endif
 
     func testServer_ReturnsWebSocketFrames() async throws {
-        let address = Socket.makeAddressUnix(path: "fox")
+        let address = Socket.makeAddressUnix(path: "foxing")
         try? Socket.unlink(address)
         let server = HTTPServer.make(address: address)
         await server.appendRoute("GET /socket", to: .webSocket(EchoWSMessageHandler()))
