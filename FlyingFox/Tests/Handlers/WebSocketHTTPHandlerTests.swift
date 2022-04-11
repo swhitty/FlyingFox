@@ -1,5 +1,5 @@
 //
-//  WebSocketHandlerTests.swift
+//  WebSocketHTTPHandlerTests.swift
 //  FlyingFox
 //
 //  Created by Simon Whitty on 19/03/2022.
@@ -32,7 +32,7 @@
 @testable import FlyingFox
 import XCTest
 
-final class WebSocketHandlerTests: XCTestCase {
+final class WebSocketHTTPHandlerTests: XCTestCase {
 
     func testResponseIncludesExpectedHeaders() async throws {
         let handler = WebSocketHTTPHandler.make()
@@ -124,6 +124,16 @@ final class WebSocketHandlerTests: XCTestCase {
         )
     }
 
+    func testHandlerVerifiesRequestMethod() async throws {
+        let handler = WebSocketHTTPHandler.make(accepts: [.GET])
+
+        let incorrectMethodResponse = try await handler.handleRequest(.make(method: .POST))
+        XCTAssertEqual(
+            incorrectMethodResponse.statusCode,
+            .badRequest
+        )
+    }
+
     func testWebSocketKey_IsCreatedFromUUID() async throws {
         XCTAssertEqual(
             WebSocketHTTPHandler.makeSecWebSocketKeyValue(for: UUID(uuidString: "123e4567-e89b-12d3-a456-426614174000")!),
@@ -139,8 +149,8 @@ final class WebSocketHandlerTests: XCTestCase {
 }
 
 private extension WebSocketHTTPHandler {
-    static func make(handler: WSHandler = MockHandler()) -> WebSocketHTTPHandler {
-        WebSocketHTTPHandler(handler: MockHandler())
+    static func make(handler: WSHandler = MockHandler(), accepts methods: Set<HTTPMethod> = [.GET]) -> WebSocketHTTPHandler {
+        WebSocketHTTPHandler(handler: MockHandler(), accepts: methods)
     }
 }
 
