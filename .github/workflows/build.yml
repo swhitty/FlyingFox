@@ -38,9 +38,11 @@ jobs:
 
   linux:
     runs-on: ubuntu-latest
-    container: swift:5.6
+    container: swift:5.6.1
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+      - name: Version
+        run: swift --version
       - name: Build and Test
         run: swift test
