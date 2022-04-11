@@ -39,8 +39,6 @@ public final actor PollingSocketPool: AsyncSocketPool {
     public enum Interval {
         case immediate
         case seconds(TimeInterval)
-
-        public static let `default` = Interval.seconds(0.1)
     }
 
     public init(pollInterval: Interval, loopInterval: Interval) {
