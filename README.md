@@ -1,6 +1,6 @@
 [![Build](https://github.com/swhitty/FlyingFox/actions/workflows/build.yml/badge.svg)](https://github.com/swhitty/FlyingFox/actions/workflows/build.yml)
 [![Codecov](https://codecov.io/gh/swhitty/FlyingFox/graphs/badge.svg)](https://codecov.io/gh/swhitty/FlyingFox)
-[![Platforms](https://img.shields.io/badge/platforms-iOS%20|%20Mac%20|%20tvOS%20|%20Linux-lightgray.svg)](https://github.com/swhitty/FlyingFox/blob/main/Package.swift)
+[![Platforms](https://img.shields.io/badge/platforms-iOS%20|%20Mac%20|%20tvOS%20|%20Linux|%20Windows-lightgray.svg)](https://github.com/swhitty/FlyingFox/blob/main/Package.swift)
 [![Swift 5.6](https://img.shields.io/badge/swift-5.5|5.6-red.svg?style=flat)](https://developer.apple.com/swift)
 [![License](https://img.shields.io/badge/license-MIT-lightgrey.svg)](https://opensource.org/licenses/MIT)
 [![Twitter](https://img.shields.io/badge/twitter-@simonwhitty-blue.svg)](http://twitter.com/simonwhitty)
@@ -9,23 +9,28 @@
 - [Handlers](#handlers)
 - [Routes](#routes)
 - [WebSockets](#websockets)
-- [SocketAddress](#socketaddress)
+- [FlyingSocks](#flyingsocks)
+    - [Socket](#socket)
+    - [AsyncSocket](#asyncsocket)
+        - [AsyncSocketPool](#asyncsocketpool)
+        - [PollingSocketPool](#pollingsocketpool)
+    - [SocketAddress](#socketaddress)
 - [Credits](#credits)
 
 # Introduction
 
-**FlyingFox** is a lightweight HTTP server built using [Swift Concurrency](https://docs.swift.org/swift-book/LanguageGuide/Concurrency.html). The server uses non blocking BSD sockets, handling each connection in a concurrent child [Task](https://developer.apple.com/documentation/swift/task). When a socket is blocked with no data, tasks are suspended using the shared [`AsyncSocketPool`](https://github.com/swhitty/FlyingFox/blob/main/README.md#asyncsocket--pollingsocketpool).
+**FlyingFox** is a lightweight HTTP server built using [Swift Concurrency](https://docs.swift.org/swift-book/LanguageGuide/Concurrency.html). The server uses non blocking BSD sockets, handling each connection in a concurrent child [Task](https://developer.apple.com/documentation/swift/task). When a socket is blocked with no data, tasks are suspended using the shared [`AsyncSocketPool`](#pollingsocketpool).
 
 # Installation
 
 FlyingFox can be installed by using Swift Package Manager.
 
-**Note:** FlyingFox requires Swift 5.5 on Xcode 13.2+. It runs on iOS 13+, tvOS 13+, macOS 10.15+ and Linux.
+**Note:** FlyingFox requires Swift 5.5 on Xcode 13.2+. It runs on iOS 13+, tvOS 13+, macOS 10.15+ and Linux. Windows 10 support is experimental.
 
 To install using Swift Package Manager, add this to the `dependencies:` section in your Package.swift file:
 
 ```swift
-.package(url: "https://github.com/swhitty/FlyingFox.git", .upToNextMajor(from: "0.6.0"))
+.package(url: "https://github.com/swhitty/FlyingFox.git", .upToNextMajor(from: "0.7.0"))
 ```
 
 # Usage
@@ -254,6 +259,62 @@ protocol WSHandler {
 
 `WSHandler` facilitates the exchange of a pair `AsyncStream<WSFrame>` containing the raw websocket frames sent over the connection. While powerful, it is more convenient to exchange streams of messages via [`WebSocketHTTPHandler`](#websockethttphandler).
 
+# FlyingSocks
+
+Internally, FlyingFox uses a thin wrapper around standard BSD sockets. The `FlyingSocks` module includes these wrappers providing the same `async` API.
+
+```swift
+import FlyingSocks
+
+let socket = try await AsyncSocket.connected(to: .inet(ip4: "192.168.0.100", port: 80))
+try await socket.write(Data([0x01, 0x02, 0x03]))
+try socket.close()
+```
+
+## Socket
+
+`Socket` provides a cross platform wrapper around a socket file descriptor providing an easy to use Swift interface throwing `SocketError` instead of return codes.
+
+```swift
+public enum SocketError: LocalizedError {
+  case blocked
+  case disconnected
+  case unsupportedAddress
+  case failed(type: String, errno: Int32, message: String)
+}
+```
+
+When data is unavailable for a socket and the `EWOULDBLOCK` errno is returned, then `SocketError.blocked` is thrown.
+
+## AsyncSocket
+
+`AsyncSocket` is a simply wraps a `Socket` instance and provides an `async` interface to the socket.  All sockets are configured with the flag `O_NONBLOCK`, when `SocketError.blocked` is caught the current task is suspended using the sockets `AsyncSocketPool`.  When data is available the task is resumed and `AsyncSocket` will retry the operation.
+
+A configured `AsyncSocketPool` can be provided to the socket to optimise the task suspension / resumption behaviour.
+
+```swift
+public struct AsyncSocket: Sendable {
+    public init(socket: Socket, pool: AsyncSocketPool) throws {
+       ...
+    }
+}
+```
+
+### AsyncSocketPool
+
+```swift
+protocol AsyncSocketPool {
+  func run() async throws
+
+  // Suspends current task until a socket is ready to read and/or write
+  func suspendSocket(_ socket: Socket, untilReadyFor events: Socket.Events) async throws
+}
+```
+
+### PollingSocketPool
+
+`PollingSocketPool` is currently the only pool available. It uses a continuous loop of [`poll(2)`](https://www.freebsd.org/cgi/man.cgi?poll) / [`Task.yield()`](https://developer.apple.com/documentation/swift/task/3814840-yield) to check all sockets awaiting data at a supplied interval.  All sockets share the same pool.
+
 ## SocketAddress
 
 The `sockaddr` cluster of structures are grouped via conformance to `SocketAddress`
@@ -280,20 +341,7 @@ You can then [netcat](https://www.freebsd.org/cgi/man.cgi?query=nc) to the socke
 % nc -U Ants
 ```
 
-## AsyncSocket / PollingSocketPool
-
-Internally, FlyingFox uses standard BSD sockets configured with the flag `O_NONBLOCK`. When data is unavailable for a socket (`EWOULDBLOCK`) the task is suspended using the current `AsyncSocketPool` until data is available:
-
-```swift
-protocol AsyncSocketPool {
-  // Suspends current task until a socket is ready to read and/or write
-  func suspendSocket(_ socket: Socket, untilReadyFor events: Socket.Events) async throws
-}
-```
-
-`PollingSocketPool` is currently the only pool available. It uses a continuous loop of [`poll(2)`](https://www.freebsd.org/cgi/man.cgi?poll) / [`Task.yield()`](https://developer.apple.com/documentation/swift/task/3814840-yield) to check all sockets awaiting data at a supplied interval.  All sockets share the same pool.
-
-## Command line app
+# Command line app
 
 An example command line app FlyingFoxCLI is available [here](https://github.com/swhitty/FlyingFoxCLI).
 
