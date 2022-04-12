@@ -146,7 +146,7 @@ final class HTTPServerTests: XCTestCase {
     }
 
     func testServer_StartsOnUnixSocket() async throws {
-        let address = sockaddr_un.unix(path: "fox")
+        let address = sockaddr_un.unix(path: "foxsocks")
         try? Socket.unlink(address)
         let server = HTTPServer.make(address: address)
         await server.appendRoute("*") { _ in
