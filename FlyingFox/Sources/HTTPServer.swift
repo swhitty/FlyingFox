@@ -94,14 +94,21 @@ public final actor HTTPServer {
 
     public func start() async throws {
         let socket = try makeSocketAndListen()
+        isListening = true
         do {
             try await start(on: socket, pool: pool)
         } catch {
             logger?.logCritical("server error: \(error.localizedDescription)")
             try? socket.close()
+            isListening = false
             throw error
         }
     }
+
+    private(set) var isListening: Bool = false {
+        didSet { isListeningDidUpdate(from: oldValue) }
+    }
+    var waiting: Set<Continuation> = []
 
     func makeSocketAndListen() throws -> Socket {
         let socket = try Socket(domain: Int32(address.ss_family))

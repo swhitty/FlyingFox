@@ -152,8 +152,10 @@ final class HTTPServerTests: XCTestCase {
         await server.appendRoute("*") { _ in
             return HTTPResponse.make(statusCode: .accepted)
         }
-        let task = try await server.startDetached()
+        let task = Task { try await server.start() }
         defer { task.cancel() }
+        try await server.waitUntilListening()
+
         let socket = try await AsyncSocket.connected(to: address)
         defer { try? socket.close() }
         try await socket.writeRequest(.make())
@@ -170,8 +172,9 @@ final class HTTPServerTests: XCTestCase {
             return HTTPResponse.make(statusCode: .accepted)
         }
 
-        let task = try await server.startDetached()
-        defer { task.cancel( )}
+        let task = Task { try await server.start() }
+        defer { task.cancel() }
+        try await server.waitUntilListening()
 
         let socket = try await AsyncSocket.connected(to: .inet(ip4: "127.0.0.1", port: 8080))
         defer { try? socket.close() }
@@ -209,8 +212,9 @@ final class HTTPServerTests: XCTestCase {
         let server = HTTPServer(port: 8080)
 
         await server.appendRoute("GET /socket", to: .webSocket(EchoWSMessageHandler()))
-        let task = try await server.startDetached()
+        let task = Task { try await server.start() }
         defer { task.cancel() }
+        try await server.waitUntilListening()
 
         let wsTask = URLSession.shared.webSocketTask(with: URL(string: "ws://localhost:8080/socket")!)
         wsTask.resume()
@@ -225,8 +229,9 @@ final class HTTPServerTests: XCTestCase {
         try? Socket.unlink(address)
         let server = HTTPServer.make(address: address)
         await server.appendRoute("GET /socket", to: .webSocket(EchoWSMessageHandler()))
-        let task = try await server.startDetached()
+        let task = Task { try await server.start() }
         defer { task.cancel() }
+        try await server.waitUntilListening()
 
         let socket = try await AsyncSocket.connected(to: address)
         defer { try? socket.close() }
@@ -313,6 +318,43 @@ final class HTTPServerTests: XCTestCase {
             "starting server"
         )
     }
+
+    func testWaitUntilListing_WaitsUntil_SocketIsListening() async {
+        let server = HTTPServer.make(address: .inet(port: 8080))
+
+        let waiting = Task<Bool, Error> {
+            try await server.waitUntilListening()
+            return true
+        }
+
+        let task = Task { try await server.start() }
+        defer { task.cancel() }
+
+        await XCTAssertEqualAsync(try await waiting.value, true)
+    }
+
+    func testWaitUntilListing_ThrowsWhen_TaskIsCancelled() async {
+        let server = HTTPServer.make(address: .inet(port: 8080))
+
+        let waiting = Task<Bool, Error> {
+            try await server.waitUntilListening()
+            return true
+        }
+
+        waiting.cancel()
+        await XCTAssertThrowsError(try await waiting.value, of: CancellationError.self)
+    }
+
+    func testWaitUntilListing_ThrowsWhen_TimeoutExpires() async throws {
+        let server = HTTPServer.make(address: .inet(port: 8080))
+
+        let waiting = Task<Bool, Error> {
+            try await server.waitUntilListening(timeout: 1)
+            return true
+        }
+
+        await XCTAssertThrowsError(try await waiting.value, of: Error.self)
+    }
 }
 
 extension HTTPHandlerTests {
@@ -368,17 +410,6 @@ extension HTTPServer {
                    timeout: timeout,
                    logger: logger,
                    handler: handler)
-    }
-
-    // Ensures server is listening before returning
-    // clients can then immediatley connect
-    func startDetached() throws -> Task<Void, Error>{
-        let socket = try makeSocketAndListen()
-        let pool = HTTPServer.defaultPool()
-        return Task {
-            defer { try? socket.close() }
-            try await start(on: socket, pool: pool)
-        }
     }
 }
 
