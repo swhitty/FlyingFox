@@ -176,21 +176,38 @@ public final actor PollingSocketPool: AsyncSocketPool {
     final class Continuation: Hashable {
 
         private let continuation: CheckedContinuation<Void, Swift.Error>
+        @Locked private(set) var isComplete: Bool
 
         init(_ continuation: CheckedContinuation<Void, Swift.Error>) {
             self.continuation = continuation
+            self.isComplete = false
         }
 
         func resume() {
-            continuation.resume()
+            _isComplete.unlock {
+                if $0 == false {
+                    continuation.resume()
+                    $0 = true
+                }
+            }
         }
 
         func disconnected() {
-            continuation.resume(throwing: SocketError.disconnected)
+            _isComplete.unlock {
+                if $0 == false {
+                    continuation.resume(throwing: SocketError.disconnected)
+                    $0 = true
+                }
+            }
         }
 
         func cancel() {
-            continuation.resume(throwing: CancellationError())
+            _isComplete.unlock {
+                if $0 == false {
+                    continuation.resume(throwing: CancellationError())
+                    $0 = true
+                }
+            }
         }
 
         func hash(into hasher: inout Hasher) {
