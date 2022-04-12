@@ -145,6 +145,7 @@ final class HTTPServerTests: XCTestCase {
         task.cancel()
     }
 
+    #if canImport(Darwin)
     func testServer_StartsOnUnixSocket() async throws {
         let address = sockaddr_un.unix(path: "foxsocks")
         try? Socket.unlink(address)
@@ -165,6 +166,7 @@ final class HTTPServerTests: XCTestCase {
             .accepted
         )
     }
+    #endif
 
     func testServer_StartsOnIP4Socket() async throws {
         let server = HTTPServer.make(address: .inet(port: 8080))
