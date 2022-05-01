@@ -290,7 +290,7 @@ When data is unavailable for a socket and the `EWOULDBLOCK` errno is returned, t
 
 `AsyncSocket` is a simply wraps a `Socket` instance and provides an `async` interface to the socket.  All sockets are configured with the flag `O_NONBLOCK`, when `SocketError.blocked` is caught the current task is suspended using the sockets `AsyncSocketPool`.  When data is available the task is resumed and `AsyncSocket` will retry the operation.
 
-A configured `AsyncSocketPool` can be provided to the socket to optimise the task suspension / resumption behaviour.
+A configured `AsyncSocketPool` can be provided to the socket to tune the task suspension / resumption behaviour.
 
 ```swift
 public struct AsyncSocket: Sendable {
@@ -311,9 +311,20 @@ protocol AsyncSocketPool {
 }
 ```
 
+```swift
+let pool = PollingSocketPool(pollInterval: .immediate, loopInterval: .seconds(0.05))
+let server = HTTPServer(port: 80, pool: pool)
+```
+
+
 ### PollingSocketPool
 
-`PollingSocketPool` is currently the only pool available. It uses a continuous loop of [`poll(2)`](https://www.freebsd.org/cgi/man.cgi?poll) / [`Task.yield()`](https://developer.apple.com/documentation/swift/task/3814840-yield) to check all sockets awaiting data at a supplied interval.  All sockets share the same pool.
+`PollingSocketPool` is currently the only pool available. It uses a continuous loop of [`poll(2)`](https://www.freebsd.org/cgi/man.cgi?poll) / [`Task.yield()`](https://developer.apple.com/documentation/swift/task/3814840-yield) to check all sockets awaiting data at a supplied interval. 
+
+The pool can be tuned to adjust the time spent within [`poll(2)`](https://www.freebsd.org/cgi/man.cgi?poll) and at the end of each iteration with [`Task.yield()`](https://developer.apple.com/documentation/swift/task/3814840-yield) or [`Task.sleep()`](https://developer.apple.com/documentation/swift/task/3862701-sleep)
+```swift
+init(pollInterval: Interval, loopInterval: Interval)
+```
 
 ## SocketAddress
 
