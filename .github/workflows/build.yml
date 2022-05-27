@@ -6,10 +6,10 @@ on:
   workflow_dispatch:
 
 jobs:
-  xcode_13_3:
+  xcode_13_4:
     runs-on: macos-12
     env:
-      DEVELOPER_DIR: /Applications/Xcode_13.3.app/Contents/Developer
+      DEVELOPER_DIR: /Applications/Xcode_13.4.app/Contents/Developer
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -24,10 +24,10 @@ jobs:
         with:
           files: ./coverage_report.lcov
 
-  xcode_13_2_1:
+  xcode_13_1:
     runs-on: macos-latest
     env:
-      DEVELOPER_DIR: /Applications/Xcode_13.2.1.app/Contents/Developer
+      DEVELOPER_DIR: /Applications/Xcode_13.1.app/Contents/Developer
     steps:
       - name: Checkout
         uses: actions/checkout@v2
