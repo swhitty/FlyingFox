@@ -37,9 +37,9 @@ import WinSDK.WinSock2
 
 public final actor HTTPServer {
 
+    let pool: AsyncSocketPool
     private let address: sockaddr_storage
     private let timeout: TimeInterval
-    private let pool: AsyncSocketPool
     private let logger: HTTPLogging?
     private var handlers: RoutedHTTPHandler
 

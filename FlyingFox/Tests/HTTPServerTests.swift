@@ -157,7 +157,7 @@ final class HTTPServerTests: XCTestCase {
         defer { task.cancel() }
         try await server.waitUntilListening()
 
-        let socket = try await AsyncSocket.connected(to: address)
+        let socket = try await AsyncSocket.connected(to: address, pool: server.pool)
         defer { try? socket.close() }
         try await socket.writeRequest(.make())
 
@@ -178,7 +178,7 @@ final class HTTPServerTests: XCTestCase {
         defer { task.cancel() }
         try await server.waitUntilListening()
 
-        let socket = try await AsyncSocket.connected(to: .inet(ip4: "127.0.0.1", port: 8080))
+        let socket = try await AsyncSocket.connected(to: .inet(ip4: "127.0.0.1", port: 8080), pool: server.pool)
         defer { try? socket.close() }
 
         try await socket.writeRequest(.make())
@@ -235,7 +235,7 @@ final class HTTPServerTests: XCTestCase {
         defer { task.cancel() }
         try await server.waitUntilListening()
 
-        let socket = try await AsyncSocket.connected(to: address)
+        let socket = try await AsyncSocket.connected(to: address, pool: server.pool)
         defer { try? socket.close() }
 
         var request = HTTPRequest.make(path: "/socket")
