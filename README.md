@@ -94,6 +94,17 @@ await server.appendRoute("GET /mock", to: .file(named: "mock.json"))
 
 `FileHTTPHandler` will return `HTTP 404` if the file does not exist.
 
+### DirectoryHTTPHandler
+
+Requests can be routed to static files within a directory with `DirectoryHTTPHandler`:
+
+```swift
+await server.appendRoute("GET /mock/*", to: .directory(subPath: "Stubs", serverPath: "mock"))
+// GET /mock/fish/index.html  ---->  Stubs/fish/index.html
+```
+
+`DirectoryHTTPHandler` will return `HTTP 404` if a file does not exist.
+
 ### ProxyHTTPHandler
 
 Requests can be proxied via a base URL:
