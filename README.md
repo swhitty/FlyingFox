@@ -272,7 +272,7 @@ protocol WSHandler {
 
 # FlyingSocks
 
-Internally, FlyingFox uses a thin wrapper around standard BSD sockets. The `FlyingSocks` module includes these wrappers providing the same `async` API.
+Internally, FlyingFox uses a thin wrapper around standard BSD sockets. The `FlyingSocks` module provides a cross platform `async` interface to these sockets;
 
 ```swift
 import FlyingSocks
@@ -284,7 +284,7 @@ try socket.close()
 
 ## Socket
 
-`Socket` provides a cross platform wrapper around a socket file descriptor providing an easy to use Swift interface throwing `SocketError` instead of return codes.
+`Socket` wraps a file descriptor and provides a Swift interface to common operations throwing `SocketError` instead of returning error codes.
 
 ```swift
 public enum SocketError: LocalizedError {
@@ -299,17 +299,7 @@ When data is unavailable for a socket and the `EWOULDBLOCK` errno is returned, t
 
 ## AsyncSocket
 
-`AsyncSocket` is a simply wraps a `Socket` instance and provides an `async` interface to the socket.  All sockets are configured with the flag `O_NONBLOCK`, when `SocketError.blocked` is caught the current task is suspended using the sockets `AsyncSocketPool`.  When data is available the task is resumed and `AsyncSocket` will retry the operation.
-
-A configured `AsyncSocketPool` can be provided to the socket to tune the task suspension / resumption behaviour.
-
-```swift
-public struct AsyncSocket: Sendable {
-    public init(socket: Socket, pool: AsyncSocketPool) throws {
-       ...
-    }
-}
-```
+`AsyncSocket` simply wraps a `Socket` and provides an `async` interface.  All async sockets are configured with the flag `O_NONBLOCK`, catching `SocketError.blocked` and then suspending the current task using an `AsyncSocketPool`.  When data becomes available the task is resumed and `AsyncSocket` will retry the operation.
 
 ### AsyncSocketPool
 
@@ -322,19 +312,15 @@ protocol AsyncSocketPool {
 }
 ```
 
-```swift
-let pool = PollingSocketPool(pollInterval: .immediate, loopInterval: .seconds(0.05))
-let server = HTTPServer(port: 80, pool: pool)
-```
-
-
 ### PollingSocketPool
 
 `PollingSocketPool` is currently the only pool available. It uses a continuous loop of [`poll(2)`](https://www.freebsd.org/cgi/man.cgi?poll) / [`Task.yield()`](https://developer.apple.com/documentation/swift/task/3814840-yield) to check all sockets awaiting data at a supplied interval. 
 
-The pool can be tuned to adjust the time spent within [`poll(2)`](https://www.freebsd.org/cgi/man.cgi?poll) and at the end of each iteration with [`Task.yield()`](https://developer.apple.com/documentation/swift/task/3814840-yield) or [`Task.sleep()`](https://developer.apple.com/documentation/swift/task/3862701-sleep)
+The pool can be tuned to adjust both the time spent within [`poll(2)`](https://www.freebsd.org/cgi/man.cgi?poll) and at the time end of each iteration with [`Task.yield()`](https://developer.apple.com/documentation/swift/task/3814840-yield) or [`Task.sleep()`](https://developer.apple.com/documentation/swift/task/3862701-sleep)
+
 ```swift
-init(pollInterval: Interval, loopInterval: Interval)
+let pool = PollingSocketPool(pollInterval: .immediate, loopInterval: .seconds(0.05))
+let server = HTTPServer(port: 80, pool: pool)
 ```
 
 ## SocketAddress
