@@ -284,7 +284,7 @@ try socket.close()
 
 ## Socket
 
-`Socket` wraps a file descriptor and provides a Swift interface to common operations throwing `SocketError` instead of returning error codes.
+`Socket` wraps a file descriptor and provides a Swift interface to common operations, throwing `SocketError` instead of returning error codes.
 
 ```swift
 public enum SocketError: LocalizedError {
