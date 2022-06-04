@@ -1,7 +1,7 @@
 {
-  "name": "FlyingFox",
+  "name": "FlyingSocks",
   "version": "0.7.0",
-  "summary": "Lightweight, HTTP server written in Swift using async/await",
+  "summary": "Lightweight, async sockets written in Swift using async/await",
   "homepage": "https://github.com/swhitty/FlyingFox",
   "authors": "Simon Whitty",
   "license": {
@@ -17,9 +17,6 @@
     "osx": "10.15",
     "tvos": "13.0"
   },
-  "source_files": "FlyingFox/Sources/**/*.swift",
-  "dependencies": {
-    "FlyingSocks": "~> 0.7.0"
-  },
+  "source_files": "FlyingSocks/Sources/**/*.swift",
   "swift_version": "5.5"
 }
