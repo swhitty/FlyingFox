@@ -173,7 +173,7 @@ public final actor PollingSocketPool: AsyncSocketPool {
         var events: Socket.Events
     }
 
-    final class Continuation: Hashable {
+    final class Continuation: Hashable, @unchecked Sendable {
 
         private let continuation: CheckedContinuation<Void, Swift.Error>
         @Locked private(set) var isComplete: Bool
@@ -293,7 +293,3 @@ private extension Socket.Events {
         reduce(POLLEvents()) { [$0, $1.pollEvents] }
     }
 }
-
-#if compiler(>=5.6)
-extension PollingSocketPool.Continuation: Sendable { }
-#endif

@@ -37,6 +37,7 @@ import Foundation
 import FoundationNetworking
 #endif
 
+#if compiler(>=5.6)
 final class HTTPServerTests: XCTestCase {
 
     func testRequests_AreMatchedToHandlers_ViaRoute() async throws {
@@ -145,7 +146,6 @@ final class HTTPServerTests: XCTestCase {
         task.cancel()
     }
 
-    #if canImport(Darwin)
     func testServer_StartsOnUnixSocket() async throws {
         let address = sockaddr_un.unix(path: "foxsocks")
         try? Socket.unlink(address)
@@ -166,7 +166,6 @@ final class HTTPServerTests: XCTestCase {
             .accepted
         )
     }
-    #endif
 
     func testServer_StartsOnIP4Socket() async throws {
         let server = HTTPServer.make(address: .inet(port: 8080))
@@ -189,7 +188,6 @@ final class HTTPServerTests: XCTestCase {
         )
     }
 
-#if canImport(Darwin)
     func testServer_Returns500_WhenHandlerTimesout() async throws {
         let server = HTTPServer.make(timeout: 0.1)
         await server.appendRoute("*") { _ in
@@ -207,9 +205,8 @@ final class HTTPServerTests: XCTestCase {
         )
         task.cancel()
     }
-#endif
 
-#if canImport(Darwin) && compiler(>=5.6)
+#if canImport(Darwin)
     func testServer_ReturnsWebSocketFramesToURLSession() async throws {
         let server = HTTPServer(port: 8080)
 
@@ -381,6 +378,7 @@ extension HTTPHandlerTests {
         XCTAssertEqual(response.statusCode, .ok)
     }
 }
+#endif
 
 extension HTTPServer {
 
