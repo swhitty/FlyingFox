@@ -17,6 +17,19 @@
     "osx": "10.15",
     "tvos": "13.0"
   },
-  "source_files": "Sources/**/*.swift",
-  "swift_version": "5.5"
+  "default_subspecs": "FlyingFox",
+  "swift_version": "5.5",
+  "subspecs": [
+    {
+      "name": "FlyingFox",
+      "source_files": "FlyingFox/Sources/**/*.swift",
+      "dependencies": {
+          "FlyingFox/FlyingSocks": [ ]
+	  }
+    },
+    {
+      "name": "FlyingSocks",
+      "source_files": "FlyingSocks/Sources/**/*.swift"
+    }
+  ]
 }
