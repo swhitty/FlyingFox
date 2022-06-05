@@ -316,7 +316,7 @@ protocol AsyncSocketPool {
 
 `PollingSocketPool` is currently the only pool available. It uses a continuous loop of [`poll(2)`](https://www.freebsd.org/cgi/man.cgi?poll) / [`Task.yield()`](https://developer.apple.com/documentation/swift/task/3814840-yield) to check all sockets awaiting data at a supplied interval. 
 
-The pool can be tuned to adjust both the time spent within [`poll(2)`](https://www.freebsd.org/cgi/man.cgi?poll) and at the time end of each iteration with [`Task.yield()`](https://developer.apple.com/documentation/swift/task/3814840-yield) or [`Task.sleep()`](https://developer.apple.com/documentation/swift/task/3862701-sleep)
+The pool can be tuned to adjust both the time spent within [`poll(2)`](https://www.freebsd.org/cgi/man.cgi?poll) and at the end of each iteration with [`Task.yield()`](https://developer.apple.com/documentation/swift/task/3814840-yield) or [`Task.sleep()`](https://developer.apple.com/documentation/swift/task/3862701-sleep)
 
 ```swift
 let pool = PollingSocketPool(pollInterval: .immediate, loopInterval: .seconds(0.05))
