@@ -272,7 +272,7 @@ protocol WSHandler {
 
 # FlyingSocks
 
-Internally, FlyingFox uses a thin wrapper around standard BSD sockets. The `FlyingSocks` module provides a cross platform `async` interface to these sockets;
+Internally, FlyingFox uses a thin wrapper around standard BSD sockets. The `FlyingSocks` module provides a cross platform async interface to these sockets;
 
 ```swift
 import FlyingSocks
@@ -299,7 +299,7 @@ When data is unavailable for a socket and the `EWOULDBLOCK` errno is returned, t
 
 ## AsyncSocket
 
-`AsyncSocket` simply wraps a `Socket` and provides an `async` interface.  All async sockets are configured with the flag `O_NONBLOCK`, catching `SocketError.blocked` and then suspending the current task using an `AsyncSocketPool`.  When data becomes available the task is resumed and `AsyncSocket` will retry the operation.
+`AsyncSocket` simply wraps a `Socket` and provides an async interface.  All async sockets are configured with the flag `O_NONBLOCK`, catching `SocketError.blocked` and then suspending the current task using an `AsyncSocketPool`.  When data becomes available the task is resumed and `AsyncSocket` will retry the operation.
 
 ### AsyncSocketPool
 
