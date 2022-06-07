@@ -1,5 +1,5 @@
 ignore:
   - FlyingFox/Sources/Continuation*.swift
-  - FlyingFox/Sources/Locked*.swift
+  - FlyingFox/Sources/Locked.swift
   - FlyingFox/Tests
   - FlyingSocks/Tests
