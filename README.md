@@ -15,6 +15,7 @@
         - [AsyncSocketPool](#asyncsocketpool)
         - [PollingSocketPool](#pollingsocketpool)
     - [SocketAddress](#socketaddress)
+- [Command Line App](#command-line-app)
 - [Credits](#credits)
 
 # Introduction
