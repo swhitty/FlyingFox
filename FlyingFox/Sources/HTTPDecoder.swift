@@ -95,6 +95,7 @@ struct HTTPDecoder {
         return (path, query ?? [])
     }
 
+    @Sendable
     static func readHeader(from line: String) -> (header: HTTPHeader, value: String)? {
         let comps = line.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: true)
         guard comps.count > 1 else { return nil }
