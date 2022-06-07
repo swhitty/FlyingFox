@@ -260,17 +260,3 @@ private extension HTTPConnection {
         "<\(hostname)>"
     }
 }
-
-public extension HTTPServer {
-
-    @available(*, deprecated, renamed: "appendRoute(_:to:)")
-    func appendHandler(for route: HTTPRoute, handler: HTTPHandler) {
-        appendRoute(route, to: handler)
-
-    }
-
-    @available(*, deprecated, renamed: "appendRoute(_:to:)")
-    func appendHandler(for route: HTTPRoute, closure: @Sendable @escaping (HTTPRequest) async throws -> HTTPResponse) {
-        appendRoute(route, handler: closure)
-    }
-}

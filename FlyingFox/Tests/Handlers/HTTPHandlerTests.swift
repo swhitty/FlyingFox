@@ -270,28 +270,3 @@ final class HTTPHandlerTests: XCTestCase {
         XCTAssertEqual(response.statusCode, .ok)
     }
 }
-
-extension HTTPHandlerTests {
-
-    func testDeprecatedRoutedHandler_AppendsHandler() async throws {
-        var handler = RoutedHTTPHandler()
-
-        handler.appendHandler(for: "*", handler: .redirect(to: "https://pie.dev"))
-
-        let response = try await handler.handleRequest(.make(path: "/hello"))
-        XCTAssertEqual(response.statusCode, .movedPermanently)
-    }
-
-    func testDeprecatedRoutedHandler_AppendsClosure() async throws {
-        var handler = RoutedHTTPHandler()
-
-        handler.appendHandler(for: "/hello") { _ in
-            HTTPResponse(statusCode: .ok)
-        }
-
-        let response = try await handler.handleRequest(.make(path: "/hello"))
-        XCTAssertEqual(response.statusCode, .ok)
-    }
-}
-
-

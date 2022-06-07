@@ -356,28 +356,6 @@ final class HTTPServerTests: XCTestCase {
     }
 }
 
-extension HTTPHandlerTests {
-
-    func testDeprecatedHandler_AppendsHandler() async throws {
-        let server = HTTPServer.make()
-
-        await server.appendHandler(for: "*", handler: .redirect(to: "https://pie.dev"))
-
-        let response = await server.handleRequest(.make(path: "/hello"))
-        XCTAssertEqual(response.statusCode, .movedPermanently)
-    }
-
-    func testDeprecatedHandler_AppendsClosure() async throws {
-        let server = HTTPServer.make()
-
-        await server.appendHandler(for: "/hello") { _ in
-            HTTPResponse(statusCode: .ok)
-        }
-
-        let response = await server.handleRequest(.make(path: "/hello"))
-        XCTAssertEqual(response.statusCode, .ok)
-    }
-}
 #endif
 
 extension HTTPServer {

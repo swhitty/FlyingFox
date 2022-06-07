@@ -59,25 +59,3 @@ public struct RoutedHTTPHandler: HTTPHandler, Sendable {
         throw HTTPUnhandledError()
     }
 }
-
-@available(*, deprecated, renamed: "RoutedHTTPHandler")
-public typealias CompositeHTTPHandler = RoutedHTTPHandler
-
-
-public extension RoutedHTTPHandler {
-
-    @available(*, deprecated, renamed: "RouteHTTPHandler")
-
-
-    @available(*, deprecated, renamed: "appendRoute(_:to:)")
-    mutating func appendHandler(for route: HTTPRoute, handler: HTTPHandler) {
-        appendRoute(route, to: handler)
-
-    }
-
-    @available(*, deprecated, renamed: "appendRoute(_:to:)")
-    mutating func appendHandler(for route: HTTPRoute,
-                                closure: @Sendable @escaping (HTTPRequest) async throws -> HTTPResponse) {
-        appendRoute(route, handler: closure)
-    }
-}
