@@ -140,8 +140,11 @@ final class SocketAddressTests: XCTestCase {
             .makeStorage()
 
         var unix = try sockaddr_un.make(from: storage)
+        let path = withUnsafePointer(to: &unix.sun_path.0) {
+            return String(cString: $0)
+        }
         XCTAssertEqual(
-            String(cString: &unix.sun_path.0),
+            path,
             "/var"
         )
     }

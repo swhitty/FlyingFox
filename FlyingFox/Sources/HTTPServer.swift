@@ -55,7 +55,7 @@ public final actor HTTPServer {
         self.handlers = Self.makeRootHandler(to: handler)
     }
 
-    public convenience init(port: UInt16,
+    public init(port: UInt16,
                             timeout: TimeInterval = 15,
                             pool: AsyncSocketPool = defaultPool(),
                             logger: HTTPLogging? = defaultLogger(),
@@ -72,7 +72,7 @@ public final actor HTTPServer {
                   handler: handler)
     }
 
-    public convenience init(port: UInt16,
+    public init(port: UInt16,
                             timeout: TimeInterval = 15,
                             pool: AsyncSocketPool = defaultPool(),
                             logger: HTTPLogging? = defaultLogger(),
