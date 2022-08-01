@@ -135,7 +135,7 @@ final class PollingSocketPoolTests: XCTestCase {
 
 private extension PollingSocketPool {
 
-    init() {
+    convenience init() {
         self.init(pollInterval: .immediate, loopInterval: .immediate)
     }
 }
