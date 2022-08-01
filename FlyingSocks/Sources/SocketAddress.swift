@@ -137,8 +137,9 @@ extension Socket {
 
         case AF_UNIX:
             var sockaddr_un = try sockaddr_un.make(from: addr)
-            return .unix(String(cString: &sockaddr_un.sun_path.0))
-
+            return withUnsafePointer(to: &sockaddr_un.sun_path.0) {
+                return .unix(String(cString: $0))
+            }
         default:
             throw SocketError.unsupportedAddress
         }
