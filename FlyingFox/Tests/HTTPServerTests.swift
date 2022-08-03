@@ -257,6 +257,67 @@ final class HTTPServerTests: XCTestCase {
         )
     }
 
+    func testServer_Stops() async throws {
+        let stopExpectation = expectation(description: "server stops")
+        let successExpectation = expectation(description: "first request succeeds")
+        let errorExpectation = expectation(description: "second request fails")
+
+        Task {
+            let server = HTTPServer.make(port: 8080)
+
+            await server.appendRoute("/accepted") { _ in
+                try await server.stop()
+                try await Task.sleep(nanoseconds: 500_000_000)
+                return HTTPResponse.make(statusCode: .accepted)
+            }
+
+            let startTask = Task { try await server.start() }
+
+            try await server.waitUntilListening()
+
+            try await withThrowingTaskGroup(of: Void.self) { group in
+                // First network call should stop the server.
+                group.addTask {
+                    var request = URLRequest(url: URL(string: "http://localhost:8080/accepted")!)
+                    // Close the connection otherwise this keeps the server on.
+                    // TODO: Think whether the server should close connections open after processing the last request
+                    // from that connection.
+                    request.setValue("close", forHTTPHeaderField: "Connection")
+                    let (_, response) = try await URLSession.shared .makeData(for: request) as! (Data, HTTPURLResponse)
+                    XCTAssertEqual(response.statusCode, HTTPStatusCode.accepted.code)
+                    successExpectation.fulfill()
+                }
+
+                // Wait a bit so that requests are not simultaneous, since this is shorter than the handler sleep, it
+                // doesn't add to the test length.
+                try await Task.sleep(nanoseconds: 250_000_000)
+
+                // Second request should fails since the server has stopped accepting new connections.
+                group.addTask {
+                    var request = URLRequest(url: URL(string: "http://localhost:8080/accepted")!)
+                    request.setValue("close", forHTTPHeaderField: "Connection")
+                    do {
+                        _ = try await URLSession.shared.makeData(for: request) as! (Data, HTTPURLResponse)
+                        XCTFail("Network call should have thrown")
+                    } catch {
+                        let nsError = error as NSError
+                        XCTAssertEqual(nsError.domain, NSURLErrorDomain)
+                        XCTAssertEqual(nsError.code, NSURLErrorCannotConnectToHost)
+                        errorExpectation.fulfill()
+                    }
+                }
+
+                try await group.waitForAll()
+            }
+
+            try await startTask.value
+            stopExpectation.fulfill()
+        }
+
+        // Wait for a bit longer than what the request takes.
+        await waitForExpectations(timeout: 5)
+    }
+
 #if canImport(Darwin)
     func testDefaultLogger_IsOSLog() async throws {
         if #available(iOS 14.0, tvOS 14.0, *) {

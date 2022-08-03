@@ -42,6 +42,7 @@ public final actor HTTPServer {
     private let timeout: TimeInterval
     private let logger: HTTPLogging?
     private var handlers: RoutedHTTPHandler
+    private var listeningSocket: Socket?
 
     public init<A: SocketAddress>(address: A,
                                   timeout: TimeInterval = 15,
@@ -94,6 +95,8 @@ public final actor HTTPServer {
 
     public func start() async throws {
         let socket = try makeSocketAndListen()
+        self.listeningSocket = socket
+
         isListening = true
         do {
             try await start(on: socket, pool: pool)
@@ -102,6 +105,13 @@ public final actor HTTPServer {
             try? socket.close()
             isListening = false
             throw error
+        }
+    }
+
+    public func stop() throws {
+        if isListening, let listeningSocket = listeningSocket {
+            isListening = false
+            try listeningSocket.close()
         }
     }
 
@@ -129,22 +139,45 @@ public final actor HTTPServer {
             group.addTask {
                 try await pool.run()
             }
+
             group.addTask {
                 try await self.listenForConnections(on: asyncSocket)
             }
-            try await group.waitForAll()
+
+            do {
+                // Wait for the first task to finish and then cancel the other one. Most likely
+                // the first one to finish will be the listenForConnections one, as that one
+                // will exit when the listening socket is closed.
+                _ = try await group.next()
+                group.cancelAll()
+            } catch {
+                // If there's an error awaiting for one of the tasks, just cancel it all and
+                // throw the error.
+                group.cancelAll()
+                throw error
+            }
         }
     }
 
     private func listenForConnections(on socket: AsyncSocket) async throws {
         do {
             try await withThrowingTaskGroup(of: Void.self) { [logger] group in
-                for try await socket in socket.sockets {
-                    group.addTask {
-                        await self.handleConnection(HTTPConnection(socket: socket, logger: logger))
+                do {
+                    for try await socket in socket.sockets {
+                        group.addTask {
+                            await self.handleConnection(HTTPConnection(socket: socket, logger: logger))
+                        }
+                    }
+                } catch {
+                    if let error = error as? SocketError, case .disconnected = error {
+                        // If we got disconnected, it likely is that the listening socket was closed, so wait for all
+                        // pending requests.
+                        try await group.waitForAll()
+                    } else {
+                        // For any other error, cancel all and exit.
+                        group.cancelAll()
                     }
                 }
-                group.cancelAll()
             }
         } catch {
             try socket.close()
