@@ -64,6 +64,12 @@ final class AsyncSequenceExtensionTests: XCTestCase {
         await XCTAssertEqualAsync(try await iterator.next(), "b")
         await XCTAssertThrowsError(try await iterator.next(), of: AsyncSequenceError.self)
     }
+
+    func testTakeNextThrowsError_WhenSequenceEnds() async {
+        let sequence = ConsumingAsyncSequence<Int>([])
+      
+        await XCTAssertThrowsError(try await sequence.takeNext(), of: SequenceTerminationError.self)
+    }
 }
 
 
