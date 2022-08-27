@@ -76,4 +76,18 @@ final class URLSessionAsyncTests: XCTestCase {
             XCTAssertEqual($0.code, .cancelled)
         }
     }
+
+    func testURLSessionFallback_CancelsRequest() async throws {
+        let request = URLRequest(url: URL(string: "https://httpstat.us/200?sleep=10000")!)
+
+        let task = Task {
+            _ = try await URLSession.shared.getData(for: request, forceFallback: true)
+        }
+
+        task.cancel()
+
+        await XCTAssertThrowsError(try await task.value, of: URLError.self) {
+            XCTAssertEqual($0.code, .cancelled)
+        }
+    }
 }
