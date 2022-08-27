@@ -199,7 +199,7 @@ public final actor HTTPServer {
     }
 
     public static func defaultPool() -> AsyncSocketPool {
-        PollingSocketPool(pollInterval: .seconds(0.1), loopInterval: .immediate)
+        PollingSocketPool(pollInterval: .immediate, loopInterval: .seconds(0.1))
     }
 }
 
