@@ -76,11 +76,24 @@ final class HTTPRequestSequence<S: ChunkedAsyncSequence & Sendable>: AsyncSequen
     typealias Element = HTTPRequest
     private let bytes: S
 
-    @Locked fileprivate var isComplete: Bool
+    private var _isComplete: Bool
+    private let lock = NSLock()
+    fileprivate var isComplete: Bool {
+        get {
+            lock.lock()
+            defer { lock.unlock() }
+            return _isComplete
+        }
+        set {
+            lock.lock()
+            _isComplete = newValue
+            lock.unlock()
+        }
+    }
 
     init(bytes: S) {
         self.bytes = bytes
-        self.isComplete = false
+        self._isComplete = false
     }
 
     func makeAsyncIterator() -> HTTPRequestSequence { self }
