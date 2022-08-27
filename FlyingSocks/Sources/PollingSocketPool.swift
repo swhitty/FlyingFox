@@ -48,36 +48,31 @@ public final actor PollingSocketPool: AsyncSocketPool {
 
     public func suspendSocket(_ socket: Socket, untilReadyFor events: Socket.Events) async throws {
         let socket = SuspendedSocket(file: socket.file, events: events)
-        return try await withCancellingContinuation(returning: Void.self) { continuation, handler in
-            let continuation = Continuation(continuation)
-            appendContinuation(continuation, for: socket)
-            handler.onCancel {
-                self.removeContinuation(continuation, for: socket)
-            }
-        }
+        let continuation = Continuation()
+        defer { removeContinuation(continuation, for: socket) }
+        appendContinuation(continuation, for: socket)
+        return try await continuation.value
     }
 
     private let pollInterval: Interval
     private let loopInterval: Interval
+
+    typealias Continuation = CancellingContinuation<Void, SocketError>
     private var waiting: [SuspendedSocket: Set<Continuation>] = [:] {
         didSet {
             if !waiting.isEmpty, let continuation = loop {
-                loop = nil
                 continuation.resume()
             }
         }
     }
 
-    private var loop: Continuation?
+    private var loop: CancellingContinuation<Void, Never>?
 
     private func suspendLoopUntilSocketsExist() async throws {
-        try await withCancellingContinuation(returning: Void.self) { continuation, handler in
-            let continuation = Continuation(continuation)
-            loop = continuation
-            handler.onCancel {
-                continuation.cancel()
-            }
-        }
+        let continuation = CancellingContinuation<Void, Never>()
+        loop = continuation
+        defer { loop = nil }
+        return try await continuation.value
     }
 
     private func appendContinuation(_ continuation: Continuation, for socket: SuspendedSocket) {
@@ -90,16 +85,9 @@ public final actor PollingSocketPool: AsyncSocketPool {
         waiting[socket] = existing
     }
 
-    private func _removeContinuation(_ continuation: Continuation, for socket: SuspendedSocket) {
+    private func removeContinuation(_ continuation: Continuation, for socket: SuspendedSocket) {
         guard waiting[socket]?.contains(continuation) == true else { return }
         waiting[socket]?.remove(continuation)
-        continuation.cancel()
-    }
-
-    // Careful not to escape non-isolated method
-    // https://bugs.swift.org/browse/SR-15745
-    nonisolated private func removeContinuation(_ continuation: Continuation, for socket: SuspendedSocket) {
-        Task { await _removeContinuation(continuation, for: socket) }
     }
 
     private var state: State = .ready
@@ -114,16 +102,18 @@ public final actor PollingSocketPool: AsyncSocketPool {
         guard state != .running else { throw Error("Not Ready") }
         state = .running
 
-        defer {
-            for continuation in waiting.values.flatMap({ $0 }) {
-                continuation.cancel()
-            }
+        do {
+            try await poll()
+        } catch {
+            let pending = waiting
             waiting = [:]
             state = .complete
             loop = nil
+            for continuation in pending.values.flatMap({ $0 }) {
+                continuation.cancel()
+            }
+            throw error
         }
-
-        try await poll()
     }
 
     private func poll() async throws {
@@ -154,16 +144,16 @@ public final actor PollingSocketPool: AsyncSocketPool {
 
     private func processPoll(socket: SuspendedSocket, revents: POLLEvents) {
         if revents.intersects(with: socket.events.pollEvents) {
-            let continuations = waiting[socket]
+            let continuations = waiting[socket] ?? []
             waiting[socket] = nil
-            continuations?.forEach {
-                $0.resume()
+            for c in continuations {
+                c.resume()
             }
         } else if revents.intersects(with: .errors) {
-            let continuations = waiting[socket]
+            let continuations = waiting[socket] ?? []
             waiting[socket] = nil
-            continuations?.forEach {
-                $0.disconnected()
+            for c in continuations {
+                c.resume(throwing: .disconnected)
             }
         }
     }
@@ -171,52 +161,6 @@ public final actor PollingSocketPool: AsyncSocketPool {
     private struct SuspendedSocket: Hashable {
         var file: Socket.FileDescriptor
         var events: Socket.Events
-    }
-
-    final class Continuation: Hashable, @unchecked Sendable {
-
-        private let continuation: CheckedContinuation<Void, Swift.Error>
-        @Locked private(set) var isComplete: Bool
-
-        init(_ continuation: CheckedContinuation<Void, Swift.Error>) {
-            self.continuation = continuation
-            self.isComplete = false
-        }
-
-        func resume() {
-            _isComplete.unlock {
-                if $0 == false {
-                    continuation.resume()
-                    $0 = true
-                }
-            }
-        }
-
-        func disconnected() {
-            _isComplete.unlock {
-                if $0 == false {
-                    continuation.resume(throwing: SocketError.disconnected)
-                    $0 = true
-                }
-            }
-        }
-
-        func cancel() {
-            _isComplete.unlock {
-                if $0 == false {
-                    continuation.resume(throwing: CancellationError())
-                    $0 = true
-                }
-            }
-        }
-
-        func hash(into hasher: inout Hasher) {
-            ObjectIdentifier(self).hash(into: &hasher)
-        }
-
-        static func == (lhs: Continuation, rhs: Continuation) -> Bool {
-            lhs === rhs
-        }
     }
 }
 
