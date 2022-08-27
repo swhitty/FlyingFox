@@ -31,7 +31,7 @@
 
 /// Wrapper around `CheckedContinuation` throwing CancellationError when the
 /// task is cancelled.
-public struct CancellingContinuation<Success, Failure: Error> {
+public struct CancellingContinuation<Success, Failure: Error>: Sendable {
 
     private let inner: Inner
 
@@ -42,9 +42,9 @@ public struct CancellingContinuation<Success, Failure: Error> {
     public var value: Success {
         get async throws {
             try await withTaskCancellationHandler {
-                cancel()
-            } operation: {
                 try await inner.getValue()
+            } onCancel: {
+                cancel()
             }
         }
     }
