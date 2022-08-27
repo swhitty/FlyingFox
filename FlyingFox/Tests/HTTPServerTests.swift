@@ -180,7 +180,7 @@ final class HTTPServerTests: XCTestCase {
 
 #if canImport(Darwin)
     func testServer_ReturnsWebSocketFramesToURLSession() async throws {
-        let server = HTTPServer(port: 8080)
+        let server = HTTPServer(address: .loopback(port: 8080))
 
         await server.appendRoute("GET /socket", to: .webSocket(EchoWSMessageHandler()))
         let task = Task { try await server.start() }
@@ -291,7 +291,7 @@ final class HTTPServerTests: XCTestCase {
     }
 
     func testWaitUntilListing_WaitsUntil_SocketIsListening() async {
-        let server = HTTPServer.make(address: .inet(port: 8080))
+        let server = HTTPServer.make(address: .loopback(port: 8080))
 
         let waiting = Task<Bool, Error> {
             try await server.waitUntilListening()
@@ -305,7 +305,7 @@ final class HTTPServerTests: XCTestCase {
     }
 
     func testWaitUntilListing_ThrowsWhen_TaskIsCancelled() async {
-        let server = HTTPServer.make(address: .inet(port: 8080))
+        let server = HTTPServer.make(address: .loopback(port: 8080))
 
         let waiting = Task<Bool, Error> {
             try await server.waitUntilListening()
@@ -317,7 +317,7 @@ final class HTTPServerTests: XCTestCase {
     }
 
     func testWaitUntilListing_ThrowsWhen_TimeoutExpires() async throws {
-        let server = HTTPServer.make(address: .inet(port: 8080))
+        let server = HTTPServer.make(address: .loopback(port: 8080))
 
         let waiting = Task<Bool, Error> {
             try await server.waitUntilListening(timeout: 1)
