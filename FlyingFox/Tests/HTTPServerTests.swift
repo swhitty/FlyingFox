@@ -116,36 +116,6 @@ final class HTTPServerTests: XCTestCase {
         )
     }
 
-    func testServer_ReturnsFile_WhenFileHandlerIsMatched() async throws {
-        let server = HTTPServer.make(port: 8009)
-        await server.appendRoute("*", to: .file(named: "Stubs/fish.json", in: .module))
-        let task = Task { try await server.start() }
-
-        let request = URLRequest(url: URL(string: "http://localhost:8009")!)
-        let (data, _) = try await URLSession.shared.makeData(for: request)
-
-        XCTAssertEqual(
-            data,
-            #"{"fish": "cakes"}"#.data(using: .utf8)
-        )
-        task.cancel()
-    }
-
-    func testServer_ReturnsFile_WhenDirectoryHandlerIsMatched() async throws {
-        let server = HTTPServer.make(port: 8019)
-        await server.appendRoute("*", to: .directory(for: .module, subPath: "Stubs", serverPath: "/server/path/"))
-        let task = Task { try await server.start() }
-
-        let request = URLRequest(url: URL(string: "http://localhost:8019/server/path/subdir/vinegar.json")!)
-        let (data, _) = try await URLSession.shared.makeData(for: request)
-
-        XCTAssertEqual(
-            data,
-            #"{"type": "malt"}"#.data(using: .utf8)
-        )
-        task.cancel()
-    }
-
     func testServer_StartsOnUnixSocket() async throws {
         let address = sockaddr_un.unix(path: "foxsocks")
         try? Socket.unlink(address)
