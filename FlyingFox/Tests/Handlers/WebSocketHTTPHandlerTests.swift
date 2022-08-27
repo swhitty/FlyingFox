@@ -146,6 +146,55 @@ final class WebSocketHTTPHandlerTests: XCTestCase {
         )
     }
 
+    func testHeaderVerification() {
+        XCTAssertNoThrow(
+            try WebSocketHTTPHandler.verifyHandshakeRequestHeaders(
+                .makeWSHeaders()
+            )
+        )
+        XCTAssertThrowsError(
+            try WebSocketHTTPHandler.verifyHandshakeRequestHeaders(
+                .makeWSHeaders(host: nil)
+            )
+        )
+        XCTAssertThrowsError(
+            try WebSocketHTTPHandler.verifyHandshakeRequestHeaders(
+                .makeWSHeaders(upgrade: nil)
+            )
+        )
+        XCTAssertThrowsError(
+            try WebSocketHTTPHandler.verifyHandshakeRequestHeaders(
+                .makeWSHeaders(upgrade: "other")
+            )
+        )
+        XCTAssertThrowsError(
+            try WebSocketHTTPHandler.verifyHandshakeRequestHeaders(
+                .makeWSHeaders(connection: nil)
+            )
+        )
+        XCTAssertThrowsError(
+            try WebSocketHTTPHandler.verifyHandshakeRequestHeaders(
+                .makeWSHeaders(webSocketKey: nil)
+            )
+        )
+    }
+}
+
+private extension Dictionary where Key == HTTPHeader, Value == String {
+
+    static func makeWSHeaders(host: String? = "localhost",
+                              connection: String? = "Upgrade",
+                              upgrade: String? = "websocket",
+                              webSocketKey: String? = "ABCDEFGHIJKLMNOP",
+                              webSocketVersion: String? = "13") -> Self {
+        var headers = [HTTPHeader: String] ()
+        headers[.host] = host
+        headers[.connection] = connection
+        headers[.upgrade] = upgrade
+        headers[.webSocketKey] = webSocketKey?.data(using: .utf8)!.base64EncodedString()
+        headers[.webSocketVersion] = webSocketVersion
+        return headers
+    }
 }
 
 private extension WebSocketHTTPHandler {
