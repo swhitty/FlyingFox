@@ -61,7 +61,7 @@ struct HTTPConnection: Sendable {
         let server = try await handler.makeFrames(for: client)
         try await socket.write(response)
         logger?.logSwitchProtocol(self, to: "websocket")
-        requests.isComplete = true
+        await requests.complete()
         for await frame in server {
             try await socket.write(WSFrameEncoder.encodeFrame(frame))
         }
@@ -72,31 +72,22 @@ struct HTTPConnection: Sendable {
     }
 }
 
-final class HTTPRequestSequence<S: ChunkedAsyncSequence & Sendable>: AsyncSequence, AsyncIteratorProtocol, @unchecked Sendable where S.Element == UInt8 {
+actor HTTPRequestSequence<S: ChunkedAsyncSequence & Sendable>: AsyncSequence, AsyncIteratorProtocol, @unchecked Sendable where S.Element == UInt8 {
     typealias Element = HTTPRequest
     private let bytes: S
 
-    private var _isComplete: Bool
-    private let lock = NSLock()
-    fileprivate var isComplete: Bool {
-        get {
-            lock.lock()
-            defer { lock.unlock() }
-            return _isComplete
-        }
-        set {
-            lock.lock()
-            _isComplete = newValue
-            lock.unlock()
-        }
-    }
+    private var isComplete: Bool
 
     init(bytes: S) {
         self.bytes = bytes
-        self._isComplete = false
+        self.isComplete = false
     }
 
-    func makeAsyncIterator() -> HTTPRequestSequence { self }
+    fileprivate func complete() {
+        isComplete = true
+    }
+
+    nonisolated func makeAsyncIterator() -> HTTPRequestSequence { self }
 
     func next() async throws -> HTTPRequest? {
         guard !isComplete else { return nil }
