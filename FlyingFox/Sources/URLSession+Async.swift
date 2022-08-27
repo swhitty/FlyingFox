@@ -33,6 +33,7 @@ import Foundation
 #if canImport(FoundationNetworking)
 import FoundationNetworking
 #endif
+import FlyingSocks
 
 @available(iOS, deprecated: 15.0, message: "use data(for request: URLRequest) directly")
 @available(tvOS, deprecated: 15.0, message: "use data(for request: URLRequest) directly")
@@ -51,15 +52,23 @@ extension URLSession {
     }
 
     func makeData(for request: URLRequest) async throws -> (Data, URLResponse) {
-        try await withCancellingContinuation(returning: (Data, URLResponse).self) { continuation, handler in
-            let task = dataTask(with: request) { data, response, error in
-                guard let data = data, let response = response else {
-                    return continuation.resume(throwing: error!)
-                }
-                continuation.resume(returning: (data, response))
+        let continuation = CancellingContinuation<(Data, URLResponse), Error>()
+        let task = dataTask(with: request) { data, response, error in
+            guard let data = data, let response = response else {
+                continuation.resume(throwing: error!)
+                return
             }
-            task.resume()
-            handler.onCancel(task.cancel)
+            continuation.resume(returning: (data, response))
+        }
+        defer { task.cancel() }
+        task.resume()
+
+        do {
+            return try await continuation.value
+        } catch is CancellationError {
+            throw URLError(.cancelled)
+        } catch {
+            throw error
         }
     }
 }

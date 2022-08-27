@@ -195,6 +195,8 @@ final class HTTPServerTests: XCTestCase {
             return .make(statusCode: .ok)
         }
         let task = Task { try await server.start() }
+        defer { task.cancel() }
+        try await server.waitUntilListening()
 
         let request = URLRequest(url: URL(string: "http://localhost:8008")!)
         let (_, response) = try await URLSession.shared.makeData(for: request)

@@ -30,6 +30,7 @@
 //
 
 import Foundation
+import FlyingSocks
 
 extension HTTPServer {
 
@@ -41,24 +42,10 @@ extension HTTPServer {
 
     private func doWaitUntilListening() async throws {
         guard !isListening else { return }
-        try await withCancellingContinuation(returning: Void.self) { c, handler in
-            let continuation = Continuation(c)
-            waiting.insert(continuation)
-            handler.onCancel {
-                self.cancelContinuation(continuation)
-            }
-        }
-    }
-
-    // Careful not to escape non-isolated method
-    // https://bugs.swift.org/browse/SR-15745
-    nonisolated private func cancelContinuation(_ continuation: Continuation) {
-        Task { await _cancelContinuation(continuation) }
-    }
-
-    private func _cancelContinuation(_ continuation: Continuation) {
-        guard let removed = waiting.remove(continuation) else { return }
-        removed.cancel()
+        let continuation = Continuation()
+        waiting.insert(continuation)
+        defer { waiting.remove(continuation) }
+        return try await continuation.value
     }
 
     func isListeningDidUpdate(from previous: Bool) {
@@ -71,28 +58,5 @@ extension HTTPServer {
         }
     }
 
-    final class Continuation: Hashable {
-
-        private let continuation: CheckedContinuation<Void, Swift.Error>
-
-        init(_ continuation: CheckedContinuation<Void, Swift.Error>) {
-            self.continuation = continuation
-        }
-
-        func resume() {
-            continuation.resume()
-        }
-
-        func cancel() {
-            continuation.resume(throwing: CancellationError())
-        }
-
-        func hash(into hasher: inout Hasher) {
-            ObjectIdentifier(self).hash(into: &hasher)
-        }
-
-        static func == (lhs: Continuation, rhs: Continuation) -> Bool {
-            lhs === rhs
-        }
-    }
+    typealias Continuation = CancellingContinuation<Void, Never>
 }
