@@ -87,7 +87,7 @@ final class HTTPServerTests: XCTestCase {
 
     func testHandlerTimeout_Returns500() async throws {
         let server = HTTPServer.make(timeout: 0.1) { _ in
-            try await Task.sleep(nanoseconds: 1_000_000_000)
+            try await Task.sleep(seconds: 1)
             return HTTPResponse.make(statusCode: .accepted)
         }
 
@@ -161,7 +161,7 @@ final class HTTPServerTests: XCTestCase {
     func testServer_Returns500_WhenHandlerTimesout() async throws {
         let server = HTTPServer.make(timeout: 0.1)
         await server.appendRoute("*") { _ in
-            try await Task.sleep(nanoseconds: 5_000_000_000)
+            try await Task.sleep(seconds: 5)
             return .make(statusCode: .ok)
         }
         let task = Task { try await server.start() }
@@ -377,3 +377,9 @@ extension URLSessionWebSocketTask.Message: Equatable {
     }
 }
 #endif
+
+private extension Task where Success == Never, Failure == Never {
+    static func sleep(seconds: TimeInterval) async throws {
+        try await sleep(nanoseconds: UInt64(1_000_000_000 * seconds))
+    }
+}
