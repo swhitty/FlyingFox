@@ -47,7 +47,7 @@ final class TaskTimeoutTests: XCTestCase {
     func testTimeoutThrowsError_WhenTimeoutExpires() async {
         // given
         let task = Task<Void, Error>(timeout: 0.5) {
-            try? await Task.sleep(nanoseconds: 10_000_000_000)
+            try? await Task.sleep(seconds: 10)
         }
 
         // then
@@ -62,7 +62,7 @@ final class TaskTimeoutTests: XCTestCase {
     func testTimeoutCancels() async {
         // given
         let task = Task(timeout: 0.5) {
-            try await Task.sleep(nanoseconds: 10_000_000_000)
+            try await Task.sleep(seconds: 10)
         }
 
         // when

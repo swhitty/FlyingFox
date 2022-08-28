@@ -376,7 +376,7 @@ extension URLSessionWebSocketTask.Message: Equatable {
 }
 #endif
 
-private extension Task where Success == Never, Failure == Never {
+extension Task where Success == Never, Failure == Never {
     static func sleep(seconds: TimeInterval) async throws {
         try await sleep(nanoseconds: UInt64(1_000_000_000 * seconds))
     }
