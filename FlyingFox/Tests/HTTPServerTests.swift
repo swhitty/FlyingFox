@@ -37,7 +37,6 @@ import Foundation
 import FoundationNetworking
 #endif
 
-#if compiler(>=5.6)
 final class HTTPServerTests: XCTestCase {
 
     func testRequests_AreMatchedToHandlers_ViaRoute() async throws {
@@ -116,6 +115,64 @@ final class HTTPServerTests: XCTestCase {
         )
     }
 
+#if canImport(Darwin) && compiler(>=5.6)
+    func testServer_ReturnsWebSocketFramesToURLSession() async throws {
+        let server = HTTPServer(port: 8080)
+
+        await server.appendRoute("GET /socket", to: .webSocket(EchoWSMessageHandler()))
+        let task = Task { try await server.start() }
+        defer { task.cancel() }
+        try await server.waitUntilListening()
+
+        let wsTask = URLSession.shared.webSocketTask(with: URL(string: "ws://localhost:8080/socket")!)
+        wsTask.resume()
+
+        try await wsTask.send(.string("Hello"))
+        await XCTAssertEqualAsync(try await wsTask.receive(), .string("Hello"))
+    }
+
+    func testServer_ReturnsWebSocketFrames() async throws {
+        let address = Socket.makeAddressUnix(path: "foxing")
+        try? Socket.unlink(address)
+        let server = HTTPServer.make(address: address)
+        await server.appendRoute("GET /socket", to: .webSocket(EchoWSMessageHandler()))
+        let task = Task { try await server.start() }
+        defer { task.cancel() }
+        try await server.waitUntilListening()
+
+        let socket = try await AsyncSocket.connected(to: address, pool: server.pool)
+        defer { try? socket.close() }
+
+        var request = HTTPRequest.make(path: "/socket")
+        request.headers[.host] = "localhost"
+        request.headers[.upgrade] = "websocket"
+        request.headers[.connection] = "Keep-Alive, Upgrade"
+        request.headers[.webSocketVersion] = "13"
+        request.headers[.webSocketKey] = "ABCDEFGHIJKLMNOP".data(using: .utf8)!.base64EncodedString()
+        try await socket.writeRequest(request)
+
+        let response = try await socket.readResponse()
+        XCTAssertEqual(response.headers[.webSocketAccept], "9twnCz4Oi2Q3EuDqLAETCuip07c=")
+        XCTAssertEqual(response.headers[.connection], "upgrade")
+        XCTAssertEqual(response.headers[.upgrade], "websocket")
+
+        let frame = WSFrame.make(fin: true, opcode: .text, mask: .mock, payload: "FlyingFox".data(using: .utf8)!)
+        try await socket.writeFrame(frame)
+
+        await XCTAssertEqualAsync(
+            try await socket.readFrame(),
+            WSFrame(fin: true, opcode: .text, mask: nil, payload: "FlyingFox".data(using: .utf8)!)
+        )
+    }
+
+    func testDefaultLogger_IsOSLog() async throws {
+        if #available(iOS 14.0, tvOS 14.0, *) {
+            XCTAssertTrue(HTTPServer.defaultLogger() is OSLogHTTPLogging)
+        }
+    }
+#endif
+
+#if compiler(>=5.6)
     func testServer_StartsOnUnixSocket() async throws {
         let address = sockaddr_un.unix(path: "foxsocks")
         try? Socket.unlink(address)
@@ -157,6 +214,7 @@ final class HTTPServerTests: XCTestCase {
             .accepted
         )
     }
+#endif
 
     func testServer_Returns500_WhenHandlerTimesout() async throws {
         let server = HTTPServer.make(timeout: 0.1)
@@ -178,64 +236,6 @@ final class HTTPServerTests: XCTestCase {
         task.cancel()
     }
 
-#if canImport(Darwin)
-    func testServer_ReturnsWebSocketFramesToURLSession() async throws {
-        let server = HTTPServer(port: 8080)
-
-        await server.appendRoute("GET /socket", to: .webSocket(EchoWSMessageHandler()))
-        let task = Task { try await server.start() }
-        defer { task.cancel() }
-        try await server.waitUntilListening()
-
-        let wsTask = URLSession.shared.webSocketTask(with: URL(string: "ws://localhost:8080/socket")!)
-        wsTask.resume()
-
-        try await wsTask.send(.string("Hello"))
-        await XCTAssertEqualAsync(try await wsTask.receive(), .string("Hello"))
-    }
-#endif
-
-    func testServer_ReturnsWebSocketFrames() async throws {
-        let address = Socket.makeAddressUnix(path: "foxing")
-        try? Socket.unlink(address)
-        let server = HTTPServer.make(address: address)
-        await server.appendRoute("GET /socket", to: .webSocket(EchoWSMessageHandler()))
-        let task = Task { try await server.start() }
-        defer { task.cancel() }
-        try await server.waitUntilListening()
-
-        let socket = try await AsyncSocket.connected(to: address, pool: server.pool)
-        defer { try? socket.close() }
-
-        var request = HTTPRequest.make(path: "/socket")
-        request.headers[.host] = "localhost"
-        request.headers[.upgrade] = "websocket"
-        request.headers[.connection] = "Keep-Alive, Upgrade"
-        request.headers[.webSocketVersion] = "13"
-        request.headers[.webSocketKey] = "ABCDEFGHIJKLMNOP".data(using: .utf8)!.base64EncodedString()
-        try await socket.writeRequest(request)
-
-        let response = try await socket.readResponse()
-        XCTAssertEqual(response.headers[.webSocketAccept], "9twnCz4Oi2Q3EuDqLAETCuip07c=")
-        XCTAssertEqual(response.headers[.connection], "upgrade")
-        XCTAssertEqual(response.headers[.upgrade], "websocket")
-
-        let frame = WSFrame.make(fin: true, opcode: .text, mask: .mock, payload: "FlyingFox".data(using: .utf8)!)
-        try await socket.writeFrame(frame)
-
-        await XCTAssertEqualAsync(
-            try await socket.readFrame(),
-            WSFrame(fin: true, opcode: .text, mask: nil, payload: "FlyingFox".data(using: .utf8)!)
-        )
-    }
-
-#if canImport(Darwin)
-    func testDefaultLogger_IsOSLog() async throws {
-        if #available(iOS 14.0, tvOS 14.0, *) {
-            XCTAssertTrue(HTTPServer.defaultLogger() is OSLogHTTPLogging)
-        }
-    }
-#endif
 
     func testDefaultLoggerFallback_IsPrintLogger() async throws {
         XCTAssertTrue(HTTPServer.defaultLogger(forceFallback: true) is PrintHTTPLogger)
@@ -327,8 +327,6 @@ final class HTTPServerTests: XCTestCase {
         await XCTAssertThrowsError(try await waiting.value, of: Error.self)
     }
 }
-
-#endif
 
 extension HTTPServer {
 
