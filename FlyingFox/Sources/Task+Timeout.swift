@@ -82,7 +82,12 @@ extension Task {
                 cancel()
             }
         case .afterTimeout(let seconds):
-            return try await getValue(cancellingAfter: seconds)
+            if seconds > 0 {
+                return try await getValue(cancellingAfter: seconds)
+            } else {
+                cancel()
+                return try await value
+            }
         }
     }
 

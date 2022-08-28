@@ -227,7 +227,7 @@ final class HTTPServerTests: XCTestCase {
         let socket = try await AsyncSocket.connected(to: .inet(ip4: "127.0.0.1", port: 8081))
         defer { try? socket.close() }
 
-        try await Task.sleep(seconds: 0.1)
+        try await Task.sleep(seconds: 0.5)
         let taskStop = Task { await server.stop(timeout: 10) }
 
         try await socket.writeRequest(.make())

@@ -115,11 +115,7 @@ public final actor HTTPServer {
     /// Stops the server by closing the listening socket and waiting for all connections to disconnect.
     /// - Parameter timeout: Seconds to allow for connections to close before server task is cancelled.
     public func stop(timeout: TimeInterval = 0) async {
-        guard let (socket, task) = state,
-              timeout > 0 else {
-            state?.task.cancel()
-            return
-        }
+        guard let (socket, task) = state else { return }
         try? socket.close()
         try? await task.getValue(cancelling: .afterTimeout(seconds: timeout))
     }

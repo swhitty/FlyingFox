@@ -76,4 +76,70 @@ final class TaskTimeoutTests: XCTestCase {
             XCTAssertTrue(error is CancellationError)
         }
     }
+
+    func testTaskTimeoutParentThrowsError() async {
+        let task = Task {
+            try await Task.sleep(seconds: 10)
+        }
+
+        let parent = Task {
+            try await task.getValue(cancelling: .whenParentIsCancelled)
+        }
+
+        parent.cancel()
+
+        await XCTAssertThrowsError(
+            try await parent.value,
+            of: CancellationError.self
+        )
+    }
+
+    func testTaskTimeoutZeroThrowsError() async {
+        let task = Task {
+            try await Task.sleep(seconds: 10)
+        }
+
+        await XCTAssertThrowsError(
+            try await task.getValue(cancelling: .afterTimeout(seconds: 0)),
+            of: CancellationError.self
+        )
+    }
+
+    func testTaskTimeoutThrowsError() async {
+        let task = Task {
+            try await Task.sleep(seconds: 10)
+        }
+
+        await XCTAssertThrowsError(
+            try await task.getValue(cancelling: .afterTimeout(seconds: 0.1)),
+            of: TimeoutError.self
+        )
+    }
+
+    func testTaskTimeoutParentReturnsSuccess() async {
+        let task = Task { "Fish" }
+
+        await XCTAssertEqualAsync(
+            try await task.getValue(cancelling: .whenParentIsCancelled),
+            "Fish"
+        )
+    }
+
+    func testTaskTimeoutZeroReturnsSuccess() async {
+        let task = Task { "Fish" }
+
+        await XCTAssertEqualAsync(
+            try await task.getValue(cancelling: .afterTimeout(seconds: 0)),
+            "Fish"
+        )
+    }
+
+    func testTaskTimeoutReturnsSuccess() async {
+        let task = Task { "Fish" }
+
+        await XCTAssertEqualAsync(
+            try await task.getValue(cancelling: .afterTimeout(seconds: 0.1)),
+            "Fish"
+        )
+    }
 }
