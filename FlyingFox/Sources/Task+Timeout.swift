@@ -33,9 +33,9 @@ import Foundation
 
 func withThrowingTimeout<T: Sendable>(seconds: TimeInterval, body: @escaping @Sendable () async throws -> T) async throws -> T {
     try await withThrowingTaskGroup(of: T.self) { group -> T in
-        group.addTask(operation: {
+        group.addTask {
             try await body()
-        })
+        }
         group.addTask {
             try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
             throw TimeoutError()
