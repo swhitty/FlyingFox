@@ -81,13 +81,12 @@ private extension CancellingContinuation {
         func getValue() async throws -> Success {
             precondition(hasStarted == false, "Can only wait a single time.")
             hasStarted = true
-            if let result = result {
-                return try result.get()
-            } else {
+            guard let result = result else {
                 return try await withCheckedThrowingContinuation(function: function) {
                     continuation = $0
                 }
             }
+            return try result.get()
         }
 
         func resume(with result: Result<Success, Error>) {
