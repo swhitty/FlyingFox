@@ -156,7 +156,7 @@ extension Socket {
     }
 
     static func unlink(_ addr: UnsafePointer<CChar>!) -> Int32 {
-        return Glibc.unlink(addr)
+        Glibc.unlink(addr)
     }
 
     static func poll(_ fds: UnsafeMutablePointer<pollfd>!, _ nfds: UInt32, _ tmo_p: Int32) -> Int32 {
