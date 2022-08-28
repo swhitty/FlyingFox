@@ -94,21 +94,35 @@ public final actor HTTPServer {
 
     public func start() async throws {
         let socket = try makeSocketAndListen()
-        isListening = true
         do {
-            try await start(on: socket, pool: pool)
+            let task = Task { try await start(on: socket, pool: pool) }
+            state = (socket: socket, task: task)
+            defer { state = nil }
+            try await task.getValue(cancelling: .whenParentIsCancelled)
         } catch {
             logger?.logCritical("server error: \(error.localizedDescription)")
             try? socket.close()
-            isListening = false
             throw error
         }
     }
 
-    private(set) var isListening: Bool = false {
-        didSet { isListeningDidUpdate(from: oldValue) }
-    }
+    var isListening: Bool { state != nil }
     var waiting: Set<Continuation> = []
+    private(set) var state: (socket: Socket, task: Task<Void, Error>)? {
+        didSet { isListeningDidUpdate(from: oldValue != nil ) }
+    }
+
+    /// Stops the server by closing the listening socket and waiting for all connections to disconnect.
+    /// - Parameter timeout: Seconds to allow for connections to close before server task is cancelled.
+    public func stop(timeout: TimeInterval = 0) async {
+        guard let (socket, task) = state,
+              timeout > 0 else {
+            state?.task.cancel()
+            return
+        }
+        try? socket.close()
+        try? await task.getValue(cancelling: .afterTimeout(seconds: timeout))
+    }
 
     func makeSocketAndListen() throws -> Socket {
         let socket = try Socket(domain: Int32(address.ss_family))
@@ -144,7 +158,8 @@ public final actor HTTPServer {
                         await self.handleConnection(HTTPConnection(socket: socket, logger: logger))
                     }
                 }
-                group.cancelAll()
+                try await group.waitForAll()
+                throw SocketError.disconnected
             }
         } catch {
             try socket.close()
