@@ -31,7 +31,7 @@ FlyingFox can be installed by using Swift Package Manager.
 To install using Swift Package Manager, add this to the `dependencies:` section in your Package.swift file:
 
 ```swift
-.package(url: "https://github.com/swhitty/FlyingFox.git", .upToNextMajor(from: "0.7.0"))
+.package(url: "https://github.com/swhitty/FlyingFox.git", .upToNextMajor(from: "0.8.0"))
 ```
 
 # Usage
@@ -320,7 +320,7 @@ protocol AsyncSocketPool {
 The pool can be tuned to adjust both the time spent within [`poll(2)`](https://www.freebsd.org/cgi/man.cgi?poll) and at the end of each iteration with [`Task.yield()`](https://developer.apple.com/documentation/swift/task/3814840-yield) or [`Task.sleep()`](https://developer.apple.com/documentation/swift/task/3862701-sleep)
 
 ```swift
-let pool = PollingSocketPool(pollInterval: .immediate, loopInterval: .seconds(0.05))
+let pool = PollingSocketPool(pollInterval: .immediate, loopInterval: .seconds(0.1))
 let server = HTTPServer(port: 80, pool: pool)
 ```
 
