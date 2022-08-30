@@ -267,19 +267,14 @@ public extension Socket {
 
 public extension Socket {
 
-    enum Event {
+    @available(*, deprecated, renamed: "Events")
+    typealias Event = Events
+
+    enum Events {
         case read
         case write
         case connection
     }
-
-    typealias Events = Set<Event>
-}
-
-public extension Socket.Events {
-    static let read: Self = [.read]
-    static let write: Self = [.write]
-    static let connection: Self = [.connection]
 }
 
 public protocol SocketOption {

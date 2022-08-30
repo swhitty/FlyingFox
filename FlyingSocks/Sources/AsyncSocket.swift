@@ -71,7 +71,7 @@ public struct AsyncSocket: Sendable {
     }
 
     public func connect<A: SocketAddress>(to address: A) async throws {
-        return try await pool.loopUntilReady(for: [.write], on: socket) {
+        return try await pool.loopUntilReady(for: .write, on: socket) {
             try socket.connect(to: address)
         }
     }
