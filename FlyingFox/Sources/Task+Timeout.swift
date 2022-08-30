@@ -59,3 +59,50 @@ extension Task where Success: Sendable, Failure == Error {
         }
     }
 }
+
+extension Task {
+
+    enum CancellationPolicy {
+        /// Cancels the task when the task retrieving the value is cancelled
+        case whenParentIsCancelled
+
+        /// Cancels the task after a timeout elapses
+        case afterTimeout(seconds: TimeInterval)
+    }
+
+    /// Waits for the task to complete, cancelling the task according to the provided policy
+    /// - Parameter policy: Policy that defines how the task should be cancelled.
+    /// - Returns: The task value
+    func getValue(cancelling policy: CancellationPolicy) async throws -> Success {
+        switch policy {
+        case .whenParentIsCancelled:
+            return try await withTaskCancellationHandler {
+                try await value
+            } onCancel: {
+                cancel()
+            }
+        case .afterTimeout(let seconds):
+            if seconds > 0 {
+                return try await getValue(cancellingAfter: seconds)
+            } else {
+                cancel()
+                return try await value
+            }
+        }
+    }
+
+    private func getValue(cancellingAfter seconds: TimeInterval) async throws -> Success {
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            group.addTask {
+                _ = try await getValue(cancelling: .whenParentIsCancelled)
+            }
+            group.addTask {
+                try await Task<Never, Never>.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+                throw TimeoutError()
+            }
+            _ = try await group.next()!
+            group.cancelAll()
+            return try await value
+        }
+    }
+}

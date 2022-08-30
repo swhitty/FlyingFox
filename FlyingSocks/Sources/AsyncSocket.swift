@@ -166,6 +166,12 @@ public struct AsyncSocketSequence: AsyncSequence, AsyncIteratorProtocol, Sendabl
     public func makeAsyncIterator() -> AsyncSocketSequence { self }
 
     public mutating func next() async throws -> AsyncSocket? {
-        try await socket.accept()
+        do {
+            return try await socket.accept()
+        } catch SocketError.disconnected {
+            return nil
+        } catch {
+            throw error
+        }
     }
 }
