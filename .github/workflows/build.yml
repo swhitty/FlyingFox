@@ -15,8 +15,10 @@ jobs:
         uses: actions/checkout@v2
       - name: Version
         run: swift --version
-      - name: Build and Test
-        run: swift test --enable-code-coverage
+      - name: Build
+        run: swift build --build-tests
+      - name: Test
+        run: swift test --skip-build --enable-code-coverage
       - name: Gather code coverage
         run: xcrun llvm-cov export -format="lcov" .build/debug/FlyingFoxPackageTests.xctest/Contents/MacOS/FlyingFoxPackageTests -instr-profile .build/debug/codecov/default.profdata > coverage_report.lcov
       - name: Upload Coverage
@@ -33,8 +35,10 @@ jobs:
         uses: actions/checkout@v2
       - name: Version
         run: swift --version
-      - name: Build and Test
-        run: swift test
+      - name: Build
+        run: swift build --build-tests
+      - name: Test
+        run: swift test --skip-build
 
   xcode_13_2_1:
     runs-on: macos-11
@@ -45,16 +49,20 @@ jobs:
         uses: actions/checkout@v2
       - name: Version
         run: swift --version
-      - name: Build and Test
-        run: swift test
+      - name: Build
+        run: swift build --build-tests
+      - name: Test
+        run: swift test --skip-build
 
-  linux:
+  linux_swift_5_6_2:
     runs-on: ubuntu-latest
-    container: swift:5.6.1
+    container: swift:5.6.2
     steps:
       - name: Checkout
         uses: actions/checkout@v2
       - name: Version
         run: swift --version
-      - name: Build and Test
-        run: swift test
+      - name: Build
+        run: swift build --build-tests
+      - name: Test
+        run: swift test --skip-build
