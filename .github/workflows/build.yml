@@ -16,7 +16,7 @@ jobs:
       - name: Version
         run: swift --version
       - name: Build
-        run: swift build --build-tests
+        run: swift build --build-tests --enable-code-coverage
       - name: Test
         run: swift test --skip-build --enable-code-coverage
       - name: Gather code coverage
