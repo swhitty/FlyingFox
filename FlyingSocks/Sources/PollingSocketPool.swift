@@ -125,7 +125,7 @@ public final actor PollingSocketPool: AsyncSocketPool {
             }
             if Socket.poll(&buffer, UInt32(buffer.count), pollInterval.milliseconds) > 0 {
                 for (socket, pollfd) in zip(sockets, buffer) {
-                    processPoll(socket: socket, revents: .makeRevents(pollfd.revents, for: socket.events))
+                    processPoll(socket: socket, revents: POLLEvents(rawValue: Int32(pollfd.revents)))
                 }
             }
 
@@ -143,7 +143,13 @@ public final actor PollingSocketPool: AsyncSocketPool {
     }
 
     private func processPoll(socket: SuspendedSocket, revents: POLLEvents) {
-        if revents.intersects(with: socket.events.pollEvents) {
+        if socket.events.contains(.write) && revents.intersects(with: .errors) {
+            let continuations = waiting[socket] ?? []
+            waiting[socket] = nil
+            for c in continuations {
+                c.resume(throwing: .disconnected)
+            }
+        } else if revents.intersects(with: socket.events.pollEvents) {
             let continuations = waiting[socket] ?? []
             waiting[socket] = nil
             for c in continuations {
@@ -184,7 +190,6 @@ extension PollingSocketPool.Interval {
 }
 
 extension PollingSocketPool {
-
     struct Error: LocalizedError {
         var errorDescription: String?
 
@@ -208,15 +213,6 @@ private struct POLLEvents: OptionSet, Hashable {
     func intersects(with events: POLLEvents) -> Bool {
         !intersection(events).isEmpty
     }
-
-    static func makeRevents(_ revents: Int16, for requested: Socket.Events) -> POLLEvents {
-        let events = POLLEvents(rawValue: Int32(revents))
-        let errors = events.intersection(.errors)
-        if requested == .connection && !errors.isEmpty {
-            return errors
-        }
-        return events
-    }
 }
 
 private extension Socket.Event {
@@ -226,8 +222,6 @@ private extension Socket.Event {
             return .read
         case .write:
             return .write
-        case .connection:
-            return [.read, .write]
         }
     }
 }

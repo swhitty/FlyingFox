@@ -34,6 +34,17 @@ import XCTest
 
 final class SocketTests: XCTestCase {
 
+    func testSocketEvents() {
+        let events: Set<Socket.Event> = [.read, .write]
+
+        XCTAssertTrue(
+            "\(events)".contains("read")
+        )
+        XCTAssertTrue(
+            "\(events)".contains("write")
+        )
+    }
+
     func testSocketReads_DataThatIsSent() throws {
         let (s1, s2) = try Socket.makeNonBlockingPair()
 

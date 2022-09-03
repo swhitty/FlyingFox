@@ -270,16 +270,26 @@ public extension Socket {
     enum Event {
         case read
         case write
-        case connection
     }
 
     typealias Events = Set<Event>
 }
 
+extension Socket.Event: CustomStringConvertible {
+    public var description: String {
+        switch self {
+        case .read:
+            return "read"
+        case .write:
+            return "write"
+        }
+    }
+}
+
 public extension Socket.Events {
     static let read: Self = [.read]
     static let write: Self = [.write]
-    static let connection: Self = [.connection]
+    static let connection: Self = [.read, .write]
 }
 
 public protocol SocketOption {
