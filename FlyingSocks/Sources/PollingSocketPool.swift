@@ -219,7 +219,7 @@ private struct POLLEvents: OptionSet, Hashable {
     }
 }
 
-private extension Socket.Events {
+private extension Socket.Event {
     var pollEvents: POLLEvents {
         switch self {
         case .read:
@@ -229,5 +229,11 @@ private extension Socket.Events {
         case .connection:
             return [.read, .write]
         }
+    }
+}
+
+private extension Socket.Events {
+    var pollEvents: POLLEvents {
+        reduce(POLLEvents()) { [$0, $1.pollEvents] }
     }
 }
