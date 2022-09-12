@@ -40,9 +40,9 @@ final class AsyncSequenceExtensionTests: XCTestCase {
             .collectStrings(separatedBy: ",")
             .makeAsyncIterator()
 
-        await XCTAssertEqualAsync(try await iterator.next(), "fish")
-        await XCTAssertEqualAsync(try await iterator.next(), "chips")
-        await XCTAssertEqualAsync(try await iterator.next(), nil)
+        await AsyncAssertEqual(try await iterator.next(), "fish")
+        await AsyncAssertEqual(try await iterator.next(), "chips")
+        await AsyncAssertEqual(try await iterator.next(), nil)
     }
 
     func testCollectStringsWithTrailingSeperator() async throws {
@@ -50,9 +50,9 @@ final class AsyncSequenceExtensionTests: XCTestCase {
             .collectStrings(separatedBy: ",")
             .makeAsyncIterator()
 
-        await XCTAssertEqualAsync(try await iterator.next(), "fish")
-        await XCTAssertEqualAsync(try await iterator.next(), "chips")
-        await XCTAssertEqualAsync(try await iterator.next(), nil)
+        await AsyncAssertEqual(try await iterator.next(), "fish")
+        await AsyncAssertEqual(try await iterator.next(), "chips")
+        await AsyncAssertEqual(try await iterator.next(), nil)
     }
 
     func testCollectStringsWithTrailingSeperatorA() async throws {
@@ -60,15 +60,15 @@ final class AsyncSequenceExtensionTests: XCTestCase {
             .collectStrings(separatedBy: ",")
             .makeAsyncIterator()
 
-        await XCTAssertEqualAsync(try await iterator.next(), "a")
-        await XCTAssertEqualAsync(try await iterator.next(), "b")
-        await XCTAssertThrowsError(try await iterator.next(), of: AsyncSequenceError.self)
+        await AsyncAssertEqual(try await iterator.next(), "a")
+        await AsyncAssertEqual(try await iterator.next(), "b")
+        await AsyncAssertThrowsError(try await iterator.next(), of: AsyncSequenceError.self)
     }
 
     func testTakeNextThrowsError_WhenSequenceEnds() async {
         let sequence = ConsumingAsyncSequence<Int>([])
       
-        await XCTAssertThrowsError(try await sequence.takeNext(), of: SequenceTerminationError.self)
+        await AsyncAssertThrowsError(try await sequence.takeNext(), of: SequenceTerminationError.self)
     }
 }
 

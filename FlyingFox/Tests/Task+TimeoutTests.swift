@@ -88,7 +88,7 @@ final class TaskTimeoutTests: XCTestCase {
 
         parent.cancel()
 
-        await XCTAssertThrowsError(
+        await AsyncAssertThrowsError(
             try await parent.value,
             of: CancellationError.self
         )
@@ -99,7 +99,7 @@ final class TaskTimeoutTests: XCTestCase {
             try await Task.sleep(seconds: 10)
         }
 
-        await XCTAssertThrowsError(
+        await AsyncAssertThrowsError(
             try await task.getValue(cancelling: .afterTimeout(seconds: 0)),
             of: CancellationError.self
         )
@@ -110,7 +110,7 @@ final class TaskTimeoutTests: XCTestCase {
             try await Task.sleep(seconds: 10)
         }
 
-        await XCTAssertThrowsError(
+        await AsyncAssertThrowsError(
             try await task.getValue(cancelling: .afterTimeout(seconds: 0.1)),
             of: TimeoutError.self
         )
@@ -119,7 +119,7 @@ final class TaskTimeoutTests: XCTestCase {
     func testTaskTimeoutParentReturnsSuccess() async {
         let task = Task { "Fish" }
 
-        await XCTAssertEqualAsync(
+        await AsyncAssertEqual(
             try await task.getValue(cancelling: .whenParentIsCancelled),
             "Fish"
         )
@@ -128,7 +128,7 @@ final class TaskTimeoutTests: XCTestCase {
     func testTaskTimeoutZeroReturnsSuccess() async {
         let task = Task { "Fish" }
 
-        await XCTAssertEqualAsync(
+        await AsyncAssertEqual(
             try await task.getValue(cancelling: .afterTimeout(seconds: 0)),
             "Fish"
         )
@@ -137,7 +137,7 @@ final class TaskTimeoutTests: XCTestCase {
     func testTaskTimeoutReturnsSuccess() async {
         let task = Task { "Fish" }
 
-        await XCTAssertEqualAsync(
+        await AsyncAssertEqual(
             try await task.getValue(cancelling: .afterTimeout(seconds: 0.1)),
             "Fish"
         )

@@ -59,7 +59,7 @@ final class CancellingContinuationTests: XCTestCase {
         let task = Task { try await continuation.value }
         task.cancel()
 
-        await XCTAssertEqualAsync(
+        await AsyncAssertEqual(
             try await task.value,
             "Fish"
         )
@@ -71,7 +71,7 @@ final class CancellingContinuationTests: XCTestCase {
         let task = Task { try await continuation.value }
         task.cancel()
 
-        await XCTAssertThrowsError(
+        await AsyncAssertThrowsError(
             try await task.value,
             of: CancellationError.self
         )
@@ -93,7 +93,19 @@ final class CancellingContinuationTests: XCTestCase {
         let task = Task { try await continuation.value }
         continuation.resume(throwing: SocketError.disconnected)
 
-        await XCTAssertThrowsError(
+        await AsyncAssertThrowsError(
+            try await task.value,
+            of: SocketError.self
+        )
+    }
+
+    func testResultIsReturned() async {
+        let continuation = CancellingContinuation<String, SocketError>()
+
+        let task = Task { try await continuation.value }
+        continuation.resume(with: .failure(.disconnected))
+
+        await AsyncAssertThrowsError(
             try await task.value,
             of: SocketError.self
         )

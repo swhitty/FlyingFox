@@ -60,7 +60,7 @@ final class URLSessionAsyncTests: XCTestCase {
 
     func testURLSessionFallback_ReturnsError() async throws {
         let request = URLRequest(url: URL(string: "https://flying.fox.invalid/")!)
-        await XCTAssertThrowsError(try await URLSession.shared.getData(for: request, forceFallback: true), of: URLError.self)
+        await AsyncAssertThrowsError(try await URLSession.shared.getData(for: request, forceFallback: true), of: URLError.self)
     }
 
     func testURLSession_CancelsRequest() async throws {
@@ -72,7 +72,7 @@ final class URLSessionAsyncTests: XCTestCase {
 
         task.cancel()
 
-        await XCTAssertThrowsError(try await task.value, of: URLError.self) {
+        await AsyncAssertThrowsError(try await task.value, of: URLError.self) {
             XCTAssertEqual($0.code, .cancelled)
         }
     }
@@ -86,7 +86,7 @@ final class URLSessionAsyncTests: XCTestCase {
 
         task.cancel()
 
-        await XCTAssertThrowsError(try await task.value, of: URLError.self) {
+        await AsyncAssertThrowsError(try await task.value, of: URLError.self) {
             XCTAssertEqual($0.code, .cancelled)
         }
     }

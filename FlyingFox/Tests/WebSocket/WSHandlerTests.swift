@@ -100,17 +100,17 @@ final class WSHandlerTests: XCTestCase {
 
         let frames = try await handler.makeFrames(for: [.fish, .ping, .pong, .chips, .close])
 
-        await XCTAssertEqualAsync(
+        await AsyncAssertEqual(
             try await messages.input.takeNext(),
             .text("Fish")
         )
 
-        await XCTAssertEqualAsync(
+        await AsyncAssertEqual(
             try await messages.input.takeNext(),
             .text("Chips")
         )
 
-        await XCTAssertEqualAsync(
+        await AsyncAssertEqual(
             try await frames.collectAll(),
             [.pong, .close(message: "Goodbye")]
         )

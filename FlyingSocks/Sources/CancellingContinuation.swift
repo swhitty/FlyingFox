@@ -61,6 +61,10 @@ public struct CancellingContinuation<Success, Failure: Error>: Sendable {
         Task { await inner.resume(with: .failure(error)) }
     }
 
+    public func resume(with result: Result<Success, Failure>) {
+        Task { await inner.resume(with: result.mapError { $0 as Error }) }
+    }
+
     public func cancel() {
         Task { await inner.resume(with: .failure(CancellationError())) }
     }

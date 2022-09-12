@@ -74,7 +74,7 @@ final class AsyncSocketTests: XCTestCase {
         let s1 = try AsyncSocket.make()
         try s1.close()
 
-        await XCTAssertThrowsError(try await s1.read(), of: SocketError.self) {
+        await AsyncAssertThrowsError(try await s1.read(), of: SocketError.self) {
             XCTAssertEqual($0, .disconnected)
         }
     }
@@ -89,14 +89,14 @@ final class AsyncSocketTests: XCTestCase {
     func testSocketReadByte_Throws_WhenSocketIsNotOpen() async throws {
         let s1 = try AsyncSocket.make()
 
-        await XCTAssertThrowsError(try await s1.read(), of: SocketError.self)
+        await AsyncAssertThrowsError(try await s1.read(), of: SocketError.self)
     }
 
     func testSocketReadChunk_ThrowsDisconnected_WhenSocketIsClosed() async throws {
         let s1 = try AsyncSocket.make()
         try s1.close()
 
-        await XCTAssertThrowsError(try await s1.read(bytes: 5), of: SocketError.self) {
+        await AsyncAssertThrowsError(try await s1.read(bytes: 5), of: SocketError.self) {
             XCTAssertEqual($0, .disconnected)
         }
     }
@@ -104,7 +104,7 @@ final class AsyncSocketTests: XCTestCase {
     func testSocketReadChunk_Throws_WhenSocketIsNotOpen() async throws {
         let s1 = try AsyncSocket.make()
 
-        await XCTAssertThrowsError(try await s1.read(bytes: 5), of: SocketError.self)
+        await AsyncAssertThrowsError(try await s1.read(bytes: 5), of: SocketError.self)
     }
 
     func testSocketBytesReadChunk_Throws_WhenSocketIsClosed() async throws {
@@ -112,41 +112,41 @@ final class AsyncSocketTests: XCTestCase {
         try s1.close()
 
         var bytes = s1.bytes
-        await XCTAssertThrowsError(try await bytes.nextChunk(count: 1), of: SocketError.self)
+        await AsyncAssertThrowsError(try await bytes.nextChunk(count: 1), of: SocketError.self)
     }
 
     func testSocketBytesReadChunk_Throws_WhenSocketIsNotOpen() async throws {
         let s1 = try AsyncSocket.make()
 
         var bytes = s1.bytes
-        await XCTAssertThrowsError(try await bytes.nextChunk(count: 1), of: SocketError.self)
+        await AsyncAssertThrowsError(try await bytes.nextChunk(count: 1), of: SocketError.self)
     }
 
     func testSocketWrite_ThrowsDisconnected_WhenSocketIsClosed() async throws {
         let s1 = try AsyncSocket.make()
         try s1.close()
 
-        await XCTAssertThrowsError(try await s1.writeString("Fish"), of: SocketError.self) {
+        await AsyncAssertThrowsError(try await s1.writeString("Fish"), of: SocketError.self) {
             XCTAssertEqual($0, .disconnected)
         }
     }
 
     func testSocketWrite_Throws_WhenSocketIsNotConnected() async throws {
         let s1 = try AsyncSocket.make()
-        await XCTAssertThrowsError(try await s1.writeString("Fish"), of: SocketError.self)
+        await AsyncAssertThrowsError(try await s1.writeString("Fish"), of: SocketError.self)
     }
 
     func testSocketAccept_Throws_WhenSocketIsClosed() async throws {
         let s1 = try AsyncSocket.make()
 
-        await XCTAssertThrowsError(try await s1.accept(), of: SocketError.self)
+        await AsyncAssertThrowsError(try await s1.accept(), of: SocketError.self)
     }
 
     func testSocket_Throws_WhenAlreadyCLosed() async throws {
         let s1 = try AsyncSocket.make()
 
         try s1.close()
-        await XCTAssertThrowsError(try s1.close(), of: SocketError.self)
+        await AsyncAssertThrowsError(try s1.close(), of: SocketError.self)
     }
 }
 

@@ -49,7 +49,7 @@ final class PollingSocketPoolTests: XCTestCase {
             }
         }
 
-        await XCTAssertThrowsError(try await task.value, of: PollingSocketPool.Error.self)
+        await AsyncAssertThrowsError(try await task.value, of: PollingSocketPool.Error.self)
         task.cancel()
     }
 
@@ -75,7 +75,7 @@ final class PollingSocketPoolTests: XCTestCase {
 
         task.cancel()
 
-        await XCTAssertThrowsError(try await task.value, of: CancellationError.self)
+        await AsyncAssertThrowsError(try await task.value, of: CancellationError.self)
     }
 
     func testCancellingPollingPool_CancelsSuspendedSocket() async throws {
@@ -86,7 +86,7 @@ final class PollingSocketPoolTests: XCTestCase {
         }
 
         let (s1, s2) = try Socket.makeNonBlockingPair()
-        await XCTAssertThrowsError(try await pool.suspendSocket(s1, untilReadyFor: .read), of: CancellationError.self)
+        await AsyncAssertThrowsError(try await pool.suspendSocket(s1, untilReadyFor: .read), of: CancellationError.self)
         try s1.close()
         try s2.close()
     }
@@ -101,7 +101,7 @@ final class PollingSocketPoolTests: XCTestCase {
         try? await task.value
 
         let socket = try Socket(domain: AF_UNIX, type: Socket.stream)
-        await XCTAssertThrowsError(try await pool.suspendSocket(socket, untilReadyFor: .read), of: CancellationError.self)
+        await AsyncAssertThrowsError(try await pool.suspendSocket(socket, untilReadyFor: .read), of: CancellationError.self)
     }
 
     func testPoolResumesSocket_WhenReadingAndSocketClosed() async throws {
@@ -126,7 +126,7 @@ final class PollingSocketPoolTests: XCTestCase {
             try await pool.run()
         }
 
-        await XCTAssertThrowsError(try await pool.suspendSocket(s1, untilReadyFor: .connection), of: SocketError.self) {
+        await AsyncAssertThrowsError(try await pool.suspendSocket(s1, untilReadyFor: .connection), of: SocketError.self) {
             XCTAssertEqual($0, .disconnected)
         }
         task.cancel()

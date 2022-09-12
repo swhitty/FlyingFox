@@ -39,14 +39,14 @@ final class WSFrameValidatorTests: XCTestCase {
         let frames = WSFrame.makeTextFrames("Fish & Chips🍟", maxCharacters: 2)
         XCTAssertEqual(frames.count, 7)
 
-        await XCTAssertEqualAsync(
+        await AsyncAssertEqual(
             try await WSFrameValidator.validate(frames).collectAll(),
             [WSFrame(fin: true, opcode: .text, mask: nil, payload: "Fish & Chips🍟".data(using: .utf8)!)]
         )
     }
 
     func testControlFrames_BetweenContinuations_AreHandled() async {
-        await XCTAssertEqualAsync(
+        await AsyncAssertEqual(
             try await WSFrameValidator.validate([
                 .make(fin: false, isContinuation: false, text: "Hello"),
                 .ping,
@@ -58,7 +58,7 @@ final class WSFrameValidatorTests: XCTestCase {
     }
 
     func testSingleFrames() async {
-        await XCTAssertEqualAsync(
+        await AsyncAssertEqual(
             try await WSFrameValidator.validate([.fish, .chips, .ping, .fish, .close])
                 .collectAll(),
             [.fish, .chips, .ping, .fish, .close]
@@ -66,27 +66,27 @@ final class WSFrameValidatorTests: XCTestCase {
     }
 
     func testValidation() async {
-        await XCTAssertThrowsError(
+        await AsyncAssertThrowsError(
             try await WSFrameValidator.validate([.make(fin: false), .make(fin: false)]).collectAll(),
             of: WSFrameValidator.Error.self
         )
 
-        await XCTAssertThrowsError(
+        await AsyncAssertThrowsError(
             try await WSFrameValidator.validate([.make(fin: true, opcode: .continuation)]).collectAll(),
             of: WSFrameValidator.Error.self
         )
     }
 
     func testControlFrames_ThrowError_WhenNotFin() async {
-        await XCTAssertThrowsError(
+        await AsyncAssertThrowsError(
             try await WSFrameValidator.validate([.make(fin: false, opcode: .ping)]).collectAll(),
             of: WSFrameValidator.Error.self
         )
-        await XCTAssertThrowsError(
+        await AsyncAssertThrowsError(
             try await WSFrameValidator.validate([.make(fin: false, opcode: .pong)]).collectAll(),
             of: WSFrameValidator.Error.self
         )
-        await XCTAssertThrowsError(
+        await AsyncAssertThrowsError(
             try await WSFrameValidator.validate([.make(fin: false, opcode: .close)]).collectAll(),
             of: WSFrameValidator.Error.self
         )

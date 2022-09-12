@@ -128,7 +128,7 @@ final class HTTPServerTests: XCTestCase {
         wsTask.resume()
 
         try await wsTask.send(.string("Hello"))
-        await XCTAssertEqualAsync(try await wsTask.receive(), .string("Hello"))
+        await AsyncAssertEqual(try await wsTask.receive(), .string("Hello"))
     }
 
     func testServer_ReturnsWebSocketFrames() async throws {
@@ -159,7 +159,7 @@ final class HTTPServerTests: XCTestCase {
         let frame = WSFrame.make(fin: true, opcode: .text, mask: .mock, payload: "FlyingFox".data(using: .utf8)!)
         try await socket.writeFrame(frame)
 
-        await XCTAssertEqualAsync(
+        await AsyncAssertEqual(
             try await socket.readFrame(),
             WSFrame(fin: true, opcode: .text, mask: nil, payload: "FlyingFox".data(using: .utf8)!)
         )
@@ -188,7 +188,7 @@ final class HTTPServerTests: XCTestCase {
         defer { try? socket.close() }
         try await socket.writeRequest(.make())
 
-        await XCTAssertEqualAsync(
+        await AsyncAssertEqual(
             try await socket.readResponse().statusCode,
             .accepted
         )
@@ -209,7 +209,7 @@ final class HTTPServerTests: XCTestCase {
 
         try await socket.writeRequest(.make())
 
-        await XCTAssertEqualAsync(
+        await AsyncAssertEqual(
             try await socket.readResponse().statusCode,
             .accepted
         )
@@ -325,7 +325,7 @@ final class HTTPServerTests: XCTestCase {
         let task = Task { try await server.start() }
         defer { task.cancel() }
 
-        await XCTAssertEqualAsync(try await waiting.value, true)
+        await AsyncAssertEqual(try await waiting.value, true)
     }
 
     func testWaitUntilListing_ThrowsWhen_TaskIsCancelled() async {
@@ -337,7 +337,7 @@ final class HTTPServerTests: XCTestCase {
         }
 
         waiting.cancel()
-        await XCTAssertThrowsError(try await waiting.value, of: CancellationError.self)
+        await AsyncAssertThrowsError(try await waiting.value, of: CancellationError.self)
     }
 
     func testWaitUntilListing_ThrowsWhen_TimeoutExpires() async throws {
@@ -348,7 +348,7 @@ final class HTTPServerTests: XCTestCase {
             return true
         }
 
-        await XCTAssertThrowsError(try await waiting.value, of: Error.self)
+        await AsyncAssertThrowsError(try await waiting.value, of: Error.self)
     }
 }
 

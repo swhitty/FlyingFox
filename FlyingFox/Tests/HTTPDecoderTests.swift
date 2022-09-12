@@ -190,7 +190,7 @@ final class HTTPDecoderTests: XCTestCase {
     }
 
     func testBody_ThrowsError_WhenSequenceEnds() async throws {
-        await XCTAssertThrowsError(
+        await AsyncAssertThrowsError(
             _ = try await HTTPDecoder.readBody(from: EmptyChunkedSequence(), length: "100"),
             of: HTTPDecoder.Error.self
         )

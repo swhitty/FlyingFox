@@ -39,7 +39,7 @@ final class HTTPHandlerTests: XCTestCase {
     func testUnhandledHandler_ThrowsError() async {
         let handler: HTTPHandler = .unhandled()
 
-        await XCTAssertThrowsError(try await handler.handleRequest(.make()), of: HTTPUnhandledError.self)
+        await AsyncAssertThrowsError(try await handler.handleRequest(.make()), of: HTTPUnhandledError.self)
     }
     
     //MARK: - RedirectHTTPHandler
@@ -54,7 +54,7 @@ final class HTTPHandlerTests: XCTestCase {
 
     func testRedirectHandler_ThrowsErrorWhenSuppliedLocationIsInvalid() async {
         let handler = RedirectHTTPHandler(location: "http:// fish cakes")
-        await XCTAssertThrowsError(try await handler.handleRequest(.make()), of: URLError.self)
+        await AsyncAssertThrowsError(try await handler.handleRequest(.make()), of: URLError.self)
     }
 
     //MARK: - FileHTTPHandler
@@ -199,7 +199,7 @@ final class HTTPHandlerTests: XCTestCase {
 
     func testProxyHandler_ThrowsErrorWhenBaseIsInvalid() async throws {
         let handler = ProxyHTTPHandler(base: "http:// fish cakes")
-        await XCTAssertThrowsError(
+        await AsyncAssertThrowsError(
             try await handler.handleRequest(.make()),
             of: URLError.self
         )

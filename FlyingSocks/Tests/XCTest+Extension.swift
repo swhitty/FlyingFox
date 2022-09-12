@@ -31,11 +31,11 @@
 
 import XCTest
 
-func XCTAssertEqualAsync<T: Equatable>(_ expression: @autoclosure () async throws -> T,
-                                       _ expected: @autoclosure () throws -> T,
-                                       _ message: @autoclosure () -> String = "",
-                                       file: StaticString = #filePath,
-                                       line: UInt = #line) async {
+func AsyncAssertEqual<T: Equatable>(_ expression: @autoclosure () async throws -> T,
+                                    _ expected: @autoclosure () throws -> T,
+                                    _ message: @autoclosure () -> String = "",
+                                    file: StaticString = #filePath,
+                                    line: UInt = #line) async {
     let result = await Result(catching: expression)
     XCTAssertEqual(try result.get(), try expected(), message(), file: file, line: line)
 }
@@ -55,12 +55,12 @@ func XCTAssertThrowsError<T, E: Error>(_ expression: @autoclosure () throws -> T
     }
 }
 
-func XCTAssertThrowsError<T, E: Error>(_ expression: @autoclosure () async throws -> T,
-                                       of type: E.Type,
-                                       _ message: @autoclosure () -> String = "",
-                                       file: StaticString = #filePath,
-                                       line: UInt = #line,
-                                       _ errorHandler: (_ error: E) -> Void = { _ in }) async {
+func AsyncAssertThrowsError<T, E: Error>(_ expression: @autoclosure () async throws -> T,
+                                         of type: E.Type,
+                                         _ message: @autoclosure () -> String = "",
+                                         file: StaticString = #filePath,
+                                         line: UInt = #line,
+                                         _ errorHandler: (_ error: E) -> Void = { _ in }) async {
     let result = await Result(catching: expression)
     XCTAssertThrowsError(try result.get(), message(), file: file, line: line) {
         guard let error = $0 as? E else {
@@ -69,6 +69,35 @@ func XCTAssertThrowsError<T, E: Error>(_ expression: @autoclosure () async throw
         }
         errorHandler(error)
     }
+}
+
+func AsyncAssertThrowsError<T>(_ expression: @autoclosure () async throws -> T,
+                               _ message: @autoclosure () -> String = "",
+                               file: StaticString = #filePath,
+                               line: UInt = #line,
+                               _ errorHandler: (_ error: Error) -> Void = { _ in }) async {
+    await AsyncAssertThrowsError(try await expression(),
+                                 of: Error.self,
+                                 message(),
+                                 file: file,
+                                 line: line,
+                                 errorHandler)
+}
+
+func AsyncAssertNil<T>(_ expression: @autoclosure () async throws -> T?,
+                       _ message: @autoclosure () -> String = "",
+                       file: StaticString = #filePath,
+                       line: UInt = #line) async {
+    let result = await Result(catching: expression)
+    XCTAssertNil(try result.get(), message(), file: file, line: line)
+}
+
+func AsyncAssertNotNil<T>(_ expression: @autoclosure () async throws -> T?,
+                          _ message: @autoclosure () -> String = "",
+                          file: StaticString = #filePath,
+                          line: UInt = #line) async {
+    let result = await Result(catching: expression)
+    XCTAssertNotNil(try result.get(), message(), file: file, line: line)
 }
 
 private extension Result where Failure == Error {

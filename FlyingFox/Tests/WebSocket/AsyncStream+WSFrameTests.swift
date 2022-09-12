@@ -37,15 +37,15 @@ import XCTest
 final class WSFrameSequenceTests: XCTestCase {
 
     func testSequenceDecodesFramesFromBytes() async throws {
-        await XCTAssertEqualAsync(
+        await AsyncAssertEqual(
             try await AsyncThrowingStream.make([.fish, .chips, .close]).collectAll(),
             [.fish, .chips, .close]
         )
-        await XCTAssertEqualAsync(
+        await AsyncAssertEqual(
             try await AsyncThrowingStream.make([.close]).collectAll(),
             [.close]
         )
-        await XCTAssertEqualAsync(
+        await AsyncAssertEqual(
             try await AsyncThrowingStream.make([]).collectAll(),
             []
         )
@@ -61,7 +61,7 @@ final class WSFrameSequenceTests: XCTestCase {
         continuation.yield(.chips)
         continuation.finish(throwing: SocketError.unsupportedAddress)
 
-        await XCTAssertEqualAsync(
+        await AsyncAssertEqual(
             try await AsyncStream.protocolFrames(from: stream).collectAll(),
             [.fish, .chips, .close(message: "Protocol Error")]
         )

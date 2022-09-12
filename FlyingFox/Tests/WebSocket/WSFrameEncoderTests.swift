@@ -155,7 +155,7 @@ final class WSFrameEncoderTests: XCTestCase {
     }
 
     func testDecodeFrame() async {
-        await XCTAssertEqualAsync(
+        await AsyncAssertEqual(
             try await WSFrameEncoder.decodeFrame(0b10000001, 3, .ascii("A"), .ascii("b"), .ascii("c")),
             .make(fin: true,
                   opcode: .text,
@@ -200,116 +200,116 @@ final class WSFrameEncoderTests: XCTestCase {
     }
 
     func testDecodeLength() async {
-        await XCTAssertEqualAsync(
+        await AsyncAssertEqual(
             try await WSFrameEncoder.decodeLength(0x01),
             1
         )
-        await XCTAssertEqualAsync(
+        await AsyncAssertEqual(
             try await WSFrameEncoder.decodeLength(0x7D),
             125
         )
-        await XCTAssertEqualAsync(
+        await AsyncAssertEqual(
             try await WSFrameEncoder.decodeLength(0x7E, 0x00, 0xFF),
             0xFF00
         )
-        await XCTAssertEqualAsync(
+        await AsyncAssertEqual(
             try await WSFrameEncoder.decodeLength(0x7E, 0xFF, 0x00),
             0x00FF
         )
-        await XCTAssertEqualAsync(
+        await AsyncAssertEqual(
             try await WSFrameEncoder.decodeLength(0x7E, 0xFF, 0xFF),
             0xFFFF
         )
-        await XCTAssertEqualAsync(
+        await AsyncAssertEqual(
             try await WSFrameEncoder.decodeLength(0x7F, 0xFF, 0xEE, 0xDD, 0xCC, 0xBB, 0xAA, 0x99, 0x00),
             0x0099AABBCCDDEEFF
         )
     }
 
     func testDecodeInvalidLength_ThrowsError() async {
-        await XCTAssertThrowsError(
+        await AsyncAssertThrowsError(
             try await WSFrameEncoder.decodeLength(0x7E),
             of: SocketError.self
         ) { XCTAssertEqual($0, .disconnected) }
 
-        await XCTAssertThrowsError(
+        await AsyncAssertThrowsError(
             try await WSFrameEncoder.decodeLength(0x7F, 0xFF, 0xFF, 0xFF),
             of: SocketError.self
         ) { XCTAssertEqual($0, .disconnected) }
-        await XCTAssertThrowsError(
+        await AsyncAssertThrowsError(
             try await WSFrameEncoder.decodeLength(0x7F, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF),
             of: WSFrameEncoder.Error.self
         )
     }
 
     func testDecodeMask() async {
-        await XCTAssertEqualAsync(
+        await AsyncAssertEqual(
             try await WSFrameEncoder.decodeMask(0xF0, 0x01, 0x02, 0x03, 0x04),
             .init(m1: 0x01, m2: 0x02, m3: 0x03, m4: 0x04)
         )
-        await XCTAssertEqualAsync(
+        await AsyncAssertEqual(
             try await WSFrameEncoder.decodeMask(0x70),
             nil
         )
-        await XCTAssertEqualAsync(
+        await AsyncAssertEqual(
             try await WSFrameEncoder.decodeMask(0xFE, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04),
             .init(m1: 0x01, m2: 0x02, m3: 0x03, m4: 0x04)
         )
-        await XCTAssertEqualAsync(
+        await AsyncAssertEqual(
             try await WSFrameEncoder.decodeMask(0x7E, 0x00, 0x00),
             nil
         )
-        await XCTAssertEqualAsync(
+        await AsyncAssertEqual(
             try await WSFrameEncoder.decodeMask(0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04),
             .init(m1: 0x01, m2: 0x02, m3: 0x03, m4: 0x04)
         )
-        await XCTAssertEqualAsync(
+        await AsyncAssertEqual(
             try await WSFrameEncoder.decodeMask(0x7F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00),
             nil
         )
     }
 
     func testDecodeInvalidMask_ThrowsError() async {
-        await XCTAssertThrowsError(
+        await AsyncAssertThrowsError(
             try await WSFrameEncoder.decodeMask(0xFD, 0x01, 0x02),
             of: SocketError.self
         ) { XCTAssertEqual($0, .disconnected) }
 
-        await XCTAssertThrowsError(
+        await AsyncAssertThrowsError(
             try await WSFrameEncoder.decodeMask(0xFE, 0x00, 0x00, 0x01, 0x02),
             of: SocketError.self
         ) { XCTAssertEqual($0, .disconnected) }
-        await XCTAssertThrowsError(
+        await AsyncAssertThrowsError(
             try await WSFrameEncoder.decodeMask(0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x02),
             of: SocketError.self
         ) { XCTAssertEqual($0, .disconnected) }
     }
 
     func testDecodePayload() async {
-        await XCTAssertEqualAsync(
+        await AsyncAssertEqual(
             try await WSFrameEncoder.decodePayload(length: 2, mask: nil, 0x01, 0x02, 0x03, 0x04),
             Data([0x01, 0x02])
         )
-        await XCTAssertEqualAsync(
+        await AsyncAssertEqual(
             try await WSFrameEncoder.decodePayload(length: 4, mask: nil, 0x01, 0x02, 0x03, 0x04),
             Data([0x01, 0x02, 0x03, 0x04])
         )
-        await XCTAssertEqualAsync(
+        await AsyncAssertEqual(
             try await WSFrameEncoder.decodePayload(length: 2, mask: (0xFF, 0xFF, 0xFF, 0xFF), 0x00, 0x01, 0x02, 0x03),
             Data([0xFF, 0xFE])
         )
-        await XCTAssertEqualAsync(
+        await AsyncAssertEqual(
             try await WSFrameEncoder.decodePayload(length: 2, mask: nil, 0x01, 0x02, 0x03, 0x04),
             Data([0x01, 0x02])
         )
-        await XCTAssertEqualAsync(
+        await AsyncAssertEqual(
             try await WSFrameEncoder.decodePayload(length: 4, mask: (0xFF, 0xFF, 0xFF, 0xFF), 0x00, 0x01, 0x02, 0x03),
             Data([0xFF, 0xFE, 0xFD, 0xFC])
         )
     }
 
     func testDecodeInvalidPayload_ThrowsError() async {
-        await XCTAssertThrowsError(
+        await AsyncAssertThrowsError(
             try await WSFrameEncoder.decodePayload(length: 10, mask: nil, 0x01, 0x02, 0x03, 0x04),
             of: SocketError.self
         ) { XCTAssertEqual($0, .disconnected) }
