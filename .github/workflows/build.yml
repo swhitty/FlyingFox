@@ -54,9 +54,9 @@ jobs:
       - name: Test
         run: swift test --skip-build
 
-  linux_swift_5_6_2:
+  linux_swift_5_6_3:
     runs-on: ubuntu-latest
-    container: swift:5.6.2
+    container: swift:5.6.3
     steps:
       - name: Checkout
         uses: actions/checkout@v2
