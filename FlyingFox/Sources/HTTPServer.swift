@@ -137,7 +137,7 @@ public final actor HTTPServer {
 
     func start(on socket: Socket, pool: AsyncSocketPool) async throws {
         let asyncSocket = try AsyncSocket(socket: socket, pool: pool)
-        logger?.logListening(on: address)
+        logger?.logListening(on: socket)
 
         return try await withThrowingTaskGroup(of: Void.self) { group in
             group.addTask {
@@ -240,13 +240,13 @@ extension HTTPLogging {
         logError("\(connection.identifer) error: \(error.localizedDescription)")
     }
 
-    func logListening(on address: sockaddr_storage) {
-        logInfo(Self.makeListening(on: address))
+    func logListening(on socket: Socket) {
+        logInfo(Self.makeListening(on: try? socket.sockname()))
     }
 
-    static func makeListening(on address: sockaddr_storage) -> String {
+    static func makeListening(on addr: Socket.Address?) -> String {
         var comps = ["starting server"]
-        guard let addr = try? Socket.makeAddress(from: address) else {
+        guard let addr = addr else {
             return comps.joined()
         }
 

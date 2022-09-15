@@ -290,55 +290,6 @@ final class HTTPServerTests: XCTestCase {
         XCTAssertTrue(HTTPServer.defaultLogger(forceFallback: true) is PrintHTTPLogger)
     }
 
-    func testListeningLog_INETPort() {
-        let addr = Socket.makeAddressINET(port: 1234)
-        XCTAssertEqual(
-            PrintHTTPLogger.makeListening(on: addr.makeStorage()),
-            "starting server port: 1234"
-        )
-    }
-
-    func testListeningLog_INET() throws {
-        let addr = try Socket.makeAddressINET(fromIP4: "8.8.8.8", port: 1234)
-        XCTAssertEqual(
-            PrintHTTPLogger.makeListening(on: addr.makeStorage()),
-            "starting server 8.8.8.8:1234"
-        )
-    }
-
-    func testListeningLog_INET6Port() {
-        let addr = Socket.makeAddressINET6(port: 5678)
-        XCTAssertEqual(
-            PrintHTTPLogger.makeListening(on: addr.makeStorage()),
-            "starting server port: 5678"
-        )
-    }
-
-    func testListeningLog_INET6() throws {
-        let addr = try sockaddr_in6.inet6(ip6: "::1", port: 1234)
-        XCTAssertEqual(
-            PrintHTTPLogger.makeListening(on: addr.makeStorage()),
-            "starting server ::1:1234"
-        )
-    }
-
-    func testListeningLog_UnixPath() {
-        let addr = Socket.makeAddressUnix(path: "/var/fox/xyz")
-        XCTAssertEqual(
-            PrintHTTPLogger.makeListening(on: addr.makeStorage()),
-            "starting server path: /var/fox/xyz"
-        )
-    }
-
-    func testListeningLog_Invalid() {
-        var addr = Socket.makeAddressUnix(path: "/var/fox/xyz")
-        addr.sun_family = sa_family_t(AF_IPX)
-        XCTAssertEqual(
-            PrintHTTPLogger.makeListening(on: addr.makeStorage()),
-            "starting server"
-        )
-    }
-
     func testWaitUntilListing_WaitsUntil_SocketIsListening() async {
         let server = HTTPServer.make()
 
