@@ -117,14 +117,14 @@ final class HTTPServerTests: XCTestCase {
 
 #if canImport(Darwin) && compiler(>=5.6)
     func testServer_ReturnsWebSocketFramesToURLSession() async throws {
-        let server = HTTPServer(port: 8080)
+        let server = HTTPServer.make()
 
         await server.appendRoute("GET /socket", to: .webSocket(EchoWSMessageHandler()))
         let task = Task { try await server.start() }
         defer { task.cancel() }
-        try await server.waitUntilListening()
+        let port = try await server.waitForListeningPort()
 
-        let wsTask = URLSession.shared.webSocketTask(with: URL(string: "ws://localhost:8080/socket")!)
+        let wsTask = URLSession.shared.webSocketTask(with: URL(string: "ws://localhost:\(port)/socket")!)
         wsTask.resume()
 
         try await wsTask.send(.string("Hello"))
@@ -195,16 +195,16 @@ final class HTTPServerTests: XCTestCase {
     }
 
     func testServer_StartsOnIP4Socket() async throws {
-        let server = HTTPServer.make(address: .inet(port: 8080))
+        let server = HTTPServer.make(address: .inet(port: 0))
         await server.appendRoute("*") { _ in
             return HTTPResponse.make(statusCode: .accepted)
         }
 
         let task = Task { try await server.start() }
         defer { task.cancel() }
-        try await server.waitUntilListening()
+        let port = try await server.waitForListeningPort()
 
-        let socket = try await AsyncSocket.connected(to: .inet(ip4: "127.0.0.1", port: 8080), pool: server.pool)
+        let socket = try await AsyncSocket.connected(to: .inet(ip4: "127.0.0.1", port: port), pool: server.pool)
         defer { try? socket.close() }
 
         try await socket.writeRequest(.make())
@@ -216,15 +216,15 @@ final class HTTPServerTests: XCTestCase {
     }
 
     func testServer_AllowsExistingConnectionsToDisconnect_WhenStopped() async throws {
-        let server = HTTPServer.make(port: 8081)
+        let server = HTTPServer.make(port: 0)
         await server.appendRoute("*") { _ in
             return .make(statusCode: .ok)
         }
         let task = Task { try await server.start() }
         defer { task.cancel() }
-        try await server.waitUntilListening()
+        let port = try await server.waitForListeningPort()
 
-        let socket = try await AsyncSocket.connected(to: .inet(ip4: "127.0.0.1", port: 8081))
+        let socket = try await AsyncSocket.connected(to: .inet(ip4: "127.0.0.1", port: port))
         defer { try? socket.close() }
 
         try await Task.sleep(seconds: 0.5)
@@ -238,8 +238,6 @@ final class HTTPServerTests: XCTestCase {
         XCTAssertEqual(response.statusCode, .ok)
     }
 
-#endif
-
     func testServer_Returns500_WhenHandlerTimesout() async throws {
         let server = HTTPServer.make(timeout: 0.1)
         await server.appendRoute("*") { _ in
@@ -248,9 +246,9 @@ final class HTTPServerTests: XCTestCase {
         }
         let task = Task { try await server.start() }
         defer { task.cancel() }
-        try await server.waitUntilListening()
+        let port = try await server.waitForListeningPort()
 
-        let request = URLRequest(url: URL(string: "http://localhost:8008")!)
+        let request = URLRequest(url: URL(string: "http://127.0.0.1:\(port)")!)
         let (_, response) = try await URLSession.shared.makeData(for: request)
 
         XCTAssertEqual(
@@ -259,6 +257,8 @@ final class HTTPServerTests: XCTestCase {
         )
         task.cancel()
     }
+
+#endif
 
     func testServer_ListeningAddress_IP6() async throws {
         let server = HTTPServer.make(address: .inet6(port: 8080))
@@ -340,7 +340,7 @@ final class HTTPServerTests: XCTestCase {
     }
 
     func testWaitUntilListing_WaitsUntil_SocketIsListening() async {
-        let server = HTTPServer.make(address: .inet(port: 8080))
+        let server = HTTPServer.make()
 
         let waiting = Task<Bool, Error> {
             try await server.waitUntilListening()
@@ -354,7 +354,7 @@ final class HTTPServerTests: XCTestCase {
     }
 
     func testWaitUntilListing_ThrowsWhen_TaskIsCancelled() async {
-        let server = HTTPServer.make(address: .inet(port: 8080))
+        let server = HTTPServer.make()
 
         let waiting = Task<Bool, Error> {
             try await server.waitUntilListening()
@@ -366,7 +366,7 @@ final class HTTPServerTests: XCTestCase {
     }
 
     func testWaitUntilListing_ThrowsWhen_TimeoutExpires() async throws {
-        let server = HTTPServer.make(address: .inet(port: 8080))
+        let server = HTTPServer.make()
 
         let waiting = Task<Bool, Error> {
             try await server.waitUntilListening(timeout: 1)
@@ -389,7 +389,7 @@ extension HTTPServer {
                    handler: handler)
     }
 
-    static func make(port: UInt16 = 8008,
+    static func make(port: UInt16 = 0,
                      timeout: TimeInterval = 15,
                      logger: HTTPLogging? = defaultLogger(),
                      handler: HTTPHandler? = nil) -> HTTPServer {
@@ -399,7 +399,7 @@ extension HTTPServer {
                    handler: handler)
     }
 
-    static func make(port: UInt16 = 8008,
+    static func make(port: UInt16 = 0,
                      timeout: TimeInterval = 15,
                      logger: HTTPLogging? = .print(),
                      handler: @Sendable @escaping (HTTPRequest) async throws -> HTTPResponse) -> HTTPServer {
@@ -408,7 +408,24 @@ extension HTTPServer {
                    logger: logger,
                    handler: handler)
     }
+
+    func waitForListeningPort() async throws -> UInt16 {
+        try await waitUntilListening(timeout: 10)
+        switch listeningAddress {
+        case let .ip4(_, port: port),
+             let .ip6(_, port: port):
+            return port
+        default:
+            throw Error.noPort
+        }
+    }
+
+    private enum Error: Swift.Error {
+        case noPort
+    }
 }
+
+
 
 #if canImport(Darwin)
 extension URLSessionWebSocketTask.Message: Equatable {
