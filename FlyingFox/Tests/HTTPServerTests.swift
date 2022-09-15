@@ -260,6 +260,31 @@ final class HTTPServerTests: XCTestCase {
         task.cancel()
     }
 
+    func testServer_ListeningAddress_IP6() async throws {
+        let server = HTTPServer.make(address: .inet6(port: 8080))
+        let task = Task { try await server.start() }
+        defer { task.cancel() }
+
+        try await server.waitUntilListening()
+        await AsyncAssertEqual(
+            await server.listeningAddress,
+            .ip6("::", port: 8080)
+        )
+    }
+
+#if canImport(Darwin)
+    // docker contains don't like loopback
+    func testServer_ListeningAddress_Loopback() async throws {
+        let server = HTTPServer.make(address: .loopback(port: 0))
+        let task = Task { try await server.start() }
+        defer { task.cancel() }
+
+        try await server.waitUntilListening()
+        await AsyncAssertNotNil(
+            await server.listeningAddress
+        )
+    }
+#endif
 
     func testDefaultLoggerFallback_IsPrintLogger() async throws {
         XCTAssertTrue(HTTPServer.defaultLogger(forceFallback: true) is PrintHTTPLogger)
