@@ -117,7 +117,7 @@ final class HTTPServerTests: XCTestCase {
 
 #if canImport(Darwin) && compiler(>=5.6) && compiler(<5.7)
     func testServer_ReturnsWebSocketFramesToURLSession() async throws {
-        let server = HTTPServer.make()
+        let server = HTTPServer.make(address: .loopback(port: 0))
 
         await server.appendRoute("GET /socket", to: .webSocket(EchoWSMessageHandler()))
         let task = Task { try await server.start() }
@@ -342,7 +342,7 @@ extension HTTPServer {
 
     static func make(port: UInt16 = 0,
                      timeout: TimeInterval = 15,
-                     logger: HTTPLogging? = defaultLogger(),
+                     logger: HTTPLogging? = nil,
                      handler: HTTPHandler? = nil) -> HTTPServer {
         HTTPServer(port: port,
                    timeout: timeout,
@@ -352,7 +352,7 @@ extension HTTPServer {
 
     static func make(port: UInt16 = 0,
                      timeout: TimeInterval = 15,
-                     logger: HTTPLogging? = .print(),
+                     logger: HTTPLogging? = nil,
                      handler: @Sendable @escaping (HTTPRequest) async throws -> HTTPResponse) -> HTTPServer {
         HTTPServer(port: port,
                    timeout: timeout,
