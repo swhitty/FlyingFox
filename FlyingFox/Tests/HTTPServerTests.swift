@@ -140,7 +140,7 @@ final class HTTPServerTests: XCTestCase {
         defer { task.cancel() }
         try await server.waitUntilListening()
 
-        let socket = try await AsyncSocket.connected(to: address, pool: server.pool)
+        let socket = try await AsyncSocket.connected(to: address, pool: SleepingPool())
         defer { try? socket.close() }
 
         var request = HTTPRequest.make(path: "/socket")
@@ -184,7 +184,7 @@ final class HTTPServerTests: XCTestCase {
         defer { task.cancel() }
         try await server.waitUntilListening()
 
-        let socket = try await AsyncSocket.connected(to: address, pool: server.pool)
+        let socket = try await AsyncSocket.connected(to: address, pool: SleepingPool())
         defer { try? socket.close() }
         try await socket.writeRequest(.make())
 
@@ -204,7 +204,7 @@ final class HTTPServerTests: XCTestCase {
         defer { task.cancel() }
         let port = try await server.waitForListeningPort()
 
-        let socket = try await AsyncSocket.connected(to: .inet(ip4: "127.0.0.1", port: port), pool: server.pool)
+        let socket = try await AsyncSocket.connected(to: .inet(ip4: "127.0.0.1", port: port), pool: SleepingPool())
         defer { try? socket.close() }
 
         try await socket.writeRequest(.make())
@@ -396,5 +396,14 @@ extension URLSessionWebSocketTask.Message: Equatable {
 extension Task where Success == Never, Failure == Never {
     static func sleep(seconds: TimeInterval) async throws {
         try await sleep(nanoseconds: UInt64(1_000_000_000 * seconds))
+    }
+}
+
+
+private struct SleepingPool: AsyncSocketPool {
+    func run() async throws { }
+
+    func suspendSocket(_ socket: Socket, untilReadyFor events: Socket.Events) async throws {
+        try await Task.sleep(seconds: 0.1)
     }
 }
