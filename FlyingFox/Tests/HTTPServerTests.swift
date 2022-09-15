@@ -273,7 +273,7 @@ final class HTTPServerTests: XCTestCase {
     }
 
 #if canImport(Darwin)
-    // docker contains don't like loopback
+    // docker containers don't like loopback
     func testServer_ListeningAddress_Loopback() async throws {
         let server = HTTPServer.make(address: .loopback(port: 0))
         let task = Task { try await server.start() }
