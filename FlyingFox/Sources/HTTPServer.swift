@@ -84,6 +84,10 @@ public final actor HTTPServer {
                   handler: ClosureHTTPHandler(handler))
     }
 
+    public var listeningAddress: Socket.Address? {
+        try? state?.socket.sockname()
+    }
+
     public func appendRoute(_ route: HTTPRoute, to handler: HTTPHandler) {
         handlers.appendRoute(route, to: handler)
     }
