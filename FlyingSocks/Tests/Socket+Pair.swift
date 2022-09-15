@@ -64,3 +64,7 @@ extension Socket {
         return (s1, s2)
     }
 }
+
+extension Socket.FileDescriptor {
+    static let validMock = Socket.FileDescriptor(rawValue: 999)
+}
