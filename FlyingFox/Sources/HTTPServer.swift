@@ -132,12 +132,12 @@ public final actor HTTPServer {
         #endif
         try socket.bind(to: address)
         try socket.listen()
+        logger?.logListening(on: socket)
         return socket
     }
 
     func start(on socket: Socket, pool: AsyncSocketPool) async throws {
         let asyncSocket = try AsyncSocket(socket: socket, pool: pool)
-        logger?.logListening(on: socket)
 
         return try await withThrowingTaskGroup(of: Void.self) { group in
             group.addTask {
