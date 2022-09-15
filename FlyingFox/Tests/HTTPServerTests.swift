@@ -115,7 +115,7 @@ final class HTTPServerTests: XCTestCase {
         )
     }
 
-#if canImport(Darwin) && compiler(>=5.6)
+#if canImport(Darwin) && compiler(>=5.6) && compiler(<5.7)
     func testServer_ReturnsWebSocketFramesToURLSession() async throws {
         let server = HTTPServer.make()
 
@@ -216,7 +216,7 @@ final class HTTPServerTests: XCTestCase {
     }
 
     func testServer_AllowsExistingConnectionsToDisconnect_WhenStopped() async throws {
-        let server = HTTPServer.make(port: 0)
+        let server = HTTPServer.make()
         await server.appendRoute("*") { _ in
             return .make(statusCode: .ok)
         }
@@ -237,9 +237,10 @@ final class HTTPServerTests: XCTestCase {
         await taskStop.value
         XCTAssertEqual(response.statusCode, .ok)
     }
+#endif
 
-    func testServer_Returns500_WhenHandlerTimesout() async throws {
-        let server = HTTPServer.make(timeout: 0.1)
+    func disabled_testServer_Returns500_WhenHandlerTimesout() async throws {
+        let server = HTTPServer.make(timeout: 0.5)
         await server.appendRoute("*") { _ in
             try await Task.sleep(seconds: 5)
             return .make(statusCode: .ok)
@@ -258,7 +259,6 @@ final class HTTPServerTests: XCTestCase {
         task.cancel()
     }
 
-#endif
 
     func testServer_ListeningAddress_IP6() async throws {
         let server = HTTPServer.make(address: .inet6(port: 8080))
