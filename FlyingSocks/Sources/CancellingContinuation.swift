@@ -33,7 +33,7 @@
 /// task is cancelled.
 public struct CancellingContinuation<Success, Failure: Error>: Sendable {
 
-    private let inner: Inner
+    let inner: Inner
 
     public init(function: String = #function) {
         self.inner = Inner(function: function)
@@ -70,7 +70,7 @@ public struct CancellingContinuation<Success, Failure: Error>: Sendable {
     }
 }
 
-private extension CancellingContinuation {
+extension CancellingContinuation {
 
     actor Inner {
         private let function: String

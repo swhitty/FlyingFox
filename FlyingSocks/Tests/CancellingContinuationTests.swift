@@ -29,7 +29,7 @@
 //  SOFTWARE.
 //
 
-import FlyingSocks
+@testable import FlyingSocks
 import XCTest
 
 final class CancellingContinuationTests: XCTestCase {
@@ -55,12 +55,11 @@ final class CancellingContinuationTests: XCTestCase {
     func testEarlyResultIsReturned() async {
         let continuation = CancellingContinuation<String, Never>()
 
-        continuation.resume(returning: "Fish")
-        let task = Task { try await continuation.value }
-        task.cancel()
+        await continuation.inner.resume(with: .success("Fish"))
+        await continuation.inner.resume(with: .failure(CancellationError()))
 
         await AsyncAssertEqual(
-            try await task.value,
+            try await continuation.value,
             "Fish"
         )
     }
