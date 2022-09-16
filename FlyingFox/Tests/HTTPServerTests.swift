@@ -39,6 +39,24 @@ import FoundationNetworking
 
 final class HTTPServerTests: XCTestCase {
 
+    private var stopServer: HTTPServer?
+
+    func startServerWithPort(_ server: HTTPServer) async throws -> UInt16 {
+        self.stopServer = server
+        Task { try await server.start() }
+        return try await server.waitForListeningPort()
+    }
+
+    func startServer(_ server: HTTPServer) async throws {
+        self.stopServer = server
+        Task { try await server.start() }
+        try await server.waitUntilListening()
+    }
+
+    override func tearDown() async throws {
+        await stopServer?.stop(timeout: 0)
+    }
+
     func testRequests_AreMatchedToHandlers_ViaRoute() async throws {
         let server = HTTPServer.make()
 
@@ -115,14 +133,11 @@ final class HTTPServerTests: XCTestCase {
         )
     }
 
-#if canImport(Darwin) && compiler(>=5.6) && compiler(<5.7)
+#if canImport(Darwin) && compiler(>=5.6)
     func testServer_ReturnsWebSocketFramesToURLSession() async throws {
         let server = HTTPServer.make(address: .loopback(port: 0))
-
         await server.appendRoute("GET /socket", to: .webSocket(EchoWSMessageHandler()))
-        let task = Task { try await server.start() }
-        defer { task.cancel() }
-        let port = try await server.waitForListeningPort()
+        let port = try await startServerWithPort(server)
 
         let wsTask = URLSession.shared.webSocketTask(with: URL(string: "ws://localhost:\(port)/socket")!)
         wsTask.resume()
@@ -136,9 +151,7 @@ final class HTTPServerTests: XCTestCase {
         try? Socket.unlink(address)
         let server = HTTPServer.make(address: address)
         await server.appendRoute("GET /socket", to: .webSocket(EchoWSMessageHandler()))
-        let task = Task { try await server.start() }
-        defer { task.cancel() }
-        try await server.waitUntilListening()
+        try await startServer(server)
 
         let socket = try await AsyncSocket.connected(to: address, pool: SleepingPool())
         defer { try? socket.close() }
@@ -180,9 +193,7 @@ final class HTTPServerTests: XCTestCase {
         await server.appendRoute("*") { _ in
             return HTTPResponse.make(statusCode: .accepted)
         }
-        let task = Task { try await server.start() }
-        defer { task.cancel() }
-        try await server.waitUntilListening()
+        try await startServer(server)
 
         let socket = try await AsyncSocket.connected(to: address, pool: SleepingPool())
         defer { try? socket.close() }
@@ -199,10 +210,7 @@ final class HTTPServerTests: XCTestCase {
         await server.appendRoute("*") { _ in
             return HTTPResponse.make(statusCode: .accepted)
         }
-
-        let task = Task { try await server.start() }
-        defer { task.cancel() }
-        let port = try await server.waitForListeningPort()
+        let port = try await startServerWithPort(server)
 
         let socket = try await AsyncSocket.connected(to: .inet(ip4: "127.0.0.1", port: port), pool: SleepingPool())
         defer { try? socket.close() }
@@ -220,15 +228,13 @@ final class HTTPServerTests: XCTestCase {
         await server.appendRoute("*") { _ in
             return .make(statusCode: .ok)
         }
-        let task = Task { try await server.start() }
-        defer { task.cancel() }
-        let port = try await server.waitForListeningPort()
+        let port = try await startServerWithPort(server)
 
         let socket = try await AsyncSocket.connected(to: .inet(ip4: "127.0.0.1", port: port))
         defer { try? socket.close() }
 
         try await Task.sleep(seconds: 0.5)
-        let taskStop = Task { await server.stop(timeout: 10) }
+        let taskStop = Task { await server.stop(timeout: 3) }
 
         try await socket.writeRequest(.make())
         let response = try await socket.readResponse()
@@ -245,9 +251,7 @@ final class HTTPServerTests: XCTestCase {
             try await Task.sleep(seconds: 5)
             return .make(statusCode: .ok)
         }
-        let task = Task { try await server.start() }
-        defer { task.cancel() }
-        let port = try await server.waitForListeningPort()
+        let port = try await startServerWithPort(server)
 
         let request = URLRequest(url: URL(string: "http://127.0.0.1:\(port)")!)
         let (_, response) = try await URLSession.shared.makeData(for: request)
@@ -256,16 +260,12 @@ final class HTTPServerTests: XCTestCase {
             (response as? HTTPURLResponse)?.statusCode,
             500
         )
-        task.cancel()
     }
 
 
     func testServer_ListeningAddress_IP6() async throws {
         let server = HTTPServer.make(address: .inet6(port: 8080))
-        let task = Task { try await server.start() }
-        defer { task.cancel() }
-
-        try await server.waitUntilListening()
+        try await startServer(server)
         await AsyncAssertEqual(
             await server.listeningAddress,
             .ip6("::", port: 8080)
@@ -276,10 +276,7 @@ final class HTTPServerTests: XCTestCase {
     // docker containers don't like loopback
     func testServer_ListeningAddress_Loopback() async throws {
         let server = HTTPServer.make(address: .loopback(port: 0))
-        let task = Task { try await server.start() }
-        defer { task.cancel() }
-
-        try await server.waitUntilListening()
+        try await startServer(server)
         await AsyncAssertNotNil(
             await server.listeningAddress
         )
@@ -298,8 +295,8 @@ final class HTTPServerTests: XCTestCase {
             return true
         }
 
-        let task = Task { try await server.start() }
-        defer { task.cancel() }
+        Task { try await server.start() }
+        self.stopServer = server
 
         await AsyncAssertEqual(try await waiting.value, true)
     }
@@ -360,8 +357,8 @@ extension HTTPServer {
                    handler: handler)
     }
 
-    func waitForListeningPort() async throws -> UInt16 {
-        try await waitUntilListening(timeout: 10)
+    func waitForListeningPort(timeout: TimeInterval = 3) async throws -> UInt16 {
+        try await waitUntilListening(timeout: timeout)
         switch listeningAddress {
         case let .ip4(_, port: port),
              let .ip6(_, port: port):
