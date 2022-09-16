@@ -135,13 +135,14 @@ final class HTTPServerTests: XCTestCase {
 
 #if canImport(Darwin) && compiler(>=5.6)
     func testServer_ReturnsWebSocketFramesToURLSession() async throws {
+        try await Task.sleep(seconds: 0.3)
         let server = HTTPServer.make(address: .loopback(port: 0))
         await server.appendRoute("GET /socket", to: .webSocket(EchoWSMessageHandler()))
         let port = try await startServerWithPort(server)
 
         let wsTask = URLSession.shared.webSocketTask(with: URL(string: "ws://localhost:\(port)/socket")!)
         wsTask.resume()
-
+        try await Task.sleep(seconds: 0.3)
         try await wsTask.send(.string("Hello"))
         await AsyncAssertEqual(try await wsTask.receive(), .string("Hello"))
     }
