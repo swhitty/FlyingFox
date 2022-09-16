@@ -151,19 +151,14 @@ public final actor HTTPServer {
     }
 
     private func listenForConnections(on socket: AsyncSocket) async throws {
-        do {
-            try await withThrowingTaskGroup(of: Void.self) { [logger] group in
-                for try await socket in socket.sockets {
-                    group.addTask {
-                        await self.handleConnection(HTTPConnection(socket: socket, logger: logger))
-                    }
+        try await withThrowingTaskGroup(of: Void.self) { [logger] group in
+            for try await socket in socket.sockets {
+                group.addTask {
+                    await self.handleConnection(HTTPConnection(socket: socket, logger: logger))
                 }
-                try await group.waitForAll()
-                throw SocketError.disconnected
             }
-        } catch {
-            try socket.close()
-            throw error
+            try await group.waitForAll()
+            throw SocketError.disconnected
         }
     }
 
