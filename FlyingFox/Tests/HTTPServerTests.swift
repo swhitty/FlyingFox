@@ -396,8 +396,8 @@ extension Task where Success == Never, Failure == Never {
     }
 }
 
-
 private struct SleepingPool: AsyncSocketPool {
+    func prepare() async throws { }
     func run() async throws { }
 
     func suspendSocket(_ socket: Socket, untilReadyFor events: Socket.Events) async throws {

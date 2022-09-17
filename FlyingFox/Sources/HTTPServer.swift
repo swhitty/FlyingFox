@@ -97,6 +97,7 @@ public final actor HTTPServer {
     }
 
     public func start() async throws {
+        try await pool.prepare()
         let socket = try makeSocketAndListen()
         do {
             let task = Task { try await start(on: socket, pool: pool) }

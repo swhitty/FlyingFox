@@ -46,6 +46,8 @@ public final actor PollingSocketPool: AsyncSocketPool {
         self.loopInterval = loopInterval
     }
 
+    public func prepare() async throws { }
+
     public func suspendSocket(_ socket: Socket, untilReadyFor events: Socket.Events) async throws {
         let socket = SuspendedSocket(file: socket.file, events: events)
         let continuation = Continuation()
