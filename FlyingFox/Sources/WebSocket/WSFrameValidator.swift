@@ -43,6 +43,7 @@ struct WSFrameValidator: Sendable {
 
         private var last: WSFrame?
 
+        @Sendable
         func validateFrame(_ frame: WSFrame) throws -> WSFrame? {
             if frame.opcode == .continuation {
                 try appendContinuation(frame)

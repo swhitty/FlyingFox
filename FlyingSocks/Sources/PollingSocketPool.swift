@@ -36,7 +36,7 @@ import WinSDK.WinSock2
 
 public final actor PollingSocketPool: AsyncSocketPool {
 
-    public enum Interval {
+    public enum Interval: Sendable {
         case immediate
         case seconds(TimeInterval)
     }
