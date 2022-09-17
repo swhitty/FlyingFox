@@ -145,6 +145,7 @@ final class HTTPServerTests: XCTestCase {
         try await wsTask.send(.string("Hello"))
         await AsyncAssertEqual(try await wsTask.receive(), .string("Hello"))
     }
+#endif
 
     func testServer_ReturnsWebSocketFrames() async throws {
         let address = Socket.makeAddressUnix(path: "foxing")
@@ -178,6 +179,7 @@ final class HTTPServerTests: XCTestCase {
         )
     }
 
+#if canImport(Darwin)
     func testDefaultLogger_IsOSLog() async throws {
         if #available(iOS 14.0, tvOS 14.0, *) {
             XCTAssertTrue(HTTPServer.defaultLogger() is OSLogHTTPLogging)
@@ -185,7 +187,6 @@ final class HTTPServerTests: XCTestCase {
     }
 #endif
 
-#if compiler(>=5.6)
     func testServer_StartsOnUnixSocket() async throws {
         let address = sockaddr_un.unix(path: "foxsocks")
         try? Socket.unlink(address)
@@ -260,7 +261,6 @@ final class HTTPServerTests: XCTestCase {
         await AsyncAssertEqual(await server.connections.count, 0)
         await taskStop.value
     }
-#endif
 
     func disabled_testServer_Returns500_WhenHandlerTimesout() async throws {
         let server = HTTPServer.make(timeout: 0.5)
