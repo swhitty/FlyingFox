@@ -53,7 +53,7 @@ let task = Task { try await server.start() }
 task.cancel()
 ```
 
-Gracefully shutdown the server, allowing connections time to complete before forcefully closing:
+Gracefully shutdown the server, allowing requests time to complete before forcefully closing:
 
 ```swift
 await server.stop(timeout: 3)
