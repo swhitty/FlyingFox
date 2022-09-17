@@ -46,6 +46,10 @@ struct HTTPConnection: Sendable {
         self.requests = HTTPRequestSequence(bytes: socket.bytes)
     }
 
+    func complete() async {
+        await requests.complete()
+    }
+
     func sendResponse(_ response: HTTPResponse) async throws {
         let data = HTTPEncoder.encodeResponse(response)
         switch response.payload {
@@ -69,6 +73,17 @@ struct HTTPConnection: Sendable {
 
     func close() throws {
         try socket.close()
+    }
+}
+
+extension HTTPConnection: Hashable {
+
+    static func == (lhs: HTTPConnection, rhs: HTTPConnection) -> Bool {
+        lhs.socket.socket.file == rhs.socket.socket.file
+    }
+
+    func hash(into hasher: inout Hasher) {
+        socket.socket.file.hash(into: &hasher)
     }
 }
 

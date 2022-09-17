@@ -122,6 +122,9 @@ public final actor HTTPServer {
     public func stop(timeout: TimeInterval = 0) async {
         guard let (socket, task) = state else { return }
         try? socket.close()
+        for connection in connections {
+            await connection.complete()
+        }
         try? await task.getValue(cancelling: .afterTimeout(seconds: timeout))
     }
 
@@ -163,8 +166,11 @@ public final actor HTTPServer {
         }
     }
 
+    private var connections: Set<HTTPConnection> = []
+
     private func handleConnection(_ connection: HTTPConnection) async {
         logger?.logOpenConnection(connection)
+        connections.insert(connection)
         do {
             for try await request in connection.requests {
                 logger?.logRequest(request, on: connection)
@@ -174,6 +180,7 @@ public final actor HTTPServer {
         } catch {
             logger?.logError(error, on: connection)
         }
+        connections.remove(connection)
         try? connection.close()
         logger?.logCloseConnection(connection)
     }
