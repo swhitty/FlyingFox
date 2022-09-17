@@ -29,8 +29,8 @@
 //  SOFTWARE.
 //
 
-#if canImport(Glibc) && compiler(<5.7)
-// swift 5.6 on linux fails to import comformance for these Glibc types 🤷🏻‍♂️:
+#if canImport(Glibc)
+// swift on linux fails to import comformance for these Glibc types 🤷🏻‍♂️:
 import Glibc
 import FlyingSocks
 
