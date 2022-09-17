@@ -56,7 +56,7 @@ task.cancel()
 Gracefully shutdown the server, allowing connections time to complete before forcefully closing:
 
 ```swift
-await server.stop(timeout: 1)
+await server.stop(timeout: 3)
 ```
 
 Wait until the server is listening and ready for connections:
