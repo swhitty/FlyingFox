@@ -32,8 +32,8 @@
 import Foundation
 
 public protocol AsyncSocketPool: Sendable {
+    func prepare() async throws
     func run() async throws
-
     func suspendSocket(_ socket: Socket, untilReadyFor events: Socket.Events) async throws
 }
 
