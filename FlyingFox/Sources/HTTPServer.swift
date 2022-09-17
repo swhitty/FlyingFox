@@ -166,7 +166,7 @@ public final actor HTTPServer {
         }
     }
 
-    private var connections: Set<HTTPConnection> = []
+    private(set) var connections: Set<HTTPConnection> = []
 
     private func handleConnection(_ connection: HTTPConnection) async {
         logger?.logOpenConnection(connection)

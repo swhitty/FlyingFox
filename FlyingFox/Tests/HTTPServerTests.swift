@@ -226,22 +226,39 @@ final class HTTPServerTests: XCTestCase {
     func testServer_AllowsExistingConnectionsToDisconnect_WhenStopped() async throws {
         let server = HTTPServer.make()
         await server.appendRoute("*") { _ in
+            try await Task.sleep(seconds: 2)
             return .make(statusCode: .ok)
         }
         let port = try await startServerWithPort(server)
+        let socket = try await AsyncSocket.connected(to: .inet(ip4: "127.0.0.1", port: port))
+        defer { try? socket.close() }
 
+        try await socket.writeRequest(.make())
+        try await Task.sleep(seconds: 0.5)
+        let taskStop = Task { await server.stop(timeout: 5) }
+
+        await AsyncAssertEqual(
+            try await socket.readResponse().statusCode,
+            .ok
+        )
+        await taskStop.value
+    }
+
+    func testServer_DisconnectsWaitingRequests_WhenStopped() async throws {
+        let server = HTTPServer.make(logger: HTTPServer.defaultLogger())
+
+        let port = try await startServerWithPort(server)
         let socket = try await AsyncSocket.connected(to: .inet(ip4: "127.0.0.1", port: port))
         defer { try? socket.close() }
 
         try await Task.sleep(seconds: 0.5)
-        let taskStop = Task { await server.stop(timeout: 3) }
+        await AsyncAssertEqual(await server.connections.count, 1)
 
-        try await socket.writeRequest(.make())
-        let response = try await socket.readResponse()
-        try? socket.close()
+        let taskStop = Task { await server.stop(timeout: 5) }
+        try await Task.sleep(seconds: 0.5)
 
+        await AsyncAssertEqual(await server.connections.count, 0)
         await taskStop.value
-        XCTAssertEqual(response.statusCode, .ok)
     }
 #endif
 

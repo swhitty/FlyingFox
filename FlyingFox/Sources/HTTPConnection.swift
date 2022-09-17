@@ -92,6 +92,7 @@ actor HTTPRequestSequence<S: ChunkedAsyncSequence & Sendable>: AsyncSequence, As
     private let bytes: S
 
     private var isComplete: Bool
+    private var task: Task<Element, Error>?
 
     init(bytes: S) {
         self.bytes = bytes
@@ -100,6 +101,7 @@ actor HTTPRequestSequence<S: ChunkedAsyncSequence & Sendable>: AsyncSequence, As
 
     fileprivate func complete() {
         isComplete = true
+        task?.cancel()
     }
 
     nonisolated func makeAsyncIterator() -> HTTPRequestSequence { self }
@@ -108,7 +110,10 @@ actor HTTPRequestSequence<S: ChunkedAsyncSequence & Sendable>: AsyncSequence, As
         guard !isComplete else { return nil }
 
         do {
-            let request = try await HTTPDecoder.decodeRequest(from: bytes)
+            let task = Task { try await HTTPDecoder.decodeRequest(from: bytes) }
+            self.task = task
+            defer { self.task = nil }
+            let request = try await task.getValue(cancelling: .whenParentIsCancelled)
             if !request.shouldKeepAlive {
                 isComplete = true
             }
