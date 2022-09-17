@@ -51,7 +51,7 @@ struct EventNotification: Equatable {
     }
 }
 
-#if canImport(Darwin)
+#if canImport(Darwin) || canImport(CSystemLinux)
 // temporary public interface
 public func makeEventQueuePool() -> AsyncSocketPool {
     .eventQueue()
