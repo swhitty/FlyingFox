@@ -53,10 +53,16 @@ let task = Task { try await server.start() }
 task.cancel()
 ```
 
-Alternatively, gracefully shutdown the server allowing existing connections time to complete before forcefully closing:
+Gracefully shutdown the server allowing connections time to complete before forcefully closing:
 
 ```swift
 await server.stop(timeout: 3)
+```
+
+Wait until the server is listening and ready for connections:
+
+```swift
+try await server.waitUntilListening()
 ```
 
 > Note: iOS will hangup the listening socket when an app is suspended in the background. Once the app returns to the foreground, `HTTPServer.start()` detects this, throwing `SocketError.disconnected`. The server must then be started once more.
