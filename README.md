@@ -307,6 +307,7 @@ When data is unavailable for a socket and the `EWOULDBLOCK` errno is returned, t
 
 ```swift
 protocol AsyncSocketPool {
+  func prepare() async throws
   func run() async throws
 
   // Suspends current task until a socket is ready to read and/or write
