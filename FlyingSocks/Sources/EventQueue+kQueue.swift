@@ -153,7 +153,12 @@ extension EventNotification {
             errors: []
         )
 
-        if filter == .write && (event.flags & UInt16(EV_EOF)) == EV_EOF {
+        if filter == .read && event.data > 0 {
+            // ignore read errors until there is no data available
+            return notification
+        }
+
+        if (event.flags & UInt16(EV_EOF)) == EV_EOF {
             notification.errors.insert(.endOfFile)
         }
         if (event.flags & UInt16(EV_ERROR)) == EV_ERROR {

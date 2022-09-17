@@ -124,12 +124,13 @@ final class kQueueTests: XCTestCase {
         )
     }
 
-    func testHUPErrorsIgnored_WhenRead() {
+    func testErrorsIgnored_WhenReadWithDataAvailable() {
         XCTAssertEqual(
             EventNotification.make(from: .make(
                 ident: 10,
                 filter: EVFILT_READ,
-                flags: EV_EOF
+                flags: EV_ERROR,
+                data: 5
             )),
             EventNotification(
                 file: .init(rawValue: 10),
