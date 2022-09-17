@@ -35,8 +35,8 @@ public struct CancellingContinuation<Success, Failure: Error>: Sendable {
 
     let inner: Inner
 
-    public init(function: String = #function) {
-        self.inner = Inner(function: function)
+    public init() {
+        self.inner = Inner()
     }
 
     public var value: Success {
@@ -73,20 +73,15 @@ public struct CancellingContinuation<Success, Failure: Error>: Sendable {
 extension CancellingContinuation {
 
     actor Inner {
-        private let function: String
-        private var continuation: CheckedContinuation<Success, Error>?
+        private var continuation: UnsafeContinuation<Success, Error>?
         private var result: Result<Success, Error>?
         private var hasStarted: Bool = false
-
-        init(function: String) {
-            self.function = function
-        }
 
         func getValue() async throws -> Success {
             precondition(hasStarted == false, "Can only wait a single time.")
             hasStarted = true
             guard let result = result else {
-                return try await withCheckedThrowingContinuation(function: function) {
+                return try await withUnsafeThrowingContinuation {
                     continuation = $0
                 }
             }
