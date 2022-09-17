@@ -134,8 +134,13 @@ final class PollingSocketPoolTests: XCTestCase {
 }
 
 private extension PollingSocketPool {
-
+#if compiler(>=5.7)
+    init() {
+        self.init(pollInterval: .immediate, loopInterval: .immediate)
+    }
+#else
     convenience init() {
         self.init(pollInterval: .immediate, loopInterval: .immediate)
     }
+#endif
 }

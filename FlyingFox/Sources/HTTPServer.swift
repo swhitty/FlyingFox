@@ -55,35 +55,6 @@ public final actor HTTPServer {
         self.handlers = Self.makeRootHandler(to: handler)
     }
 
-    public convenience init(port: UInt16,
-                            timeout: TimeInterval = 15,
-                            pool: AsyncSocketPool = defaultPool(),
-                            logger: HTTPLogging? = defaultLogger(),
-                            handler: HTTPHandler? = nil) {
-        #if canImport(WinSDK)
-        let address = sockaddr_in.inet(port: port)
-        #else
-        let address = sockaddr_in6.inet6(port: port)
-        #endif
-        self.init(address: address,
-                  timeout: timeout,
-                  pool: pool,
-                  logger: logger,
-                  handler: handler)
-    }
-
-    public convenience init(port: UInt16,
-                            timeout: TimeInterval = 15,
-                            pool: AsyncSocketPool = defaultPool(),
-                            logger: HTTPLogging? = defaultLogger(),
-                            handler: @Sendable @escaping (HTTPRequest) async throws -> HTTPResponse) {
-        self.init(port: port,
-                  timeout: timeout,
-                  pool: pool,
-                  logger: logger,
-                  handler: ClosureHTTPHandler(handler))
-    }
-
     public var listeningAddress: Socket.Address? {
         try? state?.socket.sockname()
     }
@@ -219,6 +190,70 @@ public final actor HTTPServer {
     public static func defaultPool() -> AsyncSocketPool {
         PollingSocketPool(pollInterval: .immediate, loopInterval: .seconds(0.1))
     }
+}
+
+public extension HTTPServer {
+
+#if compiler(>=5.7)
+    init(port: UInt16,
+         timeout: TimeInterval = 15,
+         pool: AsyncSocketPool = defaultPool(),
+         logger: HTTPLogging? = defaultLogger(),
+         handler: HTTPHandler? = nil) {
+#if canImport(WinSDK)
+        let address = sockaddr_in.inet(port: port)
+#else
+        let address = sockaddr_in6.inet6(port: port)
+#endif
+        self.init(address: address,
+                  timeout: timeout,
+                  pool: pool,
+                  logger: logger,
+                  handler: handler)
+    }
+
+    init(port: UInt16,
+         timeout: TimeInterval = 15,
+         pool: AsyncSocketPool = defaultPool(),
+         logger: HTTPLogging? = defaultLogger(),
+         handler: @Sendable @escaping (HTTPRequest) async throws -> HTTPResponse) {
+        self.init(port: port,
+                  timeout: timeout,
+                  pool: pool,
+                  logger: logger,
+                  handler: ClosureHTTPHandler(handler))
+    }
+
+#else
+    convenience init(port: UInt16,
+                     timeout: TimeInterval = 15,
+                     pool: AsyncSocketPool = defaultPool(),
+                     logger: HTTPLogging? = defaultLogger(),
+                     handler: HTTPHandler? = nil) {
+#if canImport(WinSDK)
+        let address = sockaddr_in.inet(port: port)
+#else
+        let address = sockaddr_in6.inet6(port: port)
+#endif
+        self.init(address: address,
+                  timeout: timeout,
+                  pool: pool,
+                  logger: logger,
+                  handler: handler)
+    }
+
+    convenience init(port: UInt16,
+                     timeout: TimeInterval = 15,
+                     pool: AsyncSocketPool = defaultPool(),
+                     logger: HTTPLogging? = defaultLogger(),
+                     handler: @Sendable @escaping (HTTPRequest) async throws -> HTTPResponse) {
+        self.init(port: port,
+                  timeout: timeout,
+                  pool: pool,
+                  logger: logger,
+                  handler: ClosureHTTPHandler(handler))
+    }
+#endif
 }
 
 extension HTTPLogging {
