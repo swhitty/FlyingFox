@@ -46,11 +46,17 @@ let server = HTTPServer(port: 80)
 try await server.start()
 ```
 
-The server runs within the the current task. To stop the server, cancel the task:
+The server runs within the the current task. To stop the server, cancel the task terminating all connections immediatley:
 
 ```swift
 let task = Task { try await server.start() }
 task.cancel()
+```
+
+Alternatively, gracefully shutdown the server allowing existing connections time to complete before forcefully closing:
+
+```swift
+await server.stop(timeout: 3)
 ```
 
 > Note: iOS will hangup the listening socket when an app is suspended in the background. Once the app returns to the foreground, `HTTPServer.start()` detects this, throwing `SocketError.disconnected`. The server must then be started once more.
