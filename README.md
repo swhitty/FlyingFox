@@ -330,7 +330,7 @@ let server = HTTPServer(port: 80, pool: pool)
 
 The experimental `EventQueueSocketPool<Queue>` suspends and resume sockets using kernel events without the need to continuosly poll the waiting file descriptors.  The pool uses a queue to add, remove and be notified of events abstracting [`kqueue(2)`](https://www.freebsd.org/cgi/man.cgi?kqueue) on Darwin platforms and [`epoll(7)`](https://man7.org/linux/man-pages/man7/epoll.7.html) on linux.
 
-`EventQueueSocketPool<Queue>` and associated types will be made `public` in the future.  In the meantime they can be used like so:
+[`EventQueueSocketPool<Queue>`](https://github.com/swhitty/FlyingFox/blob/main/FlyingSocks/Sources/EventQueueSocketPool.swift) and associated types will be made `public` in the future.  In the meantime they can be used like so:
 
 ```swift
 let server = HTTPServer(port: 80, pool: makeEventQueuePool())
