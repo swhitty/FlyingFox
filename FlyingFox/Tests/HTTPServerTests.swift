@@ -142,7 +142,6 @@ final class HTTPServerTests: XCTestCase {
 
         let wsTask = URLSession.shared.webSocketTask(with: URL(string: "ws://localhost:\(port)/socket")!)
         wsTask.resume()
-        try await Task.sleep(seconds: 0.3)
         try await wsTask.send(.string("Hello"))
         await AsyncAssertEqual(try await wsTask.receive(), .string("Hello"))
     }
