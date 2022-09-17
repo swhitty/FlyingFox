@@ -6,19 +6,19 @@ on:
   workflow_dispatch:
 
 jobs:
-  xcode_13_4:
+  xcode_14:
     runs-on: macos-12
     env:
-      DEVELOPER_DIR: /Applications/Xcode_13.4.app/Contents/Developer
+      DEVELOPER_DIR: /Applications/Xcode_14.0.app/Contents/Developer
     steps:
       - name: Checkout
         uses: actions/checkout@v2
       - name: Version
         run: swift --version
       - name: Build
-        run: swift build --build-tests --enable-code-coverage
+        run: swift build --build-tests
       - name: Test
-        run: swift test --skip-build --enable-code-coverage
+        run: swift test --enable-code-coverage
       - name: Gather code coverage
         run: xcrun llvm-cov export -format="lcov" .build/debug/FlyingFoxPackageTests.xctest/Contents/MacOS/FlyingFoxPackageTests -instr-profile .build/debug/codecov/default.profdata > coverage_report.lcov
       - name: Upload Coverage
@@ -26,10 +26,10 @@ jobs:
         with:
           files: ./coverage_report.lcov
 
-  xcode_14:
+  xcode_13_4:
     runs-on: macos-12
     env:
-      DEVELOPER_DIR: /Applications/Xcode_14.0.app/Contents/Developer
+      DEVELOPER_DIR: /Applications/Xcode_13.4.app/Contents/Developer
     steps:
       - name: Checkout
         uses: actions/checkout@v2
