@@ -32,8 +32,17 @@
 import Foundation
 
 public protocol AsyncSocketPool: Sendable {
+
+    /// Prepare the pool before running
     func prepare() async throws
+
+    /// Runs the pool within the current task
     func run() async throws
+
+    /// Suspends a socket, returning when the socket is ready for the requested events.
+    /// - Parameters:
+    ///   - socket: Socket that is blocked and is waiting for events
+    ///   - events: The events the socket is waiting to become available
     func suspendSocket(_ socket: Socket, untilReadyFor events: Socket.Events) async throws
 }
 
