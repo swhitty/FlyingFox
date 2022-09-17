@@ -233,7 +233,7 @@ final class EventQueueSocketPoolTests: XCTestCase {
 
 private extension EventQueueSocketPool where Queue == MockEventQueue  {
     static func make() -> Self {
-        .init(queue: MockEventQueue())
+        .init(queue: MockEventQueue(), maxEvents: 5)
     }
 }
 

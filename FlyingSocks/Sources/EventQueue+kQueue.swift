@@ -33,8 +33,8 @@
 import Darwin
 
 extension AsyncSocketPool where Self == EventQueueSocketPool<kQueue> {
-    static func eventQueue() -> EventQueueSocketPool<kQueue> {
-        EventQueueSocketPool<kQueue>(queue: kQueue())
+    static func eventQueue(maxEvents limit: Int) -> EventQueueSocketPool<kQueue> {
+        EventQueueSocketPool<kQueue>(queue: kQueue(), maxEvents: limit)
     }
 }
 

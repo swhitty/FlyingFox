@@ -33,8 +33,8 @@
 import CSystemLinux
 
 extension AsyncSocketPool where Self == EventQueueSocketPool<ePoll> {
-    static func eventQueue() -> EventQueueSocketPool<ePoll> {
-        EventQueueSocketPool<ePoll>(queue: ePoll())
+    static func eventQueue(maxEvents limit: Int) -> EventQueueSocketPool<ePoll> {
+        EventQueueSocketPool<ePoll>(queue: ePoll(), maxEvents: limit)
     }
 }
 

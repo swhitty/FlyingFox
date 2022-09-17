@@ -53,8 +53,8 @@ struct EventNotification: Equatable {
 
 #if canImport(Darwin) || canImport(CSystemLinux)
 // temporary public interface
-public func makeEventQueuePool() -> AsyncSocketPool {
-    .eventQueue()
+public func makeEventQueuePool(maxEvents limit: Int = 10) -> AsyncSocketPool {
+    .eventQueue(maxEvents: limit)
 }
 #endif
 
@@ -62,11 +62,15 @@ final actor EventQueueSocketPool<Queue: EventQueue>: AsyncSocketPool {
 
     private(set) var queue: Queue
     private let dispatchQueue: DispatchQueue
+    private let eventsLimit: Int32
     private(set) var state: State?
 
-    init(queue: Queue, dispatchQueue: DispatchQueue = .init(label: "flyingfox")) {
+    init(queue: Queue,
+         dispatchQueue: DispatchQueue = .init(label: "flyingfox"),
+         maxEvents limit: Int) {
         self.queue = queue
         self.dispatchQueue = dispatchQueue
+        self.eventsLimit = Int32(limit)
     }
 
     func prepare() async throws {
@@ -97,9 +101,9 @@ final actor EventQueueSocketPool<Queue: EventQueue>: AsyncSocketPool {
 
     private func getNotifications() async throws -> [EventNotification] {
         let continuation = CancellingContinuation<[EventNotification], Swift.Error>()
-        dispatchQueue.async { [queue] in
+        dispatchQueue.async { [queue, eventsLimit] in
             let result = Result {
-                try queue.getNotifications(max: 5)
+                try queue.getNotifications(max: eventsLimit)
             }
             continuation.resume(with: result)
         }
