@@ -105,6 +105,7 @@ public struct MessageFrameWSHandler: WSHandler {
                             framesOut.yield(frame)
                         }
                     }
+                    framesOut.finish(throwing: nil)
                 } catch FrameError.closed {
                     framesOut.yield(.close(message: "Goodbye"))
                     framesOut.finish(throwing: nil)

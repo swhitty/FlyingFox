@@ -116,6 +116,15 @@ final class WSHandlerTests: XCTestCase {
         )
     }
 
+    func testResponseFramesEnds() async throws {
+        let handler = MessageFrameWSHandler.make()
+        let frames = try await handler.makeFrames(for: [.ping])
+
+        await AsyncAssertEqual(
+            try await frames.collectAll(),
+            [.pong]
+        )
+    }
 }
 
 private extension MessageFrameWSHandler {
