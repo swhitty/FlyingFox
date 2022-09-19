@@ -62,8 +62,8 @@ final class SocketAddressTests: XCTestCase {
     }
 
     func testAddress_DecodesIP4() throws {
-        var addr = Socket.makeAddressINET(port: 1080)
-        addr.sin_addr = try Socket.makeInAddr(fromIP4: "192.168.0.1")
+        let addr = try Socket.makeAddressINET(fromIP4: "192.168.0.1",
+                                              port: 1080)
 
         XCTAssertEqual(
             try Socket.makeAddress(from: addr.makeStorage()),
