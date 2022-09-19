@@ -65,6 +65,12 @@ Wait until the server is listening and ready for connections:
 try await server.waitUntilListening()
 ```
 
+Retrieve the current listening address:
+
+```swift
+await server.listeningAddress
+```
+
 > Note: iOS will hangup the listening socket when an app is suspended in the background. Once the app returns to the foreground, `HTTPServer.start()` detects this, throwing `SocketError.disconnected`. The server must then be started once more.
 
 ## Handlers
