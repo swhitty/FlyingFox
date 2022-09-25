@@ -32,20 +32,16 @@
 #if canImport(CSystemLinux)
 import CSystemLinux
 
-extension AsyncSocketPool where Self == EventQueueSocketPool<ePoll> {
-    static func eventQueue(maxEvents limit: Int) -> EventQueueSocketPool<ePoll> {
-        EventQueueSocketPool<ePoll>(queue: ePoll(), maxEvents: limit)
-    }
-}
-
 struct ePoll: EventQueue {
 
     private(set) var file: Socket.FileDescriptor
     private(set) var existing: [Socket.FileDescriptor: Socket.Events]
+    private let eventsLimit: Int
 
-    init() {
+    init(maxEvents limit: Int) {
         self.file = .invalid
         self.existing = [:]
+        self.eventsLimit = limit
     }
 
     mutating func reset() throws {
@@ -100,9 +96,9 @@ struct ePoll: EventQueue {
         }
     }
 
-    func getNotifications(max count: Int32) throws -> [EventNotification] {
-        var events = Array(repeating: epoll_event(), count: Int(count))
-        let status = CSystemLinux.epoll_wait(file.rawValue, &events, count, -1)
+    func getNotifications() throws -> [EventNotification] {
+        var events = Array(repeating: epoll_event(), count: eventsLimit)
+        let status = CSystemLinux.epoll_wait(file.rawValue, &events, Int32(eventsLimit), -1)
         guard status > 0 else {
             throw SocketError.makeFailed("epoll wait")
         }
