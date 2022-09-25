@@ -207,7 +207,7 @@ final class kQueueTests: XCTestCase {
 private extension kQueue {
 
     static func make() throws -> Self {
-        var queue = kQueue()
+        var queue = kQueue(maxEvents: 20)
         try queue.prepare()
         return queue
     }
@@ -217,7 +217,7 @@ private extension kQueue {
         return try await withCheckedThrowingContinuation { continuation in
             DispatchQueue.global().async {
                 let result = Result {
-                    try queue.getNotifications(max: 10)
+                    try queue.getNotifications()
                 }
                 continuation.resume(with: result)
             }

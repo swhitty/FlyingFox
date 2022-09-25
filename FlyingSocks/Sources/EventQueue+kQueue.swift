@@ -32,20 +32,16 @@
 #if canImport(Darwin)
 import Darwin
 
-extension AsyncSocketPool where Self == EventQueueSocketPool<kQueue> {
-    static func eventQueue(maxEvents limit: Int) -> EventQueueSocketPool<kQueue> {
-        EventQueueSocketPool<kQueue>(queue: kQueue(), maxEvents: limit)
-    }
-}
-
 struct kQueue: EventQueue {
 
     private(set) var file: Socket.FileDescriptor
     private(set) var existing: [Socket.FileDescriptor: Socket.Events]
+    private let eventsLimit: Int
 
-    init() {
+    init(maxEvents limit: Int) {
         self.file = .invalid
         self.existing = [:]
+        self.eventsLimit = limit
     }
 
     mutating func reset() throws {
@@ -113,9 +109,9 @@ struct kQueue: EventQueue {
         }
     }
 
-    func getNotifications(max count: Int32) throws -> [EventNotification] {
-        var events = Array(repeating: kevent(), count: Int(count))
-        let status = kevent(file.rawValue, nil, 0, &events, count, nil)
+    func getNotifications() throws -> [EventNotification] {
+        var events = Array(repeating: kevent(), count: eventsLimit)
+        let status = kevent(file.rawValue, nil, 0, &events, Int32(eventsLimit), nil)
         guard status > 0 else {
             throw SocketError.makeFailed("kqueue kevent")
         }

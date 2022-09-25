@@ -37,7 +37,7 @@ protocol EventQueue {
     mutating func reset() throws
     mutating func addEvents(_ events: Socket.Events, for socket: Socket.FileDescriptor) throws
     mutating func removeEvents(_ events: Socket.Events, for socket: Socket.FileDescriptor) throws
-    func getNotifications(max count: Int32) throws -> [EventNotification]
+    func getNotifications() throws -> [EventNotification]
 }
 
 struct EventNotification: Equatable {
@@ -51,26 +51,27 @@ struct EventNotification: Equatable {
     }
 }
 
-#if canImport(Darwin) || canImport(CSystemLinux)
 // temporary public interface
-public func makeEventQueuePool(maxEvents limit: Int = 10) -> AsyncSocketPool {
-    .eventQueue(maxEvents: limit)
-}
+public func makeEventQueuePool(maxEvents limit: Int = 20) -> AsyncSocketPool {
+#if canImport(Darwin)
+    return EventQueueSocketPool<kQueue>(queue: kQueue(maxEvents: limit))
+#elseif canImport(CSystemLinux)
+    return EventQueueSocketPool<ePoll>(queue: ePoll(maxEvents: limit))
+#else
+    return EventQueueSocketPool<Poll>(queue: Poll(interval: .seconds(0.01)))
 #endif
+}
 
 final actor EventQueueSocketPool<Queue: EventQueue>: AsyncSocketPool {
 
     private(set) var queue: Queue
     private let dispatchQueue: DispatchQueue
-    private let eventsLimit: Int32
     private(set) var state: State?
 
     init(queue: Queue,
-         dispatchQueue: DispatchQueue = .init(label: "flyingfox"),
-         maxEvents limit: Int) {
+         dispatchQueue: DispatchQueue = .init(label: "flyingfox")) {
         self.queue = queue
         self.dispatchQueue = dispatchQueue
-        self.eventsLimit = Int32(limit)
     }
 
     func prepare() async throws {
@@ -101,9 +102,9 @@ final actor EventQueueSocketPool<Queue: EventQueue>: AsyncSocketPool {
 
     private func getNotifications() async throws -> [EventNotification] {
         let continuation = CancellingContinuation<[EventNotification], Swift.Error>()
-        dispatchQueue.async { [queue, eventsLimit] in
+        dispatchQueue.async { [queue] in
             let result = Result {
-                try queue.getNotifications(max: eventsLimit)
+                try queue.getNotifications()
             }
             continuation.resume(with: result)
         }

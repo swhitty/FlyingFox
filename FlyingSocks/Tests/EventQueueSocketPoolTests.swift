@@ -233,7 +233,7 @@ final class EventQueueSocketPoolTests: XCTestCase {
 
 private extension EventQueueSocketPool where Queue == MockEventQueue  {
     static func make() -> Self {
-        .init(queue: MockEventQueue(), maxEvents: 5)
+        .init(queue: MockEventQueue())
     }
 }
 
@@ -284,7 +284,7 @@ final class MockEventQueue: EventQueue {
         }
     }
 
-    func getNotifications(max count: Int32) throws -> [EventNotification] {
+    func getNotifications() throws -> [EventNotification] {
         defer {
             result = nil
         }
