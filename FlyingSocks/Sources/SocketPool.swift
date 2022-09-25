@@ -52,15 +52,9 @@ public struct EventNotification: Equatable {
     }
 }
 
-@available(*, deprecated, message: "init pool directly")
+@available(*, unavailable, message: "use .make(maxEvents:)")
 public func makeEventQueuePool(maxEvents limit: Int = 20) -> AsyncSocketPool {
-#if canImport(Darwin)
-    return .kQueue(maxEvents: limit)
-#elseif canImport(CSystemLinux)
-    return .ePoll(maxEvents: limit)
-#else
-    return .poll(interval: .seconds(0.01))
-#endif
+    fatalError("init pool directly")
 }
 
 #if compiler(>=5.7)
