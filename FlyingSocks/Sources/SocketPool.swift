@@ -67,13 +67,13 @@ public func makeEventQueuePool(maxEvents limit: Int = 20) -> AsyncSocketPool {
 public extension AsyncSocketPool where Self == SocketPool<Poll> {
 
     static func make(maxEvents limit: Int = 20) -> SocketPool<some EventQueue> {
-#if canImport(Darwin)
-    return .kQueue(maxEvents: limit)
-#elseif canImport(CSystemLinux)
-    return .ePoll(maxEvents: limit)
-#else
-    return .poll(interval: .seconds(0.01))
-#endif
+    #if canImport(Darwin)
+        return .kQueue(maxEvents: limit)
+    #elseif canImport(CSystemLinux)
+        return .ePoll(maxEvents: limit)
+    #else
+        return .poll(interval: .seconds(0.01))
+    #endif
     }
 }
 #endif
