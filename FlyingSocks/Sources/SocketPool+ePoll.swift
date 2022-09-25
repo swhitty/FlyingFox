@@ -34,7 +34,7 @@ import CSystemLinux
 
 public extension AsyncSocketPool where Self == SocketPool<ePoll> {
     static func ePoll(maxEvents limit: Int = 20) -> SocketPool<ePoll> {
-        SocketPool(queue: ePoll(maxEvents: limit))
+        SocketPool(queue: FlyingSocks.ePoll(maxEvents: limit))
     }
 }
 
