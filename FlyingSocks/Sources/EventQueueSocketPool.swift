@@ -32,7 +32,7 @@
 import Dispatch
 import Foundation
 
-protocol EventQueue {
+public protocol EventQueue {
     mutating func open() throws
     mutating func close() throws
 
@@ -41,12 +41,12 @@ protocol EventQueue {
     func getNotifications() throws -> [EventNotification]
 }
 
-struct EventNotification: Equatable {
-    var file: Socket.FileDescriptor
-    var events: Socket.Events
-    var errors: Set<Error>
+public struct EventNotification: Equatable {
+    public var file: Socket.FileDescriptor
+    public var events: Socket.Events
+    public var errors: Set<Error>
 
-    enum Error {
+    public enum Error {
         case endOfFile
         case error
     }
@@ -63,24 +63,24 @@ public func makeEventQueuePool(maxEvents limit: Int = 20) -> AsyncSocketPool {
 #endif
 }
 
-final actor EventQueueSocketPool<Queue: EventQueue>: AsyncSocketPool {
+public final actor EventQueueSocketPool<Queue: EventQueue>: AsyncSocketPool {
 
     private(set) var queue: Queue
     private let dispatchQueue: DispatchQueue
     private(set) var state: State?
 
-    init(queue: Queue,
+    public init(queue: Queue,
          dispatchQueue: DispatchQueue = .init(label: "flyingfox")) {
         self.queue = queue
         self.dispatchQueue = dispatchQueue
     }
 
-    func prepare() async throws {
+    public func prepare() async throws {
         try queue.open()
         state = .ready
     }
 
-    func run() async throws {
+    public func run() async throws {
         guard state == .ready else { throw Error("Not Ready") }
         state = .running
         defer { cancellAll() }
@@ -93,7 +93,7 @@ final actor EventQueueSocketPool<Queue: EventQueue>: AsyncSocketPool {
         } while true
     }
 
-    func suspendSocket(_ socket: Socket, untilReadyFor events: Socket.Events) async throws {
+    public func suspendSocket(_ socket: Socket, untilReadyFor events: Socket.Events) async throws {
         guard state == .running || state == .ready else { throw Error("Not Ready") }
         let continuation = Continuation()
         defer { removeContinuation(continuation, for: socket.file) }

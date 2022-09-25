@@ -32,29 +32,29 @@
 #if canImport(Darwin)
 import Darwin
 
-struct kQueue: EventQueue {
+public struct kQueue: EventQueue {
 
     private(set) var file: Socket.FileDescriptor
     private(set) var existing: [Socket.FileDescriptor: Socket.Events]
     private let eventsLimit: Int
 
-    init(maxEvents limit: Int) {
+    public init(maxEvents limit: Int) {
         self.file = .invalid
         self.existing = [:]
         self.eventsLimit = limit
     }
 
-    mutating func open() throws {
+    public mutating func open() throws {
         existing = [:]
         self.file = try Self.makeQueue()
     }
 
-    mutating func close() throws {
+    public mutating func close() throws {
         existing = [:]
         try Self.closeQueue(file: file)
     }
 
-    mutating func addEvents(_ events: Socket.Events, for socket: Socket.FileDescriptor) throws {
+    public mutating func addEvents(_ events: Socket.Events, for socket: Socket.FileDescriptor) throws {
         for event in events {
             var socketEvents = existing[socket] ?? []
             if !socketEvents.contains(event) {
@@ -79,7 +79,7 @@ struct kQueue: EventQueue {
         }
     }
 
-    mutating func removeEvents(_ events: Socket.Events, for socket: Socket.FileDescriptor) throws {
+    public mutating func removeEvents(_ events: Socket.Events, for socket: Socket.FileDescriptor) throws {
         for event in events {
             if var entries = existing[socket] {
                 if entries.contains(event) {
@@ -109,7 +109,7 @@ struct kQueue: EventQueue {
         }
     }
 
-    func getNotifications() throws -> [EventNotification] {
+    public func getNotifications() throws -> [EventNotification] {
         var events = Array(repeating: kevent(), count: eventsLimit)
         let status = kevent(file.rawValue, nil, 0, &events, Int32(eventsLimit), nil)
         guard status > 0 else {

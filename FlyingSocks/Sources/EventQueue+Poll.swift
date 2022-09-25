@@ -31,7 +31,7 @@
 
 import Foundation
 
-struct Poll: EventQueue {
+public struct Poll: EventQueue {
 
     private(set) var entries: Set<Entry>
     private var isOpen: Bool = false
@@ -42,40 +42,40 @@ struct Poll: EventQueue {
         var events: Socket.Events
     }
 
-    enum Interval: Sendable {
+    public enum Interval: Sendable {
         case immediate
         case seconds(TimeInterval)
     }
 
-    init(interval: Interval) {
+    public init(interval: Interval) {
         self.entries = []
         self.interval = interval
     }
 
 
-    mutating func open() {
+    public mutating func open() {
         entries = []
         isOpen = true
     }
 
-    mutating func close() {
+    public mutating func close() {
         entries = []
         isOpen = false
     }
 
-    mutating func addEvents(_ events: Socket.Events, for socket: Socket.FileDescriptor) throws {
+    public mutating func addEvents(_ events: Socket.Events, for socket: Socket.FileDescriptor) throws {
         guard isOpen else { throw SocketError.makeFailed("poll.addEvents notReady") }
         let entry = Entry(file: socket, events: events)
         entries.insert(entry)
     }
 
-    mutating func removeEvents(_ events: Socket.Events, for socket: Socket.FileDescriptor) throws {
+    public mutating func removeEvents(_ events: Socket.Events, for socket: Socket.FileDescriptor) throws {
         guard isOpen else { throw SocketError.makeFailed("poll.removeEvents notReady") }
         let entry = Entry(file: socket, events: events)
         entries.remove(entry)
     }
 
-    func getNotifications() throws -> [EventNotification] {
+    public func getNotifications() throws -> [EventNotification] {
         guard isOpen else { throw SocketError.makeFailed("poll.getNotifications notReady") }
         var buffer = entries.map(\.pollfd)
 
