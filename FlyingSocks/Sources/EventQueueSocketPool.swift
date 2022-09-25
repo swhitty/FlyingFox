@@ -33,8 +33,9 @@ import Dispatch
 import Foundation
 
 protocol EventQueue {
-    mutating func prepare() throws
-    mutating func reset() throws
+    mutating func open() throws
+    mutating func close() throws
+
     mutating func addEvents(_ events: Socket.Events, for socket: Socket.FileDescriptor) throws
     mutating func removeEvents(_ events: Socket.Events, for socket: Socket.FileDescriptor) throws
     func getNotifications() throws -> [EventNotification]
@@ -75,7 +76,7 @@ final actor EventQueueSocketPool<Queue: EventQueue>: AsyncSocketPool {
     }
 
     func prepare() async throws {
-        try queue.prepare()
+        try queue.open()
         state = .ready
     }
 
@@ -141,7 +142,7 @@ final actor EventQueueSocketPool<Queue: EventQueue>: AsyncSocketPool {
     }
 
     private func cancellAll() {
-        try? queue.reset()
+        try? queue.close()
         state = .complete
         waiting.cancellAll()
         waiting = Waiting()

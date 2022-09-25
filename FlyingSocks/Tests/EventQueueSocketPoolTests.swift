@@ -246,8 +246,8 @@ final class MockEventQueue: EventQueue {
     private(set) var state: State?
 
     enum State {
-        case prepared
-        case reset
+        case open
+        case close
     }
 
     func sendResult(returning success: [EventNotification]) {
@@ -272,12 +272,12 @@ final class MockEventQueue: EventQueue {
 
     }
 
-    func prepare() throws {
-        state = .prepared
+    func open() throws {
+        state = .open
     }
 
-    func reset() throws {
-        state = .reset
+    func close() throws {
+        state = .close
         result = .failure(CancellationError())
         if isWaiting {
             semaphore.signal()

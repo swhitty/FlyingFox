@@ -34,7 +34,7 @@ import Foundation
 struct Poll: EventQueue {
 
     private(set) var entries: Set<Entry>
-    private var isReady: Bool = false
+    private var isOpen: Bool = false
     private let interval: Interval
 
     struct Entry: Hashable {
@@ -52,30 +52,31 @@ struct Poll: EventQueue {
         self.interval = interval
     }
 
-    mutating func reset() {
+
+    mutating func open() {
         entries = []
-        isReady = false
+        isOpen = true
     }
 
-    mutating func prepare() {
+    mutating func close() {
         entries = []
-        isReady = true
+        isOpen = false
     }
 
     mutating func addEvents(_ events: Socket.Events, for socket: Socket.FileDescriptor) throws {
-        guard isReady else { throw SocketError.makeFailed("poll.addEvents notReady") }
+        guard isOpen else { throw SocketError.makeFailed("poll.addEvents notReady") }
         let entry = Entry(file: socket, events: events)
         entries.insert(entry)
     }
 
     mutating func removeEvents(_ events: Socket.Events, for socket: Socket.FileDescriptor) throws {
-        guard isReady else { throw SocketError.makeFailed("poll.removeEvents notReady") }
+        guard isOpen else { throw SocketError.makeFailed("poll.removeEvents notReady") }
         let entry = Entry(file: socket, events: events)
         entries.remove(entry)
     }
 
     func getNotifications() throws -> [EventNotification] {
-        guard isReady else { throw SocketError.makeFailed("poll.getNotifications notReady") }
+        guard isOpen else { throw SocketError.makeFailed("poll.getNotifications notReady") }
         var buffer = entries.map(\.pollfd)
 
         let status = Socket.poll(&buffer, UInt32(buffer.count), interval.milliseconds)

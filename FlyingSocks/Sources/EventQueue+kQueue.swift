@@ -44,14 +44,14 @@ struct kQueue: EventQueue {
         self.eventsLimit = limit
     }
 
-    mutating func reset() throws {
+    mutating func open() throws {
         existing = [:]
-        try Self.closeQueue(file: file)
+        self.file = try Self.makeQueue()
     }
 
-    mutating func prepare() throws {
-        try reset()
-        self.file = try Self.makeQueue()
+    mutating func close() throws {
+        existing = [:]
+        try Self.closeQueue(file: file)
     }
 
     mutating func addEvents(_ events: Socket.Events, for socket: Socket.FileDescriptor) throws {

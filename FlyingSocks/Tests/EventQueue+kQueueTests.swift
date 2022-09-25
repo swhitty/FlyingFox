@@ -37,7 +37,7 @@ final class kQueueTests: XCTestCase {
 
     func testQueueCloses() throws {
         var queue = try kQueue.make()
-        XCTAssertNoThrow(try queue.reset())
+        XCTAssertNoThrow(try queue.close())
     }
 
     func testQueueThrowsError_Closes() throws {
@@ -199,7 +199,7 @@ final class kQueueTests: XCTestCase {
         let (s1, _) = try Socket.makeNonBlockingPair()
         try queue.addEvents([.read], for: s1.file)
 
-        try queue.reset()
+        try queue.close()
         await AsyncAssertThrowsError(try await queue.getEvents())
     }
 }
@@ -208,7 +208,7 @@ private extension kQueue {
 
     static func make() throws -> Self {
         var queue = kQueue(maxEvents: 20)
-        try queue.prepare()
+        try queue.open()
         return queue
     }
 
