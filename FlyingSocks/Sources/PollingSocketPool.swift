@@ -47,6 +47,16 @@ public extension SocketPool where Queue == Poll {
     }
 #endif
 
+#if compiler(>=5.7)
+    static let client: SocketPool<some EventQueue> = {
+        let pool = SocketPool.make()
+        Task {
+            try await pool.prepare()
+            try await pool.run()
+        }
+        return pool
+    }()
+#else
     static let client: SocketPool<Poll> = {
         let pool = SocketPool(queue: Poll(interval: .seconds(0.01)))
         Task {
@@ -55,4 +65,6 @@ public extension SocketPool where Queue == Poll {
         }
         return pool
     }()
+#endif
+
 }

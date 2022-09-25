@@ -51,6 +51,11 @@ final class SocketPoolTests: XCTestCase {
     }
 #endif
 
+    func testPoll() {
+        let pool: AsyncSocketPool = .poll()
+        XCTAssertTrue(type(of: pool) == SocketPool<Poll>.self)
+    }
+
     func testQueuePrepare() async throws {
         let pool = SocketPool.make()
 
