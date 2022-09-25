@@ -1,5 +1,5 @@
 //
-//  EventQueue+kQueue.swift
+//  SocketPool+kQueue.swift
 //  FlyingFox
 //
 //  Created by Simon Whitty on 10/09/2022.
@@ -31,6 +31,12 @@
 
 #if canImport(Darwin)
 import Darwin
+
+public extension AsyncSocketPool where Self == SocketPool<kQueue> {
+    static func kQueue(maxEvents limit: Int = 20) -> SocketPool<kQueue> {
+        SocketPool(queue: FlyingSocks.kQueue(maxEvents: limit))
+    }
+}
 
 public struct kQueue: EventQueue {
 

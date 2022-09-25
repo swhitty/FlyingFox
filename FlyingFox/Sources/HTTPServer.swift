@@ -188,7 +188,13 @@ public final actor HTTPServer {
     }
 
     public static func defaultPool() -> AsyncSocketPool {
-        PollingSocketPool(pollInterval: .immediate, loopInterval: .seconds(0.1))
+#if canImport(Darwin)
+    return .kQueue()
+#elseif canImport(CSystemLinux)
+    return .ePoll()
+#else
+    return .poll()
+#endif
     }
 }
 

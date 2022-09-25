@@ -1,5 +1,5 @@
 //
-//  EventQueue+Poll.swift
+//  SocketPool+Poll.swift
 //  FlyingFox
 //
 //  Created by Simon Whitty on 24/09/2022.
@@ -30,6 +30,12 @@
 //
 
 import Foundation
+
+public extension AsyncSocketPool where Self == SocketPool<Poll> {
+    static func poll(interval: Poll.Interval = .seconds(0.01)) -> SocketPool<Poll> {
+        SocketPool(queue: Poll(interval: interval))
+    }
+}
 
 public struct Poll: EventQueue {
 

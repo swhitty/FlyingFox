@@ -52,25 +52,24 @@ public struct EventNotification: Equatable {
     }
 }
 
-// temporary public interface
+@available(*, deprecated, message: "init pool directly")
 public func makeEventQueuePool(maxEvents limit: Int = 20) -> AsyncSocketPool {
 #if canImport(Darwin)
-    return EventQueueSocketPool<kQueue>(queue: kQueue(maxEvents: limit))
+    return .kQueue(maxEvents: limit)
 #elseif canImport(CSystemLinux)
-    return EventQueueSocketPool<ePoll>(queue: ePoll(maxEvents: limit))
+    return .ePoll(maxEvents: limit)
 #else
-    return EventQueueSocketPool<Poll>(queue: Poll(interval: .seconds(0.01)))
+    return .poll(interval: .seconds(0.01))
 #endif
 }
 
-public final actor EventQueueSocketPool<Queue: EventQueue>: AsyncSocketPool {
+public final actor SocketPool<Queue: EventQueue>: AsyncSocketPool {
 
     private(set) var queue: Queue
     private let dispatchQueue: DispatchQueue
     private(set) var state: State?
 
-    public init(queue: Queue,
-         dispatchQueue: DispatchQueue = .init(label: "flyingfox")) {
+    public init(queue: Queue, dispatchQueue: DispatchQueue = .init(label: "flyingfox")) {
         self.queue = queue
         self.dispatchQueue = dispatchQueue
     }

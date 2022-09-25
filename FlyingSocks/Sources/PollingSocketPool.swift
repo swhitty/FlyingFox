@@ -30,9 +30,9 @@
 //
 
 @available(*, deprecated, renamed: "EventQueueSocketPool")
-public typealias PollingSocketPool = EventQueueSocketPool<Poll>
+public typealias PollingSocketPool = SocketPool<Poll>
 
-public extension EventQueueSocketPool where Queue == Poll {
+public extension SocketPool where Queue == Poll {
     typealias Interval = Poll.Interval
 
 #if compiler(>=5.7)
@@ -47,8 +47,8 @@ public extension EventQueueSocketPool where Queue == Poll {
     }
 #endif
 
-    static let client: EventQueueSocketPool<Poll> = {
-        let pool = EventQueueSocketPool(queue: Poll(interval: .seconds(0.01)))
+    static let client: SocketPool<Poll> = {
+        let pool = SocketPool(queue: Poll(interval: .seconds(0.01)))
         Task {
             try await pool.prepare()
             try await pool.run()

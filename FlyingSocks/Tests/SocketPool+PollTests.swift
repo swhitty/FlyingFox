@@ -1,5 +1,5 @@
 //
-//  EventQueue+PollTests.swift
+//  SocketPool+PollTests.swift
 //  FlyingFox
 //
 //  Created by Simon Whitty on 25/09/2022.

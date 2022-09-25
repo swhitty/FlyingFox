@@ -1,5 +1,5 @@
 //
-//  EventQueue+ePoll.swift
+//  SocketPool+ePoll.swift
 //  FlyingFox
 //
 //  Created by Simon Whitty on 30/08/2022.
@@ -31,6 +31,12 @@
 
 #if canImport(CSystemLinux)
 import CSystemLinux
+
+public extension AsyncSocketPool where Self == SocketPool<ePoll> {
+    static func ePoll(maxEvents limit: Int = 20) -> SocketPool<ePoll> {
+        SocketPool(queue: ePoll(maxEvents: limit))
+    }
+}
 
 public struct ePoll: EventQueue {
 

@@ -46,9 +46,9 @@ public protocol AsyncSocketPool: Sendable {
     func suspendSocket(_ socket: Socket, untilReadyFor events: Socket.Events) async throws
 }
 
-public extension AsyncSocketPool where Self == EventQueueSocketPool<Poll> {
+public extension AsyncSocketPool where Self == SocketPool<Poll> {
     static var pollingClient: AsyncSocketPool {
-        EventQueueSocketPool<Poll>.client
+        SocketPool<Poll>.client
     }
 }
 

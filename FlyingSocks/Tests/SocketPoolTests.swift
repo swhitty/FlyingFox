@@ -1,5 +1,5 @@
 //
-//  EventQueueSocketPoolTests.swift
+//  SocketPoolTests.swift
 //  FlyingFox
 //
 //  Created by Simon Whitty on 12/09/2022.
@@ -32,20 +32,20 @@
 @testable import FlyingSocks
 import XCTest
 
-final class EventQueueSocketPoolTests: XCTestCase {
+final class SocketPoolTests: XCTestCase {
 
     typealias Continuation = CancellingContinuation<Void, SocketError>
-    typealias Waiting = EventQueueSocketPool<MockEventQueue>.Waiting
+    typealias Waiting = SocketPool<MockEventQueue>.Waiting
 
 #if canImport(Darwin)
     func testKqueuePool() {
         let pool = makeEventQueuePool()
-        XCTAssertTrue(type(of: pool) == EventQueueSocketPool<kQueue>.self)
+        XCTAssertTrue(type(of: pool) == SocketPool<kQueue>.self)
     }
 #endif
 
     func testQueuePrepare() async throws {
-        let pool = EventQueueSocketPool.make()
+        let pool = SocketPool.make()
 
         await AsyncAssertNil(await pool.state)
 
@@ -54,13 +54,13 @@ final class EventQueueSocketPoolTests: XCTestCase {
     }
 
     func testQueueRun_ThrowsError_WhenNotReady() async throws {
-        let pool = EventQueueSocketPool.make()
+        let pool = SocketPool.make()
 
         await AsyncAssertThrowsError(try await pool.run(), of: Error.self)
     }
 
     func testSuspendedSockets_ThrowError_WhenCancelled() async throws {
-        let pool = EventQueueSocketPool.make()
+        let pool = SocketPool.make()
         try await pool.prepare()
 
         let task = Task {
@@ -74,7 +74,7 @@ final class EventQueueSocketPoolTests: XCTestCase {
     }
 
     func testCancellingPollingPool_CancelsSuspendedSocket() async throws {
-        let pool = EventQueueSocketPool.make()
+        let pool = SocketPool.make()
         try await pool.prepare()
 
         _ = Task(timeout: 0.5) {
@@ -91,7 +91,7 @@ final class EventQueueSocketPoolTests: XCTestCase {
     }
 
     func testCancellingPool_CancelsNewSockets() async throws {
-        let pool = EventQueueSocketPool.make()
+        let pool = SocketPool.make()
         try await pool.prepare()
 
         let task = Task(timeout: 0.1) {
@@ -107,7 +107,7 @@ final class EventQueueSocketPoolTests: XCTestCase {
     }
 
     func testQueueNotification_ResumesSocket() async throws {
-        let pool = EventQueueSocketPool.make()
+        let pool = SocketPool.make()
         try await pool.prepare()
         let task = Task { try await pool.run() }
         defer { task.cancel() }
@@ -128,7 +128,7 @@ final class EventQueueSocketPoolTests: XCTestCase {
     }
 
     func testQueueNotificationError_ResumesSocket_WithError() async throws {
-        let pool = EventQueueSocketPool.make()
+        let pool = SocketPool.make()
         try await pool.prepare()
         let task = Task { try await pool.run() }
         defer { task.cancel() }
@@ -231,7 +231,7 @@ final class EventQueueSocketPoolTests: XCTestCase {
     }
 }
 
-private extension EventQueueSocketPool where Queue == MockEventQueue  {
+private extension SocketPool where Queue == MockEventQueue  {
     static func make() -> Self {
         .init(queue: MockEventQueue())
     }
