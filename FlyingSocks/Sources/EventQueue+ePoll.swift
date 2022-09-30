@@ -87,7 +87,7 @@ struct ePoll: EventQueue {
                     throw SocketError.makeFailed("epoll_ctl EPOLL_CTL_MOD")
                 }
             }
-        } else {
+        } else if !events.isEmpty {
             guard epoll_ctl(file.rawValue, EPOLL_CTL_ADD, socket.rawValue, &event) != -1 else {
                 throw SocketError.makeFailed("epoll_ctl EPOLL_CTL_ADD")
             }
