@@ -231,7 +231,7 @@ final class HTTPServerTests: XCTestCase {
             return .make(statusCode: .ok)
         }
         let port = try await startServerWithPort(server)
-        let socket = try await AsyncSocket.connected(to: .inet(ip4: "127.0.0.1", port: port))
+        let socket = try await AsyncSocket.connected(to: .inet(ip4: "127.0.0.1", port: port), pool: SleepingPool())
         defer { try? socket.close() }
 
         try await socket.writeRequest(.make())
@@ -249,7 +249,7 @@ final class HTTPServerTests: XCTestCase {
         let server = HTTPServer.make(logger: HTTPServer.defaultLogger())
 
         let port = try await startServerWithPort(server)
-        let socket = try await AsyncSocket.connected(to: .inet(ip4: "127.0.0.1", port: port))
+        let socket = try await AsyncSocket.connected(to: .inet(ip4: "127.0.0.1", port: port), pool: SleepingPool())
         defer { try? socket.close() }
 
         try await Task.sleep(seconds: 0.5)
