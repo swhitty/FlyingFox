@@ -60,13 +60,13 @@ public func makeEventQueuePool(maxEvents limit: Int = 20) -> AsyncSocketPool {
 #if compiler(>=5.7)
 public extension AsyncSocketPool where Self == SocketPool<Poll> {
 
-    static func make(maxEvents limit: Int = 20) -> SocketPool<some EventQueue> {
+    static func make(maxEvents limit: Int = 20, logger: Logging? = nil) -> SocketPool<some EventQueue> {
     #if canImport(Darwin)
-        return .kQueue(maxEvents: limit)
+        return .kQueue(maxEvents: limit, logger: logger)
     #elseif canImport(CSystemLinux)
-        return .ePoll(maxEvents: limit)
+        return .ePoll(maxEvents: limit, logger: logger)
     #else
-        return .poll(interval: .seconds(0.01))
+        return .poll(interval: .seconds(0.01), logger: logger)
     #endif
     }
 }
@@ -77,13 +77,16 @@ public final actor SocketPool<Queue: EventQueue>: AsyncSocketPool {
     private(set) var queue: Queue
     private let dispatchQueue: DispatchQueue
     private(set) var state: State?
+    private let logger: Logging?
 
-    public init(queue: Queue, dispatchQueue: DispatchQueue = .init(label: "flyingfox")) {
+    public init(queue: Queue, dispatchQueue: DispatchQueue = .init(label: "flyingfox"), logger: Logging? = nil) {
         self.queue = queue
         self.dispatchQueue = dispatchQueue
+        self.logger = logger
     }
 
     public func prepare() async throws {
+        logger?.logInfo("SocketPoll prepare")
         try queue.open()
         state = .ready
     }
@@ -150,6 +153,7 @@ public final actor SocketPool<Queue: EventQueue>: AsyncSocketPool {
     }
 
     private func cancellAll() {
+        logger?.logInfo("SocketPoll cancellAll")
         try? queue.close()
         state = .complete
         waiting.cancellAll()

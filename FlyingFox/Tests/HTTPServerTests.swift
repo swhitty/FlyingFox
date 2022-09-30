@@ -301,7 +301,7 @@ final class HTTPServerTests: XCTestCase {
 #endif
 
     func testDefaultLoggerFallback_IsPrintLogger() async throws {
-        XCTAssertTrue(HTTPServer.defaultLogger(forceFallback: true) is PrintHTTPLogger)
+        XCTAssertTrue(HTTPServer.defaultLogger(forceFallback: true) is PrintLogger)
     }
 
     func testWaitUntilListing_WaitsUntil_SocketIsListening() async {
@@ -346,7 +346,7 @@ extension HTTPServer {
 
     static func make<A: SocketAddress>(address: A,
                                        timeout: TimeInterval = 15,
-                                       logger: HTTPLogging? = defaultLogger(),
+                                       logger: Logging? = defaultLogger(),
                                        handler: HTTPHandler? = nil) -> HTTPServer {
         HTTPServer(address: address,
                    timeout: timeout,
@@ -356,7 +356,7 @@ extension HTTPServer {
 
     static func make(port: UInt16 = 0,
                      timeout: TimeInterval = 15,
-                     logger: HTTPLogging? = nil,
+                     logger: Logging? = nil,
                      handler: HTTPHandler? = nil) -> HTTPServer {
         HTTPServer(port: port,
                    timeout: timeout,
@@ -366,7 +366,7 @@ extension HTTPServer {
 
     static func make(port: UInt16 = 0,
                      timeout: TimeInterval = 15,
-                     logger: HTTPLogging? = nil,
+                     logger: Logging? = nil,
                      handler: @Sendable @escaping (HTTPRequest) async throws -> HTTPResponse) -> HTTPServer {
         HTTPServer(port: port,
                    timeout: timeout,

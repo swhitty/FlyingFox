@@ -32,8 +32,8 @@
 import Foundation
 
 public extension AsyncSocketPool where Self == SocketPool<Poll> {
-    static func poll(interval: Poll.Interval = .seconds(0.01)) -> SocketPool<Poll> {
-        SocketPool(queue: Poll(interval: interval))
+    static func poll(interval: Poll.Interval = .seconds(0.01), logger: Logging? = nil) -> SocketPool<Poll> {
+        SocketPool(queue: Poll(interval: interval, logger: logger), logger: logger)
     }
 }
 
@@ -42,6 +42,7 @@ public struct Poll: EventQueue {
     private(set) var entries: Set<Entry>
     private var isOpen: Bool = false
     private let interval: Interval
+    private let logger: Logging?
 
     struct Entry: Hashable {
         var file: Socket.FileDescriptor
@@ -53,11 +54,11 @@ public struct Poll: EventQueue {
         case seconds(TimeInterval)
     }
 
-    public init(interval: Interval) {
+    public init(interval: Interval, logger: Logging? = nil) {
         self.entries = []
         self.interval = interval
+        self.logger = logger
     }
-
 
     public mutating func open() {
         entries = []

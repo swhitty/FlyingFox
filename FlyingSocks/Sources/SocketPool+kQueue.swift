@@ -33,8 +33,8 @@
 import Darwin
 
 public extension AsyncSocketPool where Self == SocketPool<kQueue> {
-    static func kQueue(maxEvents limit: Int = 20) -> SocketPool<kQueue> {
-        SocketPool(queue: FlyingSocks.kQueue(maxEvents: limit))
+    static func kQueue(maxEvents limit: Int = 20, logger: Logging? = nil) -> SocketPool<kQueue> {
+        SocketPool(queue: FlyingSocks.kQueue(maxEvents: limit, logger: logger), logger: logger)
     }
 }
 
@@ -43,11 +43,13 @@ public struct kQueue: EventQueue {
     private(set) var file: Socket.FileDescriptor
     private(set) var existing: [Socket.FileDescriptor: Socket.Events]
     private let eventsLimit: Int
+    private let logger: Logging?
 
-    public init(maxEvents limit: Int) {
+    public init(maxEvents limit: Int, logger: Logging? = nil) {
         self.file = .invalid
         self.existing = [:]
         self.eventsLimit = limit
+        self.logger = logger
     }
 
     public mutating func open() throws {

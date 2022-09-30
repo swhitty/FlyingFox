@@ -68,8 +68,7 @@ public final actor HTTPServer {
     }
 
     public func start() async throws {
-        try await pool.prepare()
-        let socket = try makeSocketAndListen()
+        let socket = try await preparePoolAndSocket()
         do {
             let task = Task { try await start(on: socket, pool: pool) }
             state = (socket: socket, task: task)
@@ -78,6 +77,16 @@ public final actor HTTPServer {
         } catch {
             logger?.logCritical("server error: \(error.localizedDescription)")
             try? socket.close()
+            throw error
+        }
+    }
+
+    func preparePoolAndSocket() async throws -> Socket {
+        do {
+            try await pool.prepare()
+            return try makeSocketAndListen()
+        } catch {
+            logger?.logCritical("server error: \(error.localizedDescription)")
             throw error
         }
     }
