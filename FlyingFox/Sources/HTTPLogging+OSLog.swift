@@ -29,47 +29,9 @@
 //  SOFTWARE.
 //
 
+import FlyingSocks
+
 #if canImport(OSLog)
-import OSLog
-
 @available(macOS 11.0, iOS 14.0, tvOS 14.0, *)
-public struct OSLogHTTPLogging: HTTPLogging {
-
-    @UncheckedSendable private var logger: Logger
-
-    public init(logger: Logger) {
-        self.logger = logger
-    }
-
-    public func logDebug(_ debug: String) {
-        logger.debug("\(debug, privacy: .public)")
-    }
-        
-    public func logInfo(_ info: String) {
-        logger.info("\(info, privacy: .public)")
-    }
-
-    public func logWarning(_ warning: String) {
-        logger.warning("\(warning, privacy: .public)")
-    }
-
-    public func logError(_ error: String) {
-        logger.error("\(error, privacy: .public)")
-    }
-    
-    public func logCritical(_ critical: String) {
-        logger.critical("\(critical, privacy: .public)")
-    }
-
-}
-
-@available(macOS 11.0, iOS 14.0, tvOS 14.0, *)
-public extension HTTPLogging where Self == OSLogHTTPLogging {
-
-    static func oslog(bundle: Bundle = .main, category: String = "FlyingFox") -> Self {
-        let logger = Logger(subsystem: bundle.bundleIdentifier ?? category, category: category)
-        return OSLogHTTPLogging(logger: logger)
-    }
-}
-
+public typealias OSLogHTTPLogging = FlyingSocks.OSLogLogger
 #endif

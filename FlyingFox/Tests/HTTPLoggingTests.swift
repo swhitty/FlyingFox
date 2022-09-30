@@ -30,13 +30,14 @@
 //
 
 @testable import FlyingFox
+@testable import FlyingSocks
 import Foundation
 import XCTest
 
 final class HTTPLoggingTests: XCTestCase {
 
     func testPrintLogger_DefaultCategory() {
-        let logger = PrintHTTPLogger.print()
+        let logger = PrintLogger.print()
 
         XCTAssertEqual(
             logger.category,
@@ -44,65 +45,44 @@ final class HTTPLoggingTests: XCTestCase {
         )
     }
 
-    func testPrintLogger_SetsCategory() {
-        let logger = PrintHTTPLogger.print(category: "Fish")
-
-        XCTAssertEqual(
-            logger.category,
-            "Fish"
-        )
-    }
-    
-    func testPrintLogger_output() {
-        // NOTE: For now this test is only used to verify the output by manual confirmation
-        // until Swift.print can be unit-tested or we are able to inject a mock.
-        let logger = PrintHTTPLogger.print()
-        
-        logger.logDebug("alpha")
-        logger.logInfo("bravo")
-        logger.logWarning("charlie")
-        logger.logError("delta")
-        logger.logCritical("echo")
-    }
-
     func testListeningLog_INETPort() {
         XCTAssertEqual(
-            PrintHTTPLogger.makeListening(on: .ip4("0.0.0.0", port: 1234)),
+            PrintLogger.makeListening(on: .ip4("0.0.0.0", port: 1234)),
             "starting server port: 1234"
         )
     }
 
     func testListeningLog_INET() throws {
         XCTAssertEqual(
-            PrintHTTPLogger.makeListening(on: .ip4("8.8.8.8", port: 1234)),
+            PrintLogger.makeListening(on: .ip4("8.8.8.8", port: 1234)),
             "starting server 8.8.8.8:1234"
         )
     }
 
     func testListeningLog_INET6Port() {
         XCTAssertEqual(
-            PrintHTTPLogger.makeListening(on: .ip6("::", port: 5678)),
+            PrintLogger.makeListening(on: .ip6("::", port: 5678)),
             "starting server port: 5678"
         )
     }
 
     func testListeningLog_INET6() throws {
         XCTAssertEqual(
-            PrintHTTPLogger.makeListening(on: .ip6("::1", port: 1234)),
+            PrintLogger.makeListening(on: .ip6("::1", port: 1234)),
             "starting server ::1:1234"
         )
     }
 
     func testListeningLog_UnixPath() {
         XCTAssertEqual(
-            PrintHTTPLogger.makeListening(on: .unix("/var/fox/xyz")),
+            PrintLogger.makeListening(on: .unix("/var/fox/xyz")),
             "starting server path: /var/fox/xyz"
         )
     }
 
     func testListeningLog_Invalid() {
         XCTAssertEqual(
-            PrintHTTPLogger.makeListening(on: nil),
+            PrintLogger.makeListening(on: nil),
             "starting server"
         )
     }

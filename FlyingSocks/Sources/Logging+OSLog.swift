@@ -1,5 +1,5 @@
 //
-//  HTTPLogging.swift
+//  Logging+OSLog.swift
 //  FlyingFox
 //
 //  Created by Simon Whitty on 19/02/2022.
@@ -29,35 +29,47 @@
 //  SOFTWARE.
 //
 
-import FlyingSocks
-
-@available(*, deprecated, renamed: "FlyingSocks.Logging")
-public typealias HTTPLogging = FlyingSocks.Logging
-
-@available(*, deprecated, renamed: "FlyingSocks.PrintLogger")
-public typealias PrintHTTPLogger = FlyingSocks.PrintLogger
-
-public extension Logging where Self == PrintLogger {
-
-    static func print(category: String = "FlyingFox") -> Self {
-        return PrintLogger(category: category)
-    }
-}
-
-extension HTTPServer {
-
-    public static func defaultLogger(category: String = "FlyingFox") -> Logging {
-        defaultLogger(category: category, forceFallback: false)
-    }
-
-    static func defaultLogger(category: String = "FlyingFox", forceFallback: Bool) -> Logging {
-        guard !forceFallback, #available(macOS 11.0, iOS 14.0, tvOS 14.0, *) else {
-            return .print(category: category)
-        }
 #if canImport(OSLog)
-        return .oslog(category: category)
-#else
-        return .print(category: category)
-#endif
+import OSLog
+
+@available(macOS 11.0, iOS 14.0, tvOS 14.0, *)
+public struct OSLogLogger: Logging, @unchecked Sendable {
+
+    private var logger: Logger
+
+    public init(logger: Logger) {
+        self.logger = logger
+    }
+
+    public func logDebug(_ debug: String) {
+        logger.debug("\(debug, privacy: .public)")
+    }
+        
+    public func logInfo(_ info: String) {
+        logger.info("\(info, privacy: .public)")
+    }
+
+    public func logWarning(_ warning: String) {
+        logger.warning("\(warning, privacy: .public)")
+    }
+
+    public func logError(_ error: String) {
+        logger.error("\(error, privacy: .public)")
+    }
+    
+    public func logCritical(_ critical: String) {
+        logger.critical("\(critical, privacy: .public)")
+    }
+
+}
+
+@available(macOS 11.0, iOS 14.0, tvOS 14.0, *)
+public extension Logging where Self == OSLogLogger {
+
+    static func oslog(bundle: Bundle = .main, category: String) -> Self {
+        let logger = Logger(subsystem: bundle.bundleIdentifier ?? category, category: category)
+        return OSLogLogger(logger: logger)
     }
 }
+
+#endif

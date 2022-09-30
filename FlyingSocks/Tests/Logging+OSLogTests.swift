@@ -1,5 +1,5 @@
 //
-//  HTTPLogging+OSLogTests.swift
+//  Logging+OSLogTests.swift
 //  FlyingFox
 //
 //  Created by Andre Jacobs on 06/03/2022.
@@ -29,19 +29,19 @@
 //  SOFTWARE.
 //
 #if canImport(OSLog)
-@testable import FlyingFox
+@testable import FlyingSocks
 import Foundation
 import OSLog
 import XCTest
 
-final class HTTPLoggingOSLogTests: XCTestCase {
+final class LoggingOSLogTests: XCTestCase {
     
     func testInfo() {
         guard #available(macOS 11.0, iOS 14.0, tvOS 14.0, *) else { return }
         // NOTE: For now this test is only used to verify the output by manual confirmation (e.g. Console.app or log tool)
         // Run log tool in the terminal first and then run this unit-test:
         // log stream --level debug --predicate 'category == "FlyingFox"'
-        let logger = OSLogHTTPLogging.oslog()
+        let logger = OSLogLogger.oslog(category: "Fox")
         
         logger.logDebug("alpha")
         logger.logInfo("bravo")

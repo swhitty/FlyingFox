@@ -1,5 +1,5 @@
 //
-//  HTTPLogging.swift
+//  Logging.swift
 //  FlyingFox
 //
 //  Created by Simon Whitty on 19/02/2022.
@@ -29,35 +29,46 @@
 //  SOFTWARE.
 //
 
-import FlyingSocks
+public protocol Logging: Sendable {
+    func logDebug(_ debug: String)
+    func logInfo(_ info: String)
+    func logWarning(_ warning: String)
+    func logError(_ error: String)
+    func logCritical(_ critical: String)
+}
 
-@available(*, deprecated, renamed: "FlyingSocks.Logging")
-public typealias HTTPLogging = FlyingSocks.Logging
+public struct PrintLogger: Logging {
 
-@available(*, deprecated, renamed: "FlyingSocks.PrintLogger")
-public typealias PrintHTTPLogger = FlyingSocks.PrintLogger
+    let category: String
 
-public extension Logging where Self == PrintLogger {
+    public init(category: String) {
+        self.category = category
+    }
 
-    static func print(category: String = "FlyingFox") -> Self {
-        return PrintLogger(category: category)
+    public func logDebug(_ debug: String) {
+        Swift.print("[\(category)] debug: \(debug)")
+    }
+    
+    public func logInfo(_ info: String) {
+        Swift.print("[\(category)] info: \(info)")
+    }
+
+    public func logWarning(_ warning: String) {
+        Swift.print("[\(category)] warning: \(warning)")
+    }
+    
+    public func logError(_ error: String) {
+        Swift.print("[\(category)] error: \(error)")
+    }
+    
+    public func logCritical(_ critical: String) {
+        Swift.print("[\(category)] critical: \(critical)")
     }
 }
 
-extension HTTPServer {
+public extension Logging where Self == PrintLogger {
 
-    public static func defaultLogger(category: String = "FlyingFox") -> Logging {
-        defaultLogger(category: category, forceFallback: false)
-    }
-
-    static func defaultLogger(category: String = "FlyingFox", forceFallback: Bool) -> Logging {
-        guard !forceFallback, #available(macOS 11.0, iOS 14.0, tvOS 14.0, *) else {
-            return .print(category: category)
-        }
-#if canImport(OSLog)
-        return .oslog(category: category)
-#else
-        return .print(category: category)
-#endif
+    static func print(category: String) -> Self {
+        return PrintLogger(category: category)
     }
 }

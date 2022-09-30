@@ -40,13 +40,13 @@ public final actor HTTPServer {
     let pool: AsyncSocketPool
     private let address: sockaddr_storage
     private let timeout: TimeInterval
-    private let logger: HTTPLogging?
+    private let logger: Logging?
     private var handlers: RoutedHTTPHandler
 
     public init<A: SocketAddress>(address: A,
                                   timeout: TimeInterval = 15,
                                   pool: AsyncSocketPool = defaultPool(),
-                                  logger: HTTPLogging? = defaultLogger(),
+                                  logger: Logging? = defaultLogger(),
                                   handler: HTTPHandler? = nil) {
         self.address = address.makeStorage()
         self.timeout = timeout
@@ -204,7 +204,7 @@ public extension HTTPServer {
     init(port: UInt16,
          timeout: TimeInterval = 15,
          pool: AsyncSocketPool = defaultPool(),
-         logger: HTTPLogging? = defaultLogger(),
+         logger: Logging? = defaultLogger(),
          handler: HTTPHandler? = nil) {
 #if canImport(WinSDK)
         let address = sockaddr_in.inet(port: port)
@@ -221,7 +221,7 @@ public extension HTTPServer {
     init(port: UInt16,
          timeout: TimeInterval = 15,
          pool: AsyncSocketPool = defaultPool(),
-         logger: HTTPLogging? = defaultLogger(),
+         logger: Logging? = defaultLogger(),
          handler: @Sendable @escaping (HTTPRequest) async throws -> HTTPResponse) {
         self.init(port: port,
                   timeout: timeout,
@@ -262,7 +262,7 @@ public extension HTTPServer {
 #endif
 }
 
-extension HTTPLogging {
+extension Logging {
 
     func logOpenConnection(_ connection: HTTPConnection) {
         logInfo("\(connection.identifer) open connection")

@@ -1,8 +1,8 @@
 //
-//  HTTPLogging.swift
+//  Logging+PrintTests.swift
 //  FlyingFox
 //
-//  Created by Simon Whitty on 19/02/2022.
+//  Created by Simon Whitty on 23/02/2022.
 //  Copyright © 2022 Simon Whitty. All rights reserved.
 //
 //  Distributed under the permissive MIT license
@@ -29,35 +29,30 @@
 //  SOFTWARE.
 //
 
-import FlyingSocks
+@testable import FlyingSocks
+import Foundation
+import XCTest
 
-@available(*, deprecated, renamed: "FlyingSocks.Logging")
-public typealias HTTPLogging = FlyingSocks.Logging
+final class LoggingTests: XCTestCase {
 
-@available(*, deprecated, renamed: "FlyingSocks.PrintLogger")
-public typealias PrintHTTPLogger = FlyingSocks.PrintLogger
+    func testPrintLogger_SetsCategory() {
+        let logger = PrintLogger.print(category: "Fish")
 
-public extension Logging where Self == PrintLogger {
-
-    static func print(category: String = "FlyingFox") -> Self {
-        return PrintLogger(category: category)
+        XCTAssertEqual(
+            logger.category,
+            "Fish"
+        )
     }
-}
-
-extension HTTPServer {
-
-    public static func defaultLogger(category: String = "FlyingFox") -> Logging {
-        defaultLogger(category: category, forceFallback: false)
-    }
-
-    static func defaultLogger(category: String = "FlyingFox", forceFallback: Bool) -> Logging {
-        guard !forceFallback, #available(macOS 11.0, iOS 14.0, tvOS 14.0, *) else {
-            return .print(category: category)
-        }
-#if canImport(OSLog)
-        return .oslog(category: category)
-#else
-        return .print(category: category)
-#endif
+    
+    func testPrintLogger_output() {
+        // NOTE: For now this test is only used to verify the output by manual confirmation
+        // until Swift.print can be unit-tested or we are able to inject a mock.
+        let logger = PrintLogger.print(category: "Fox")
+        
+        logger.logDebug("alpha")
+        logger.logInfo("bravo")
+        logger.logWarning("charlie")
+        logger.logError("delta")
+        logger.logCritical("echo")
     }
 }

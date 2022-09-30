@@ -36,10 +36,10 @@ struct HTTPConnection: Sendable {
 
     let hostname: String
     private let socket: AsyncSocket
-    private let logger: HTTPLogging?
+    private let logger: Logging?
     let requests: HTTPRequestSequence<AsyncSocketReadSequence>
 
-    init(socket: AsyncSocket, logger: HTTPLogging?) {
+    init(socket: AsyncSocket, logger: Logging?) {
         self.socket = socket
         self.logger = logger
         self.hostname = HTTPConnection.makeIdentifer(from: socket.socket)
