@@ -47,8 +47,16 @@ public protocol AsyncSocketPool: Sendable {
 }
 
 public extension AsyncSocketPool where Self == SocketPool<Poll> {
+
+    @available(*, unavailable, renamed: "client")
     static var pollingClient: AsyncSocketPool {
-        SocketPool<Poll>.client
+        fatalError("use .client")
+    }
+
+    static var client: some AsyncSocketPool {
+        get async throws {
+            try await ClientPoolLoader.shared.getPool()
+        }
     }
 }
 
@@ -57,13 +65,17 @@ public struct AsyncSocket: Sendable {
     public let socket: Socket
     let pool: AsyncSocketPool
 
-    public init(socket: Socket, pool: AsyncSocketPool = .pollingClient) throws {
+    public init(socket: Socket, pool: AsyncSocketPool) throws {
         self.socket = socket
         self.pool = pool
         try socket.setFlags(.nonBlocking)
     }
 
-    public static func connected<A: SocketAddress>(to address: A,  pool: AsyncSocketPool = .pollingClient) async throws -> Self {
+    public static func connected<A: SocketAddress>(to address: A) async throws -> Self {
+        try await connected(to: address, pool: ClientPoolLoader.shared.getPool())
+    }
+
+    public static func connected<A: SocketAddress>(to address: A,  pool: AsyncSocketPool) async throws -> Self {
         let socket = try Socket(domain: Int32(address.makeStorage().ss_family), type: Socket.stream)
         let asyncSocket = try AsyncSocket(socket: socket, pool: pool)
         try await asyncSocket.connect(to: address)
@@ -184,3 +196,21 @@ public struct AsyncSocketSequence: AsyncSequence, AsyncIteratorProtocol, Sendabl
         }
     }
 }
+
+private actor ClientPoolLoader {
+    static let shared = ClientPoolLoader()
+
+    private let pool: some AsyncSocketPool = SocketPool.make()
+    private var isStarted = false
+
+    func getPool() async throws -> some AsyncSocketPool {
+        guard !isStarted else {
+            return pool
+        }
+        try await pool.prepare()
+        isStarted = true
+        Task { try await pool.run() }
+        return pool
+    }
+}
+

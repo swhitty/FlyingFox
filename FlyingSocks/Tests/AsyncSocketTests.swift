@@ -35,7 +35,7 @@ import XCTest
 final class AsyncSocketTests: XCTestCase {
 
     func testSocketReadsByte_WhenAvailable() async throws {
-        let (s1, s2) = try AsyncSocket.makePair()
+        let (s1, s2) = try await AsyncSocket.makePair()
 
         async let d2 = s2.read()
         try await s1.write(Data([10]))
@@ -47,7 +47,7 @@ final class AsyncSocketTests: XCTestCase {
     }
 
     func testSocketReadsChunk_WhenAvailable() async throws {
-        let (s1, s2) = try AsyncSocket.makePair()
+        let (s1, s2) = try await AsyncSocket.makePair()
 
         async let d2 = s2.readString(length: 12)
         Task {
@@ -59,7 +59,7 @@ final class AsyncSocketTests: XCTestCase {
     }
 
     func testSocketWrite_WaitsWhenBufferIsFull() async throws {
-        let (s1, s2) = try AsyncSocket.makePair()
+        let (s1, s2) = try await AsyncSocket.makePair()
         try s1.socket.setValue(1024, for: .sendBufferSize)
 
         let task = Task {
@@ -71,7 +71,7 @@ final class AsyncSocketTests: XCTestCase {
     }
 
     func testSocketReadByte_ThrowsDisconnected_WhenSocketIsClosed() async throws {
-        let s1 = try AsyncSocket.make()
+        let s1 = try await AsyncSocket.make()
         try s1.close()
 
         await AsyncAssertThrowsError(try await s1.read(), of: SocketError.self) {
@@ -80,20 +80,20 @@ final class AsyncSocketTests: XCTestCase {
     }
 
     func testSocketRead0Byte_ReturnsEmptyArray() async throws {
-        let s1 = try AsyncSocket.make()
+        let s1 = try await AsyncSocket.make()
 
         let bytes = try await s1.read(bytes: 0)
         XCTAssertEqual(bytes, [])
     }
 
     func testSocketReadByte_Throws_WhenSocketIsNotOpen() async throws {
-        let s1 = try AsyncSocket.make()
+        let s1 = try await AsyncSocket.make()
 
         await AsyncAssertThrowsError(try await s1.read(), of: SocketError.self)
     }
 
     func testSocketReadChunk_ThrowsDisconnected_WhenSocketIsClosed() async throws {
-        let s1 = try AsyncSocket.make()
+        let s1 = try await AsyncSocket.make()
         try s1.close()
 
         await AsyncAssertThrowsError(try await s1.read(bytes: 5), of: SocketError.self) {
@@ -102,13 +102,13 @@ final class AsyncSocketTests: XCTestCase {
     }
 
     func testSocketReadChunk_Throws_WhenSocketIsNotOpen() async throws {
-        let s1 = try AsyncSocket.make()
+        let s1 = try await AsyncSocket.make()
 
         await AsyncAssertThrowsError(try await s1.read(bytes: 5), of: SocketError.self)
     }
 
     func testSocketBytesReadChunk_Throws_WhenSocketIsClosed() async throws {
-        let s1 = try AsyncSocket.make()
+        let s1 = try await AsyncSocket.make()
         try s1.close()
 
         var bytes = s1.bytes
@@ -116,14 +116,14 @@ final class AsyncSocketTests: XCTestCase {
     }
 
     func testSocketBytesReadChunk_Throws_WhenSocketIsNotOpen() async throws {
-        let s1 = try AsyncSocket.make()
+        let s1 = try await AsyncSocket.make()
 
         var bytes = s1.bytes
         await AsyncAssertThrowsError(try await bytes.nextChunk(count: 1), of: SocketError.self)
     }
 
     func testSocketWrite_ThrowsDisconnected_WhenSocketIsClosed() async throws {
-        let s1 = try AsyncSocket.make()
+        let s1 = try await AsyncSocket.make()
         try s1.close()
 
         await AsyncAssertThrowsError(try await s1.writeString("Fish"), of: SocketError.self) {
@@ -132,18 +132,18 @@ final class AsyncSocketTests: XCTestCase {
     }
 
     func testSocketWrite_Throws_WhenSocketIsNotConnected() async throws {
-        let s1 = try AsyncSocket.make()
+        let s1 = try await AsyncSocket.make()
         await AsyncAssertThrowsError(try await s1.writeString("Fish"), of: SocketError.self)
     }
 
     func testSocketAccept_Throws_WhenSocketIsClosed() async throws {
-        let s1 = try AsyncSocket.make()
+        let s1 = try await AsyncSocket.make()
 
         await AsyncAssertThrowsError(try await s1.accept(), of: SocketError.self)
     }
 
     func testSocket_Throws_WhenAlreadyCLosed() async throws {
-        let s1 = try AsyncSocket.make()
+        let s1 = try await AsyncSocket.make()
 
         try s1.close()
         await AsyncAssertThrowsError(try s1.close(), of: SocketError.self)
@@ -152,12 +152,20 @@ final class AsyncSocketTests: XCTestCase {
 
 extension AsyncSocket {
 
-    static func make(pool: AsyncSocketPool = .pollingClient) throws -> AsyncSocket {
+    static func make() async throws -> AsyncSocket {
+        try await make(pool: .client)
+    }
+
+    static func make(pool: AsyncSocketPool) throws -> AsyncSocket {
         let socket = try Socket(domain: AF_UNIX, type: Socket.stream)
         return try AsyncSocket(socket: socket, pool: pool)
     }
 
-    static func makePair(pool: AsyncSocketPool = .pollingClient) throws -> (AsyncSocket, AsyncSocket) {
+    static func makePair() async throws -> (AsyncSocket, AsyncSocket) {
+        try await makePair(pool: .client)
+    }
+
+    static func makePair(pool: AsyncSocketPool) throws -> (AsyncSocket, AsyncSocket) {
         let (file1, file2) = Socket.socketpair(AF_UNIX, Socket.stream, 0)
         guard file1.rawValue > -1, file2.rawValue > -1 else {
             throw SocketError.makeFailed("SocketPair")
