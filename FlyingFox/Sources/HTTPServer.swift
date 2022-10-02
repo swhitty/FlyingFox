@@ -243,7 +243,7 @@ public extension HTTPServer {
     convenience init(port: UInt16,
                      timeout: TimeInterval = 15,
                      pool: AsyncSocketPool = defaultPool(),
-                     logger: HTTPLogging? = defaultLogger(),
+                     logger: Logging? = defaultLogger(),
                      handler: HTTPHandler? = nil) {
 #if canImport(WinSDK)
         let address = sockaddr_in.inet(port: port)
@@ -260,7 +260,7 @@ public extension HTTPServer {
     convenience init(port: UInt16,
                      timeout: TimeInterval = 15,
                      pool: AsyncSocketPool = defaultPool(),
-                     logger: HTTPLogging? = defaultLogger(),
+                     logger: Logging? = defaultLogger(),
                      handler: @Sendable @escaping (HTTPRequest) async throws -> HTTPResponse) {
         self.init(port: port,
                   timeout: timeout,
