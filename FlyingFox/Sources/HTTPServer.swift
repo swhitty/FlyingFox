@@ -196,13 +196,13 @@ public final actor HTTPServer {
         return root
     }
 
-    public static func defaultPool() -> AsyncSocketPool {
+    public static func defaultPool(logger: Logging? = nil) -> AsyncSocketPool {
 #if canImport(Darwin)
-    return .kQueue()
+        return .kQueue(logger: logger)
 #elseif canImport(CSystemLinux)
-    return .ePoll()
+        return .ePoll(logger: logger)
 #else
-    return .poll()
+        return .poll(logger: logger)
 #endif
     }
 }
