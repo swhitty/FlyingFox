@@ -57,10 +57,9 @@ public func makeEventQueuePool(maxEvents limit: Int = 20) -> AsyncSocketPool {
     fatalError("init pool directly")
 }
 
-#if compiler(>=5.7)
 public extension AsyncSocketPool where Self == SocketPool<Poll> {
 
-    static func make(maxEvents limit: Int = 20, logger: Logging? = nil) -> SocketPool<some EventQueue> {
+    static func make(maxEvents limit: Int = 20, logger: Logging? = nil) -> some AsyncSocketPool {
     #if canImport(Darwin)
         return .kQueue(maxEvents: limit, logger: logger)
     #elseif canImport(CSystemLinux)
@@ -70,7 +69,6 @@ public extension AsyncSocketPool where Self == SocketPool<Poll> {
     #endif
     }
 }
-#endif
 
 public final actor SocketPool<Queue: EventQueue>: AsyncSocketPool {
 

@@ -40,7 +40,7 @@ import FoundationNetworking
 final class HTTPConnectionTests: XCTestCase {
 
     func testConnection_ReceivesRequest() async throws {
-        let (s1, s2) = try AsyncSocket.makePair()
+        let (s1, s2) = try await AsyncSocket.makePair()
 
         let connection = HTTPConnection(socket: s1)
         try await s2.writeString(
@@ -68,7 +68,7 @@ final class HTTPConnectionTests: XCTestCase {
     }
 
     func testConnectionRequestsAreReceived_WhileConnectionIsKeptAlive() async throws {
-        let (s1, s2) = try AsyncSocket.makePair()
+        let (s1, s2) = try await AsyncSocket.makePair()
 
         let connection = HTTPConnection(socket: s1)
         try await s2.writeString(
@@ -93,7 +93,7 @@ final class HTTPConnectionTests: XCTestCase {
     }
 
     func testConnectionResponse_IsSent() async throws {
-        let (s1, s2) = try AsyncSocket.makePair()
+        let (s1, s2) = try await AsyncSocket.makePair()
 
         let connection = HTTPConnection(socket: s1)
 
@@ -115,7 +115,7 @@ final class HTTPConnectionTests: XCTestCase {
     }
 
     func testConnectionDisconnects_WhenErrorIsReceived() async throws {
-        let (s1, s2) = try AsyncSocket.makePair()
+        let (s1, s2) = try await AsyncSocket.makePair()
 
         try s2.close()
         let connection = HTTPConnection(socket: s1)

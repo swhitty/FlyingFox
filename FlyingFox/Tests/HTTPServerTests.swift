@@ -154,7 +154,7 @@ final class HTTPServerTests: XCTestCase {
         await server.appendRoute("GET /socket", to: .webSocket(EchoWSMessageHandler()))
         try await startServer(server)
 
-        let socket = try await AsyncSocket.connected(to: address, pool: SleepingPool())
+        let socket = try await AsyncSocket.connected(to: address)
         defer { try? socket.close() }
 
         var request = HTTPRequest.make(path: "/socket")
@@ -196,7 +196,7 @@ final class HTTPServerTests: XCTestCase {
         }
         try await startServer(server)
 
-        let socket = try await AsyncSocket.connected(to: address, pool: SleepingPool())
+        let socket = try await AsyncSocket.connected(to: address)
         defer { try? socket.close() }
         try await socket.writeRequest(.make())
 
@@ -213,7 +213,7 @@ final class HTTPServerTests: XCTestCase {
         }
         let port = try await startServerWithPort(server)
 
-        let socket = try await AsyncSocket.connected(to: .inet(ip4: "127.0.0.1", port: port), pool: SleepingPool())
+        let socket = try await AsyncSocket.connected(to: .inet(ip4: "127.0.0.1", port: port))
         defer { try? socket.close() }
 
         try await socket.writeRequest(.make())
@@ -231,7 +231,7 @@ final class HTTPServerTests: XCTestCase {
             return .make(statusCode: .ok)
         }
         let port = try await startServerWithPort(server)
-        let socket = try await AsyncSocket.connected(to: .inet(ip4: "127.0.0.1", port: port), pool: SleepingPool())
+        let socket = try await AsyncSocket.connected(to: .inet(ip4: "127.0.0.1", port: port))
         defer { try? socket.close() }
 
         try await socket.writeRequest(.make())
@@ -249,7 +249,7 @@ final class HTTPServerTests: XCTestCase {
         let server = HTTPServer.make(logger: HTTPServer.defaultLogger())
 
         let port = try await startServerWithPort(server)
-        let socket = try await AsyncSocket.connected(to: .inet(ip4: "127.0.0.1", port: port), pool: SleepingPool())
+        let socket = try await AsyncSocket.connected(to: .inet(ip4: "127.0.0.1", port: port))
         defer { try? socket.close() }
 
         try await Task.sleep(seconds: 0.5)
@@ -410,14 +410,5 @@ extension URLSessionWebSocketTask.Message: Equatable {
 extension Task where Success == Never, Failure == Never {
     static func sleep(seconds: TimeInterval) async throws {
         try await sleep(nanoseconds: UInt64(1_000_000_000 * seconds))
-    }
-}
-
-private struct SleepingPool: AsyncSocketPool {
-    func prepare() async throws { }
-    func run() async throws { }
-
-    func suspendSocket(_ socket: Socket, untilReadyFor events: Socket.Events) async throws {
-        try await Task.sleep(seconds: 0.1)
     }
 }
