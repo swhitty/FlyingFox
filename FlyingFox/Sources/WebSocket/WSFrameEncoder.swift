@@ -75,11 +75,12 @@ struct WSFrameEncoder {
     }
 
     static func encodeFrame0(_ frame: WSFrame) -> UInt8 {
-        frame.fin.byte << 7 |
-        frame.rsv1.byte << 6 |
-        frame.rsv2.byte << 5 |
-        frame.rsv3.byte << 4 |
-        frame.opcode.rawValue
+        var byte: UInt8 = frame.opcode.rawValue
+        byte |= frame.fin.byte << 7
+        byte |= frame.rsv1.byte << 6
+        byte |= frame.rsv2.byte << 5
+        byte |= frame.rsv3.byte << 4
+        return byte
     }
 
     static func decodeFrame(from byte0: UInt8) -> WSFrame {
@@ -100,15 +101,19 @@ struct WSFrameEncoder {
                     UInt8(length >> 8 & 0xFF),
                     UInt8(length >> 0 & 0xFF)]
         } else {
-            return [hasMask.byte << 7 | UInt8(127),
-                    UInt8(length >> 56 & 0xFF),
-                    UInt8(length >> 48 & 0xFF),
-                    UInt8(length >> 40 & 0xFF),
-                    UInt8(length >> 32 & 0xFF),
-                    UInt8(length >> 24 & 0xFF),
-                    UInt8(length >> 16 & 0xFF),
-                    UInt8(length >> 8 & 0xFF),
-                    UInt8(length >> 0 & 0xFF)]
+            let byte0 = UInt8(hasMask.byte << 7 | UInt8(127))
+            let byte1 = UInt8(length >> 56 & 0xFF)
+            let byte2 = UInt8(length >> 48 & 0xFF)
+            let byte3 = UInt8(length >> 40 & 0xFF)
+            let byte4 = UInt8(length >> 32 & 0xFF)
+            let byte5 = UInt8(length >> 24 & 0xFF)
+            let byte6 = UInt8(length >> 16 & 0xFF)
+            let byte7 = UInt8(length >> 8 & 0xFF)
+            let byte8 = UInt8(length & 0xFF)
+            return [
+                byte0, byte1, byte2, byte3, byte4,
+                byte5, byte6, byte7, byte8
+            ]
         }
     }
 
@@ -137,14 +142,15 @@ struct WSFrameEncoder {
                                    UInt16(bytes.take()) << 8
             return try await (Int(length), hasMask ? decodeMask(from: bytes) : nil)
         default:
-            let length = try await UInt64(bytes.take()) |
-                                   UInt64(bytes.take()) << 8 |
-                                   UInt64(bytes.take()) << 16 |
-                                   UInt64(bytes.take()) << 24 |
-                                   UInt64(bytes.take()) << 32 |
-                                   UInt64(bytes.take()) << 40 |
-                                   UInt64(bytes.take()) << 48 |
-                                   UInt64(bytes.take()) << 56
+            var length = try await UInt64(bytes.take())
+            length |= try await UInt64(bytes.take()) << 8
+            length |= try await UInt64(bytes.take()) << 16
+            length |= try await UInt64(bytes.take()) << 24
+            length |= try await UInt64(bytes.take()) << 32
+            length |= try await UInt64(bytes.take()) << 40
+            length |= try await UInt64(bytes.take()) << 48
+            length |= try await UInt64(bytes.take()) << 56
+
             guard length <= Int.max else {
                 throw Error("Length is greater than Int.max")
             }
