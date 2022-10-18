@@ -334,27 +334,11 @@ protocol AsyncSocketPool {
 }
 ```
 
-### PollingSocketPool
+### SocketPool
 
-`PollingSocketPool` is the default pool used within `HTTPServer`. It uses a continuous loop of [`poll(2)`](https://www.freebsd.org/cgi/man.cgi?poll) / [`Task.yield()`](https://developer.apple.com/documentation/swift/task/3814840-yield) to check all sockets awaiting data at a supplied interval. 
+[`SocketPool<Queue>`](https://github.com/swhitty/FlyingFox/blob/main/FlyingSocks/Sources/SocketPool.swift) is the default pool used within `HTTPServer`. It suspends and resume sockets using its generic `EventQueue` depending on the platform. Abstracting [`kqueue(2)`](https://www.freebsd.org/cgi/man.cgi?kqueue) on Darwin platforms and [`epoll(7)`](https://man7.org/linux/man-pages/man7/epoll.7.html) on Linux, the pool uses kernel events without the need to continuosly poll the waiting file descriptors.
 
-The pool can be tuned to adjust both the time spent within [`poll(2)`](https://www.freebsd.org/cgi/man.cgi?poll) and at the end of each iteration with [`Task.yield()`](https://developer.apple.com/documentation/swift/task/3814840-yield) or [`Task.sleep()`](https://developer.apple.com/documentation/swift/task/3862701-sleep)
-
-```swift
-let pool = PollingSocketPool(pollInterval: .immediate, loopInterval: .seconds(0.1))
-let server = HTTPServer(port: 80, pool: pool)
-```
-
-### EventQueueSocketPool
-
-The experimental [`EventQueueSocketPool<Queue>`](https://github.com/swhitty/FlyingFox/blob/main/FlyingSocks/Sources/EventQueueSocketPool.swift) suspends and resume sockets using kernel events without the need to continuosly poll the waiting file descriptors.  The pool uses a queue to add, remove and be notified of events, abstracting [`kqueue(2)`](https://www.freebsd.org/cgi/man.cgi?kqueue) on Darwin platforms and [`epoll(7)`](https://man7.org/linux/man-pages/man7/epoll.7.html) on Linux.
-
-`EventQueueSocketPool<Queue>` and associated types will be made `public` in the future.  In the meantime they can be used like so:
-
-```swift
-let server = HTTPServer(port: 80, pool: makeEventQueuePool())
-```
-
+Windows uses a queue backed by a continuous loop of [`poll(2)`](https://www.freebsd.org/cgi/man.cgi?poll) / [`Task.yield()`](https://developer.apple.com/documentation/swift/task/3814840-yield) to check all sockets awaiting data at a supplied interval. 
 
 ## SocketAddress
 
