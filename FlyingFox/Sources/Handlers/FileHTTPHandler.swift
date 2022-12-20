@@ -55,6 +55,8 @@ public struct FileHTTPHandler: HTTPHandler {
             return "application/json"
         case "html", "htm":
             return "text/html"
+        case "css":
+            return "text/css"
         case "js", "javascript":
             return "application/javascript"
         case "png":
