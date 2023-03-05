@@ -37,7 +37,7 @@ public struct DirectoryHTTPHandler: HTTPHandler {
     private(set) var root: URL?
     let serverPath: String
 
-    public init(root: URL, serverPath: String) {
+    public init(root: URL, serverPath: String = "/") {
         self.root = root
         self.serverPath = serverPath
     }
@@ -48,16 +48,9 @@ public struct DirectoryHTTPHandler: HTTPHandler {
     }
 
     public func handleRequest(_ request: HTTPRequest) async throws -> HTTPResponse {
-        guard request.path.hasPrefix(serverPath) else {
-            return HTTPResponse(statusCode: .notFound)
-        }
-
-        let subPath = String(request.path.dropFirst(serverPath.count))
-
         guard
-            let filePath = root?.appendingPathComponent(subPath),
-            let data = try? Data(contentsOf: filePath)
-        else {
+            let filePath = makeFileURL(for: request.path),
+            let data = try? Data(contentsOf: filePath) else {
             return HTTPResponse(statusCode: .notFound)
         }
 
@@ -68,4 +61,17 @@ public struct DirectoryHTTPHandler: HTTPHandler {
         )
     }
 
+    func makeFileURL(for requestPath: String) -> URL? {
+        let compsA = serverPath
+            .split(separator: "/", omittingEmptySubsequences: true)
+            .joined(separator: "/")
+
+        let compsB = requestPath
+            .split(separator: "/", omittingEmptySubsequences: true)
+            .joined(separator: "/")
+
+        guard compsB.hasPrefix(compsA) else { return nil }
+        let subPath = String(compsB.dropFirst(compsA.count))
+        return root?.appendingPathComponent(subPath)
+    }
 }
