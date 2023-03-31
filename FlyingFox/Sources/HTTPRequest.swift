@@ -31,7 +31,7 @@
 
 import Foundation
 
-public struct HTTPRequest: Sendable, Equatable {
+public struct HTTPRequest: Sendable {
     public var method: HTTPMethod
     public var version: HTTPVersion
     public var path: String
@@ -54,6 +54,9 @@ public struct HTTPRequest: Sendable, Equatable {
         self.body = body
     }
 }
+
+@available(*, deprecated, message: "HTTPRequest will soon remove conformance to Equatable")
+extension HTTPRequest: Equatable { }
 
 extension HTTPRequest {
     var shouldKeepAlive: Bool {
