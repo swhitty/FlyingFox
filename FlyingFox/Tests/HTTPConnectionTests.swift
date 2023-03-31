@@ -54,7 +54,7 @@ final class HTTPConnectionTests: XCTestCase {
         )
 
         let request = try await connection.requests.first()
-        XCTAssertEqual(
+        await AsyncAssertAsyncEqual(
             request,
             .make(method: .GET,
                   version: .http11,
@@ -154,5 +154,16 @@ extension AsyncSequence {
             throw AsyncSequenceError("Premature termination")
         }
         return next
+    }
+}
+
+extension HTTPRequest: AsyncEquatable {
+    static func == (lhs: HTTPRequest, rhs: HTTPRequest) async -> Bool {
+        lhs.method == rhs.method &&
+        lhs.version == rhs.version &&
+        lhs.path == rhs.path &&
+        lhs.query == rhs.query &&
+        lhs.headers == rhs.headers &&
+        lhs.body == rhs.body
     }
 }

@@ -40,6 +40,17 @@ func AsyncAssertEqual<T: Equatable>(_ expression: @autoclosure () async throws -
     XCTAssertEqual(try result.get(), try expected(), message(), file: file, line: line)
 }
 
+func AsyncAssertAsyncEqual<T: AsyncEquatable>(_ expression: @autoclosure () async throws -> T,
+                                              _ expected: @autoclosure () throws -> T,
+                                              _ message: @autoclosure () -> String = "",
+                                              file: StaticString = #filePath,
+                                              line: UInt = #line) async {
+    let result = await Result {
+        try await expression() == expected()
+    }
+    XCTAssertTrue(try result.get(), message(), file: file, line: line)
+}
+
 func XCTAssertThrowsError<T, E: Error>(_ expression: @autoclosure () throws -> T,
                                        of type: E.Type,
                                        _ message: @autoclosure () -> String = "",
@@ -132,4 +143,8 @@ func AsyncAssertFalse(_ expression: @autoclosure () async throws -> Bool,
                       line: UInt = #line) async {
     let result = await Result(catching: expression)
     XCTAssertFalse(try result.get(), message(), file: file, line: line)
+}
+
+protocol AsyncEquatable {
+    static func ==(lhs: Self, rhs: Self) async -> Bool
 }
