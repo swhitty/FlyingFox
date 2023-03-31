@@ -167,7 +167,12 @@ public extension HTTPRoute {
         return (method: String(comps[0]), path: String(comps[1]))
     }
 
+    @available(*, deprecated, message: "renamed: ~= async")
     static func ~= (route: HTTPRoute, request: HTTPRequest) -> Bool {
+        route.patternMatch(request: request)
+    }
+
+    static func ~= (route: HTTPRoute, request: HTTPRequest) async -> Bool {
         route.patternMatch(request: request)
     }
 }
@@ -176,5 +181,18 @@ extension HTTPRoute: ExpressibleByStringLiteral {
 
     public init(stringLiteral value: String) {
         self.init(value)
+    }
+}
+
+
+private extension Sequence {
+
+    func first(where predicate: (Element) async throws -> Bool) async rethrows -> Element? {
+        for element in self {
+            if try await predicate(element) {
+                return element
+            }
+        }
+        return nil
     }
 }

@@ -74,309 +74,309 @@ final class HTTPRouteTests: XCTestCase {
         )
     }
 
-    func testWildcard_MatchesPath() {
+    func testWildcard_MatchesPath() async {
         let route = HTTPRoute("/fish/*")
 
-        XCTAssertTrue(
-            route ~= HTTPRequest.make(path: "/fish/chips")
+        await AsyncAssertTrue(
+            await route ~= HTTPRequest.make(path: "/fish/chips")
         )
 
-        XCTAssertTrue(
-            route ~= HTTPRequest.make(path: "/fish/chips/mushy/peas")
+        await AsyncAssertTrue(
+            await route ~= HTTPRequest.make(path: "/fish/chips/mushy/peas")
         )
 
-        XCTAssertFalse(
-            route ~= HTTPRequest.make(path: "/chips")
+        await AsyncAssertFalse(
+            await route ~= HTTPRequest.make(path: "/chips")
         )
     }
 
-    func testMethod_Matches() {
+    func testMethod_Matches() async {
         let route = HTTPRoute("POST /fish/chips")
 
-        XCTAssertTrue(
-            route ~= HTTPRequest.make(method: .POST, path: "/fish/chips")
+        await AsyncAssertTrue(
+            await route ~= HTTPRequest.make(method: .POST, path: "/fish/chips")
         )
 
-        XCTAssertTrue(
-            route ~= HTTPRequest.make(method: .init(rawValue: "post"), path: "/fish/chips/")
+        await AsyncAssertTrue(
+            await route ~= HTTPRequest.make(method: .init(rawValue: "post"), path: "/fish/chips/")
         )
 
-        XCTAssertFalse(
-            route ~= HTTPRequest.make(method: .GET, path: "/fish/chips")
+        await AsyncAssertFalse(
+            await route ~= HTTPRequest.make(method: .GET, path: "/fish/chips")
         )
     }
 
-    func testWildcardMethod_Matches() {
+    func testWildcardMethod_Matches() async {
         let route = HTTPRoute("/fish/chips")
 
-        XCTAssertTrue(
-            route ~= HTTPRequest.make(method: .POST, path: "/fish/chips")
+        await AsyncAssertTrue(
+            await route ~= HTTPRequest.make(method: .POST, path: "/fish/chips")
         )
 
-        XCTAssertTrue(
-            route ~= HTTPRequest.make(method: .GET, path: "/fish/chips/")
+        await AsyncAssertTrue(
+            await route ~= HTTPRequest.make(method: .GET, path: "/fish/chips/")
         )
 
-        XCTAssertTrue(
-            route ~= HTTPRequest.make(method: .init("ANY"), path: "/fish/chips")
+        await AsyncAssertTrue(
+            await route ~= HTTPRequest.make(method: .init("ANY"), path: "/fish/chips")
         )
 
-        XCTAssertFalse(
-            route ~= HTTPRequest.make(method: .GET, path: "/chips/")
+        await AsyncAssertFalse(
+            await route ~= HTTPRequest.make(method: .GET, path: "/chips/")
         )
     }
 
-    func testWildcardMethod_MatchesRoute() {
+    func testWildcardMethod_MatchesRoute() async {
         let route = HTTPRoute("GET /mock")
 
-        XCTAssertFalse(
-            route ~= HTTPRequest.make(method: HTTPMethod("GET"),
+        await AsyncAssertFalse(
+            await route ~= HTTPRequest.make(method: HTTPMethod("GET"),
                                       path: "/")
         )
 
-        XCTAssertTrue(
-            route ~= HTTPRequest.make(method: HTTPMethod("GET"),
+        await AsyncAssertTrue(
+            await route ~= HTTPRequest.make(method: HTTPMethod("GET"),
                                       path: "/mock")
         )
 
-        XCTAssertFalse(
-            route ~= HTTPRequest.make(method: HTTPMethod("GET"),
+        await AsyncAssertFalse(
+            await route ~= HTTPRequest.make(method: HTTPMethod("GET"),
                                       path: "/mock/fish")
         )
     }
 
-    func testEmptyWildcard_MatchesAllRoutes() {
+    func testEmptyWildcard_MatchesAllRoutes() async {
         let route = HTTPRoute("*")
 
-        XCTAssertTrue(
-            route ~= HTTPRequest.make(method: HTTPMethod("GET"),
+        await AsyncAssertTrue(
+            await route ~= HTTPRequest.make(method: HTTPMethod("GET"),
                                       path: "/")
         )
 
-        XCTAssertTrue(
-            route ~= HTTPRequest.make(method: HTTPMethod("GET"),
+        await AsyncAssertTrue(
+            await route ~= HTTPRequest.make(method: HTTPMethod("GET"),
                                       path: "/mock")
         )
 
-        XCTAssertTrue(
-            route ~= HTTPRequest.make(method: HTTPMethod("GET"),
+        await AsyncAssertTrue(
+            await route ~= HTTPRequest.make(method: HTTPMethod("GET"),
                                       path: "/mock/fish")
         )
     }
 
-    func testQueryItem_MatchesRoute() {
+    func testQueryItem_MatchesRoute() async {
         let route = HTTPRoute("GET /mock?fish=chips")
 
-        XCTAssertTrue(
-            route ~= HTTPRequest.make(method: .GET,
+        await AsyncAssertTrue(
+            await route ~= HTTPRequest.make(method: .GET,
                                       path: "/mock",
                                       query: [.init(name: "fish", value: "chips")])
         )
 
-        XCTAssertTrue(
-            route ~= HTTPRequest.make(method: .GET,
+        await AsyncAssertTrue(
+            await route ~= HTTPRequest.make(method: .GET,
                                       path: "/mock",
                                       query: [.init(name: "cat", value: "dog"),
                                               .init(name: "fish", value: "squid"),
                                               .init(name: "fish", value: "chips")])
         )
 
-        XCTAssertFalse(
-            route ~= HTTPRequest.make(method: .GET,
+        await AsyncAssertFalse(
+            await route ~= HTTPRequest.make(method: .GET,
                                       path: "/mock",
                                       query: [.init(name: "cat", value: "dog"),
                                               .init(name: "fish", value: "squid")])
         )
     }
 
-    func testMultipleQueryItems_MatchesRoute() {
+    func testMultipleQueryItems_MatchesRoute() async {
         let route = HTTPRoute("GET /mock?fish=chips&cats=dogs")
 
-        XCTAssertTrue(
-            route ~= HTTPRequest.make(method: .GET,
+        await AsyncAssertTrue(
+            await route ~= HTTPRequest.make(method: .GET,
                                       path: "/mock",
                                       query: [.init(name: "fish", value: "chips"),
                                               .init(name: "cats", value: "dogs")])
         )
 
-        XCTAssertTrue(
-            route ~= HTTPRequest.make(method: .GET,
+        await AsyncAssertTrue(
+            await route ~= HTTPRequest.make(method: .GET,
                                       path: "/mock",
                                       query: [.init(name: "cats", value: "dogs"),
                                               .init(name: "fish", value: "chips")])
         )
 
-        XCTAssertFalse(
-            route ~= HTTPRequest.make(method: .GET,
+        await AsyncAssertFalse(
+            await route ~= HTTPRequest.make(method: .GET,
                                       path: "/mock",
                                       query: [.init(name: "fish", value: "chips")])
         )
 
-        XCTAssertFalse(
-            route ~= HTTPRequest.make(method: .GET,
+        await AsyncAssertFalse(
+            await route ~= HTTPRequest.make(method: .GET,
                                       path: "/mock",
                                       query: [.init(name: "cats", value: "dogs")])
         )
 
-        XCTAssertFalse(
-            route ~= HTTPRequest.make(method: .GET,
+        await AsyncAssertFalse(
+            await route ~= HTTPRequest.make(method: .GET,
                                       path: "/mock",
                                       query: [.init(name: "cat", value: "dog"),
                                               .init(name: "fish", value: "squid")])
         )
     }
 
-    func testQueryItemWildcard_MatchesRoute() {
+    func testQueryItemWildcard_MatchesRoute() async {
         let route = HTTPRoute("GET /mock?fish=*")
 
-        XCTAssertTrue(
-            route ~= HTTPRequest.make(method: .GET,
+        await AsyncAssertTrue(
+            await route ~= HTTPRequest.make(method: .GET,
                                       path: "/mock",
                                       query: [.init(name: "fish", value: "chips")])
         )
 
-        XCTAssertTrue(
-            route ~= HTTPRequest.make(method: .GET,
+        await AsyncAssertTrue(
+            await route ~= HTTPRequest.make(method: .GET,
                                       path: "/mock",
                                       query: [.init(name: "cat", value: "dog"),
                                               .init(name: "fish", value: "squid"),
                                               .init(name: "fish", value: "chips")])
         )
 
-        XCTAssertTrue(
-            route ~= HTTPRequest.make(method: .GET,
+        await AsyncAssertTrue(
+            await route ~= HTTPRequest.make(method: .GET,
                                       path: "/mock",
                                       query: [.init(name: "cat", value: "dog"),
                                               .init(name: "fish", value: "squid")])
         )
         
-         XCTAssertFalse(
-             route ~= HTTPRequest.make(method: .GET,
+        await AsyncAssertFalse(
+             await route ~= HTTPRequest.make(method: .GET,
                                        path: "/mock",
                                        query: [.init(name: "cat", value: "dog")])
          )
     }
 
-    func testWildcardPathWithQueryItem_MatchesRoute() {
+    func testWildcardPathWithQueryItem_MatchesRoute() async {
         let route = HTTPRoute("/mock/*?fish=*")
 
-        XCTAssertTrue(
-            route ~= HTTPRequest.make(method: .GET,
+        await AsyncAssertTrue(
+            await route ~= HTTPRequest.make(method: .GET,
                                       path: "/mock/anemone",
                                       query: [.init(name: "fish", value: "chips")])
         )
 
-        XCTAssertTrue(
-            route ~= HTTPRequest.make(method: .POST,
+        await AsyncAssertTrue(
+            await route ~= HTTPRequest.make(method: .POST,
                                       path: "/mock/crabs",
                                       query: [.init(name: "fish", value: "shrimp")])
         )
 
-        XCTAssertFalse(
-            route ~= HTTPRequest.make(method: .GET,
+        await AsyncAssertFalse(
+            await route ~= HTTPRequest.make(method: .GET,
                                       path: "/mock/anemone")
         )
     }
 
-    func testHeader_MatchesRoute() {
+    func testHeader_MatchesRoute() async {
         let route = HTTPRoute("GET /mock", headers: [.contentType: "json"])
 
-        XCTAssertTrue(
-            route ~= HTTPRequest.make(method: .GET,
+        await AsyncAssertTrue(
+            await route ~= HTTPRequest.make(method: .GET,
                                       path: "/mock",
                                       headers: [.contentType: "json"])
         )
 
-        XCTAssertTrue(
-            route ~= HTTPRequest.make(method: .GET,
+        await AsyncAssertTrue(
+            await route ~= HTTPRequest.make(method: .GET,
                                       path: "/mock",
                                       headers: [.contentEncoding: "xml",
                                                 .contentType: "json"])
         )
 
-        XCTAssertFalse(
-            route ~= HTTPRequest.make(method: .GET,
+        await AsyncAssertFalse(
+            await route ~= HTTPRequest.make(method: .GET,
                                       path: "/mock",
                                       headers: [.contentType: "xml"])
         )
     }
 
-    func testMultipleHeaders_MatchesRoute() {
+    func testMultipleHeaders_MatchesRoute() async {
         let route = HTTPRoute("GET /mock", headers: [.host: "fish",
                                                      .contentType: "json"])
 
-        XCTAssertTrue(
-            route ~= HTTPRequest.make(method: .GET,
+        await AsyncAssertTrue(
+            await route ~= HTTPRequest.make(method: .GET,
                                       path: "/mock",
                                       headers: [.host: "fish",
                                                 .contentType: "json"])
         )
 
-        XCTAssertTrue(
-            route ~= HTTPRequest.make(method: .GET,
+        await AsyncAssertTrue(
+            await route ~= HTTPRequest.make(method: .GET,
                                       path: "/mock",
                                       headers: [.contentType: "json",
                                                 .host: "fish"])
         )
 
-        XCTAssertFalse(
-            route ~= HTTPRequest.make(method: .GET,
+        await AsyncAssertFalse(
+            await route ~= HTTPRequest.make(method: .GET,
                                       path: "/mock",
                                       headers: [.host: "fish"])
         )
 
-        XCTAssertFalse(
-            route ~= HTTPRequest.make(method: .GET,
+        await AsyncAssertFalse(
+            await route ~= HTTPRequest.make(method: .GET,
                                       path: "/mock",
                                       headers: [.contentType: "json"])
         )
 
-        XCTAssertFalse(
-            route ~= HTTPRequest.make(method: .GET,
+        await AsyncAssertFalse(
+            await route ~= HTTPRequest.make(method: .GET,
                                       path: "/mock",
                                       headers: [.contentType: "xml",
                                                 .host: "fish"])
         )
     }
 
-    func testHeaderWildcard_MatchesRoute() {
+    func testHeaderWildcard_MatchesRoute() async {
         let route = HTTPRoute("GET /mock", headers: [.authorization: "*"])
 
-        XCTAssertTrue(
-            route ~= HTTPRequest.make(method: .GET,
+        await AsyncAssertTrue(
+            await route ~= HTTPRequest.make(method: .GET,
                                       path: "/mock",
                                       headers: [.authorization: "Bearer abc"])
         )
 
-        XCTAssertTrue(
-            route ~= HTTPRequest.make(method: .GET,
+        await AsyncAssertTrue(
+            await route ~= HTTPRequest.make(method: .GET,
                                       path: "/mock",
                                       headers: [.authorization: "Bearer xyz"])
         )
 
-        XCTAssertFalse(
-            route ~= HTTPRequest.make(method: .GET,
+        await AsyncAssertFalse(
+            await route ~= HTTPRequest.make(method: .GET,
                                       path: "/mock",
                                       headers: [.contentType: "xml"])
         )
     }
 
 #if canImport(Darwin)
-    func testBody_MatchesRoute() {
+    func testBody_MatchesRoute() async {
         let route = HTTPRoute("GET /mock", body: .json(where: "food == 'fish'"))
 
-        XCTAssertTrue(
-            route ~= HTTPRequest.make(path: "/mock",
+        await AsyncAssertTrue(
+            await route ~= HTTPRequest.make(path: "/mock",
                                       body: #"{"age": 45, "food": "fish"}"#.data(using: .utf8)!)
         )
 
-        XCTAssertTrue(
-            route ~= HTTPRequest.make(path: "/mock",
+        await AsyncAssertTrue(
+            await route ~= HTTPRequest.make(path: "/mock",
                                       body: #"{"food": "fish"}"#.data(using: .utf8)!)
         )
 
-        XCTAssertFalse(
-            route ~= HTTPRequest.make(path: "/mock",
+        await AsyncAssertFalse(
+            await route ~= HTTPRequest.make(path: "/mock",
                                       body: #"{"age": 45}"#.data(using: .utf8)!)
         )
     }

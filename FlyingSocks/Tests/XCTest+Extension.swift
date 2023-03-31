@@ -117,3 +117,19 @@ private extension Result where Failure == Error {
         }
     }
 }
+
+func AsyncAssertTrue(_ expression: @autoclosure () async throws -> Bool,
+                     _ message: @autoclosure () -> String = "",
+                     file: StaticString = #filePath,
+                     line: UInt = #line) async {
+    let result = await Result(catching: expression)
+    XCTAssertTrue(try result.get(), message(), file: file, line: line)
+}
+
+func AsyncAssertFalse(_ expression: @autoclosure () async throws -> Bool,
+                      _ message: @autoclosure () -> String = "",
+                      file: StaticString = #filePath,
+                      line: UInt = #line) async {
+    let result = await Result(catching: expression)
+    XCTAssertFalse(try result.get(), message(), file: file, line: line)
+}
