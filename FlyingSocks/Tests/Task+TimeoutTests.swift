@@ -29,7 +29,7 @@
 //  SOFTWARE.
 //
 
-@testable import FlyingFox
+@testable import FlyingSocks
 import XCTest
 
 final class TaskTimeoutTests: XCTestCase {
@@ -141,5 +141,23 @@ final class TaskTimeoutTests: XCTestCase {
             try await task.getValue(cancelling: .afterTimeout(seconds: 0.1)),
             "Fish"
         )
+    }
+}
+
+@_spi(Private) import func FlyingSocks.withThrowingTimeout
+
+extension Task where Success: Sendable, Failure == Error {
+
+    // Start a new Task with a timeout.
+    init(priority: TaskPriority? = nil, timeout: TimeInterval, operation: @escaping @Sendable () async throws -> Success) {
+        self = Task(priority: priority) {
+            try await withThrowingTimeout(seconds: timeout, body: operation)
+        }
+    }
+}
+
+extension Task where Success == Never, Failure == Never {
+    static func sleep(seconds: TimeInterval) async throws {
+        try await sleep(nanoseconds: UInt64(1_000_000_000 * seconds))
     }
 }

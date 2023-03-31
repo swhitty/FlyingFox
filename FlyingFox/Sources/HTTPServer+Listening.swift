@@ -31,6 +31,7 @@
 
 import Foundation
 import FlyingSocks
+@_spi(Private) import func FlyingSocks.withThrowingTimeout
 
 extension HTTPServer {
 

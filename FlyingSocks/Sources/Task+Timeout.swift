@@ -31,7 +31,8 @@
 
 import Foundation
 
-func withThrowingTimeout<T: Sendable>(seconds: TimeInterval, body: @escaping @Sendable () async throws -> T) async throws -> T {
+@_spi(Private)
+public func withThrowingTimeout<T: Sendable>(seconds: TimeInterval, body: @escaping @Sendable () async throws -> T) async throws -> T {
     try await withThrowingTaskGroup(of: T.self) { group -> T in
         group.addTask {
             try await body()
@@ -46,21 +47,13 @@ func withThrowingTimeout<T: Sendable>(seconds: TimeInterval, body: @escaping @Se
     }
 }
 
-struct TimeoutError: LocalizedError {
-    var errorDescription: String? = "Timed out before completion"
+@_spi(Private)
+public struct TimeoutError: LocalizedError {
+    public var errorDescription: String? = "Timed out before completion"
 }
 
-extension Task where Success: Sendable, Failure == Error {
-
-    // Start a new Task with a timeout.
-    init(priority: TaskPriority? = nil, timeout: TimeInterval, operation: @escaping @Sendable () async throws -> Success) {
-        self = Task(priority: priority) {
-            try await withThrowingTimeout(seconds: timeout, body: operation)
-        }
-    }
-}
-
-extension Task {
+@_spi(Private)
+public extension Task {
 
     enum CancellationPolicy {
         /// Cancels the task when the task retrieving the value is cancelled

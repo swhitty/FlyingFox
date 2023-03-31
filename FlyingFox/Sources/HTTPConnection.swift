@@ -30,6 +30,7 @@
 //
 
 import FlyingSocks
+@_spi(Private) import func FlyingSocks.withThrowingTimeout
 import Foundation
 
 struct HTTPConnection: Sendable {
