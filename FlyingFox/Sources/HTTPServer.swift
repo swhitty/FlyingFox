@@ -131,7 +131,7 @@ public final actor HTTPServer {
             group.addTask {
                 try await self.listenForConnections(on: asyncSocket)
             }
-            try await group.waitForAll()
+            try await group.next()
         }
     }
 
