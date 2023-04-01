@@ -79,3 +79,16 @@ jobs:
         run: swift build --build-tests
       - name: Test
         run: swift test --skip-build
+
+  linux_swift_5_8:
+    runs-on: ubuntu-latest
+    container: swift:5.8
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Version
+        run: swift --version
+      - name: Build
+        run: swift build --build-tests
+      - name: Test
+        run: swift test --skip-build
