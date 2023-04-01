@@ -47,16 +47,16 @@ public struct ProxyHTTPHandler: HTTPHandler, Sendable {
     }
 
     public func handleRequest(_ request: HTTPRequest) async throws -> HTTPResponse {
-        let req = try makeURLRequest(for: request)
+        let req = try await makeURLRequest(for: request)
         let (data, response) = try await session.getData(for: req)
         return makeResponse(for: response as! HTTPURLResponse, data: data)
     }
 
-    func makeURLRequest(for request: HTTPRequest) throws -> URLRequest {
+    func makeURLRequest(for request: HTTPRequest) async throws -> URLRequest {
         let url = try makeURL(for: request)
         var req = URLRequest(url: url)
         req.httpMethod = request.method.rawValue
-        req.httpBody = request.body
+        req.httpBody = try await request.bodyData
         req.allHTTPHeaderFields = request.headers.reduce(into: [:]) {
             if shouldForwardHeader($1.key) {
                 $0![$1.key.rawValue] = $1.value

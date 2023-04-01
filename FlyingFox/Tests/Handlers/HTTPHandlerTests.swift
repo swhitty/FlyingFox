@@ -165,10 +165,10 @@ final class HTTPHandlerTests: XCTestCase {
         )
     }
 
-    func testProxyHandler_MakesRequestWithQuery() throws {
+    func testProxyHandler_MakesRequestWithQuery() async throws {
         let handler = ProxyHTTPHandler(base: "fish.com")
 
-        let request = try handler.makeURLRequest(
+        let request = try await handler.makeURLRequest(
             for: .make(path: "/chips/squid",
                        query: [.init(name: "mushy", value: "peas")])
         )
@@ -179,10 +179,10 @@ final class HTTPHandlerTests: XCTestCase {
         )
     }
 
-    func testProxyHandler_MakesRequestWithHeaders() throws {
+    func testProxyHandler_MakesRequestWithHeaders() async throws {
         let handler = ProxyHTTPHandler(base: "fish.com")
 
-        let request = try handler.makeURLRequest(
+        let request = try await handler.makeURLRequest(
             for: .make(headers: [.contentType: "json",
                                  HTTPHeader("Fish"): "chips"])
         )
@@ -194,10 +194,10 @@ final class HTTPHandlerTests: XCTestCase {
         )
     }
 
-    func testProxyHandler_DoesNotFowardSomeHeaders() throws {
+    func testProxyHandler_DoesNotFowardSomeHeaders() async throws {
         let handler = ProxyHTTPHandler.proxy(via: "fish.com")
 
-        let request = try handler.makeURLRequest(
+        let request = try await handler.makeURLRequest(
             for: .make(headers: [.connection: "json",
                                  .host: "fish.com",
                                  .contentLength: "20"])

@@ -120,7 +120,7 @@ public extension HTTPRoute {
     private func patternMatch(request: HTTPRequest) -> Bool {
         guard patternMatch(query: request.query),
               patternMatch(headers: request.headers),
-              patternMatch(body: request.body) else { return false }
+              patternMatch(body: request.payload) else { return false }
 
         let nodes = request.path.split(separator: "/", omittingEmptySubsequences: true)
         guard self.method ~= request.method.rawValue else {

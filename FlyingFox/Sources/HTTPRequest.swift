@@ -38,7 +38,14 @@ public struct HTTPRequest: Sendable {
     public var query: [QueryItem]
     public var headers: [HTTPHeader: String]
     @UncheckedSendable
-    public var body: Data
+    internal var payload: Data
+
+    public var bodyData: Data {
+        get async throws { payload }
+    }
+
+    @available(*, deprecated, renamed: "bodyData")
+    public var body: Data { payload }
 
     public init(method: HTTPMethod,
                 version: HTTPVersion,
@@ -51,7 +58,7 @@ public struct HTTPRequest: Sendable {
         self.path = path
         self.query = query
         self.headers = headers
-        self.body = body
+        self.payload = body
     }
 }
 

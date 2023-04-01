@@ -159,11 +159,11 @@ extension AsyncSequence {
 
 extension HTTPRequest: AsyncEquatable {
     static func == (lhs: HTTPRequest, rhs: HTTPRequest) async -> Bool {
-        lhs.method == rhs.method &&
-        lhs.version == rhs.version &&
-        lhs.path == rhs.path &&
-        lhs.query == rhs.query &&
-        lhs.headers == rhs.headers &&
-        lhs.body == rhs.body
+        guard (try? await lhs.bodyData == rhs.bodyData) == true else { return false }
+        return lhs.method == rhs.method &&
+               lhs.version == rhs.version &&
+               lhs.path == rhs.path &&
+               lhs.query == rhs.query &&
+               lhs.headers == rhs.headers
     }
 }

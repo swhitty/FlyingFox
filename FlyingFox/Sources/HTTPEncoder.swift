@@ -63,7 +63,7 @@ struct HTTPEncoder {
                       request.version.rawValue].joined(separator: " ")
 
         var httpHeaders = request.headers
-        httpHeaders[.contentLength] = String(request.body.count)
+        httpHeaders[.contentLength] = String(request.payload.count)
         let headers = httpHeaders.map { "\($0.key.rawValue): \($0.value)" }
 
         return [status] + headers + ["\r\n"]
@@ -84,7 +84,7 @@ struct HTTPEncoder {
             .joined(separator: "\r\n")
             .data(using: .utf8)!
 
-        data.append(request.body)
+        data.append(request.payload)
 
         return data
     }
