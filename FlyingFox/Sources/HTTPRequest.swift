@@ -44,8 +44,15 @@ public struct HTTPRequest: Sendable {
         get async throws { payload }
     }
 
+    public mutating func setBodyData(_ data: Data) {
+        payload = data
+    }
+
     @available(*, deprecated, renamed: "bodyData")
-    public var body: Data { payload }
+    public var body: Data {
+        get { payload }
+        set { payload = newValue }
+    }
 
     public init(method: HTTPMethod,
                 version: HTTPVersion,
