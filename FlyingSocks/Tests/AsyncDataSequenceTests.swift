@@ -231,7 +231,8 @@ final class AsyncDataSequenceTests: XCTestCase {
 
 private extension URL {
     static var jackOfHeartsRecital: URL {
-        Bundle.module.url(forResource: "Resources/JackOfHeartsRecital.txt", withExtension: nil)!
+        Bundle.module.url(forResource: "Resources", withExtension: nil)!
+            .appendingPathComponent("JackOfHeartsRecital.txt")
     }
 }
 
