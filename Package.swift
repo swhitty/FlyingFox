@@ -39,7 +39,10 @@ let package = Package(
         .testTarget(
             name: "FlyingSocksTests",
             dependencies: ["FlyingSocks"],
-            path: "FlyingSocks/Tests"
+            path: "FlyingSocks/Tests",
+            resources: [
+                .copy("Resources")
+            ]
         ),
         .target(
              name: "CSystemLinux",

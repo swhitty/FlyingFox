@@ -52,12 +52,16 @@ struct HTTPConnection: Sendable {
     }
 
     func sendResponse(_ response: HTTPResponse) async throws {
-        let data = HTTPEncoder.encodeResponse(response)
+        let header = HTTPEncoder.encodeResponseHeader(response)
+
         switch response.payload {
-        case .body:
-            try await socket.write(data)
+        case .httpBody(let sequence):
+            try await socket.write(header)
+            for try await chunk in sequence {
+                try await socket.write(chunk)
+            }
         case .webSocket(let handler):
-            try await switchToWebSocket(with: handler, response: data)
+            try await switchToWebSocket(with: handler, response: header)
         }
     }
 

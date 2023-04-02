@@ -80,7 +80,10 @@ final class HTTPHandlerTests: XCTestCase {
         let response = try await handler.handleRequest(.make())
         XCTAssertEqual(response.statusCode, .ok)
         XCTAssertEqual(response.headers[.contentType], "application/json")
-        XCTAssertEqual(response.body, #"{"fish": "cakes"}"#.data(using: .utf8))
+        await AsyncAssertEqual(
+            try await response.bodyData,
+            #"{"fish": "cakes"}"#.data(using: .utf8)
+        )        
     }
 
     func testFileHandler_ReturnsSuppliedContentType() async throws {

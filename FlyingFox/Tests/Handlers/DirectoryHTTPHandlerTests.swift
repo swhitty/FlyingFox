@@ -40,7 +40,10 @@ final class DirectoryHTTPHandlerTests: XCTestCase {
         let response = try await handler.handleRequest(.make(path: "server/path/fish.json"))
         XCTAssertEqual(response.statusCode, .ok)
         XCTAssertEqual(response.headers[.contentType], "application/json")
-        XCTAssertEqual(response.body, #"{"fish": "cakes"}"#.data(using: .utf8))
+        await AsyncAssertEqual(
+            try await response.bodyData,
+            #"{"fish": "cakes"}"#.data(using: .utf8)
+        )
     }
 
     func testDirectoryHandler_PlainInitialiser_ReturnsFile() async throws {
@@ -50,7 +53,10 @@ final class DirectoryHTTPHandlerTests: XCTestCase {
         let response = try await handler.handleRequest(.make(path: "server/path/fish.json"))
         XCTAssertEqual(response.statusCode, .ok)
         XCTAssertEqual(response.headers[.contentType], "application/json")
-        XCTAssertEqual(response.body, #"{"fish": "cakes"}"#.data(using: .utf8))
+        await AsyncAssertEqual(
+            try await response.bodyData,
+            #"{"fish": "cakes"}"#.data(using: .utf8)
+        )
     }
 
     func testDirectoryHandler_ReturnsSubDirectoryFile() async throws {
@@ -59,7 +65,10 @@ final class DirectoryHTTPHandlerTests: XCTestCase {
         let response = try await handler.handleRequest(.make(path: "server/path/subdir/vinegar.json"))
         XCTAssertEqual(response.statusCode, .ok)
         XCTAssertEqual(response.headers[.contentType], "application/json")
-        XCTAssertEqual(response.body, #"{"type": "malt"}"#.data(using: .utf8))
+        await AsyncAssertEqual(
+            try await response.bodyData,
+            #"{"type": "malt"}"#.data(using: .utf8)
+        )
     }
 
     func testDirectoryHandler_Returns404WhenFileDoesNotExist() async throws {

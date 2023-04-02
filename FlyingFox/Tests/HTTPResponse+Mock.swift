@@ -43,4 +43,20 @@ extension HTTPResponse {
                      headers: headers,
                      body: body)
     }
+
+    static func make(version: HTTPVersion = .http11,
+                     statusCode: HTTPStatusCode  = .ok,
+                     headers: [HTTPHeader: String] = [:],
+                     body: HTTPBodySequence) -> Self {
+        HTTPResponse(version: version,
+                     statusCode: statusCode,
+                     headers: headers,
+                     body: body)
+    }
+
+    static func make(headers: [HTTPHeader: String] = [:],
+                     webSocket handler: WSHandler) -> Self {
+        HTTPResponse(headers: headers,
+                     webSocket: handler)
+    }
 }

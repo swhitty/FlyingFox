@@ -207,6 +207,32 @@ final class HTTPBodySequenceTests: XCTestCase {
         // then
         XCTAssertEqual(buffer.index, 10)
     }
+
+    func testFilePayloadIsComplete_WhenSmallerThenMax() async throws {
+        let sequence = try HTTPBodySequence(file: .fishJSON, maxSizeForComplete: 10000, chunkSize: 1)
+
+        XCTAssertTrue(sequence.isComplete)
+        await AsyncAssertEqual(
+            try await sequence.get(),
+            try Data(contentsOf: .fishJSON)
+        )
+    }
+
+    func testFilePayloadIsNotComplete_WhenLargerThenMax() async throws {
+        let sequence = try HTTPBodySequence(file: .fishJSON,  maxSizeForComplete: 1, chunkSize: 1)
+
+        XCTAssertFalse(sequence.isComplete)
+        await AsyncAssertEqual(
+            try await sequence.get(),
+            try Data(contentsOf: .fishJSON)
+        )
+    }
+}
+
+private extension URL {
+    static var fishJSON: URL {
+        Bundle.module.url(forResource: "Stubs/fish.json", withExtension: nil)!
+    }
 }
 
 private extension HTTPBodySequence {
@@ -221,5 +247,12 @@ private extension HTTPBodySequence {
             count: count ?? bytes.count,
             chunkSize: chunkSize
         )
+    }
+
+    var isComplete: Bool {
+        switch storage {
+        case .complete: return true
+        case .sequence: return false
+        }
     }
 }

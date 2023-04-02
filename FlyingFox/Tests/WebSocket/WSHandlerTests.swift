@@ -127,7 +127,7 @@ final class WSHandlerTests: XCTestCase {
     }
 }
 
-private extension MessageFrameWSHandler {
+extension MessageFrameWSHandler {
 
     static func make(handler: WSMessageHandler = Messages(),
                      frameSize: Int = 1024) -> Self {

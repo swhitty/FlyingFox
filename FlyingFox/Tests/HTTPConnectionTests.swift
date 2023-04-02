@@ -101,17 +101,18 @@ final class HTTPConnectionTests: XCTestCase {
 
         try await connection.sendResponse(
             .make(version: .http11,
-                  statusCode: .gone)
+                  statusCode: .gone,
+                  body: "Hello World!".data(using: .utf8)!)
         )
 
-        let response = try await s2.readString(length: 40)
+        let response = try await s2.readString(length: 53)
         XCTAssertEqual(
             response,
             """
             HTTP/1.1 410 Gone\r
-            Content-Length: 0\r
+            Content-Length: 12\r
             \r
-
+            Hello World!
             """
         )
     }

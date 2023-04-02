@@ -42,7 +42,15 @@ public struct AsyncDataSequence: AsyncSequence, Sendable {
         self.loader = DataLoader(
             count: count,
             chunkSize: chunkSize,
-            iterator: bytes.makeAsyncIterator()
+            iterator: AsyncChunkedSequenceIterator(bytes.makeAsyncIterator())
+        )
+    }
+
+    public init(file handle: FileHandle, count: Int, chunkSize: Int) {
+        self.loader = DataLoader(
+            count: count,
+            chunkSize: chunkSize,
+            iterator: AsyncFileHandleIterator(handle: handle)
         )
     }
 
@@ -77,18 +85,33 @@ public struct AsyncDataSequence: AsyncSequence, Sendable {
     }
 }
 
+public extension AsyncDataSequence {
+
+    static func size(of file: URL) throws -> Int {
+        let att = try FileManager.default.attributesOfItem(atPath: file.path)
+        guard let size = att[.size] as? UInt64 else {
+            throw FileSizeError()
+        }
+        return Int(size)
+    }
+
+    struct FileSizeError: LocalizedError {
+        public var errorDescription: String? = "File size not found"
+    }
+}
+
 private extension AsyncDataSequence {
 
     actor DataLoader {
         nonisolated fileprivate let count: Int
         nonisolated fileprivate let chunkSize: Int
-        private let iterator: AnyChunkedIterator
+        private let iterator: AsyncDataIterator
         private var state: State
 
-        init<I: AsyncChunkedIteratorProtocol>(count: Int, chunkSize: Int, iterator: I) where I.Element == UInt8 {
+        init(count: Int, chunkSize: Int, iterator: AsyncDataIterator) {
             self.count = count
             self.chunkSize = chunkSize
-            self.iterator = ChunkedIterator(iterator)
+            self.iterator = iterator
             self.state = .ready(index: 0)
         }
 
@@ -109,7 +132,7 @@ private extension AsyncDataSequence {
                 guard let element = try await iterator.nextChunk(count: nextCount) else {
                     throw Error.unexpectedEOF
                 }
-                state = .ready(index: endIndex)
+                state = .ready(index: index + element.count)
                 return Data(element)
             } catch {
                 state = .complete
@@ -143,24 +166,30 @@ private extension AsyncDataSequence {
         }
     }
 
-    private class AnyChunkedIterator: AsyncChunkedIteratorProtocol {
-        func next() async throws -> UInt8? { fatalError("Method must be overridden") }
-        func nextChunk(count: Int) async throws -> [UInt8]? { fatalError("Method must be overridden") }
+    final class AsyncChunkedSequenceIterator<I: AsyncChunkedIteratorProtocol>: AsyncDataIterator where I.Element == UInt8 {
+        private var iterator: I
+
+        init(_ iterator: I) {
+            self.iterator = iterator
+        }
+
+        func nextChunk(count: Int) async throws -> Data? {
+            guard let chunk = try await iterator.nextChunk(count: count) else { return nil }
+            return Data(chunk)
+        }
     }
 
-    private final class ChunkedIterator<Base: AsyncChunkedIteratorProtocol>: AnyChunkedIterator where Base.Element == UInt8 {
-        private var base: Base
+    struct AsyncFileHandleIterator: AsyncDataIterator {
+        let handle: FileHandle?
 
-        init(_ base: Base) {
-            self.base = base
-        }
-
-        override func next() async throws -> Element? {
-            try await base.next()
-        }
-
-        override func nextChunk(count: Int) async throws -> [UInt8]? {
-            try await base.nextChunk(count: count)
+        func nextChunk(count: Int) throws -> Data? {
+            guard let handle = handle else { throw SocketError.disconnected }
+            return handle.readData(ofLength: count)
         }
     }
 }
+
+private protocol AsyncDataIterator {
+    func nextChunk(count: Int) async throws -> Data?
+}
+
