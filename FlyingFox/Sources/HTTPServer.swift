@@ -156,6 +156,7 @@ public final actor HTTPServer {
             for try await request in connection.requests {
                 logger?.logRequest(request, on: connection)
                 let response = await handleRequest(request)
+                try await request.bodySequence.flushIfNeeded()
                 try await connection.sendResponse(response)
             }
         } catch {

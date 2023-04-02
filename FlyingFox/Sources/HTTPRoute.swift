@@ -120,7 +120,7 @@ public extension HTTPRoute {
     private func patternMatch(request: HTTPRequest) -> Bool {
         guard patternMatch(query: request.query),
               patternMatch(headers: request.headers),
-              patternMatch(body: request.payload) else { return false }
+              patternMatch(body: request.bodySequence) else { return false }
 
         let nodes = request.path.split(separator: "/", omittingEmptySubsequences: true)
         guard self.method ~= request.method.rawValue else {
@@ -154,9 +154,16 @@ public extension HTTPRoute {
         }
     }
 
-    private func patternMatch(body request: Data) -> Bool {
+    private func patternMatch(body request: HTTPBodySequence) -> Bool {
         guard let body = body else { return true }
-        return body.evaluate(request)
+
+        switch request.storage {
+        case .complete(let data):
+            return body.evaluate(data)
+        case .sequence:
+            // HTTPBodyPattern cannot be applied when the body is not completely loaded (large requests)
+            return false
+        }
     }
 
     private static func components(for target: String) -> (method: String, path: String) {

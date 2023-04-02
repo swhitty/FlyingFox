@@ -122,9 +122,9 @@ final class HTTPEncoderTests: XCTestCase {
         )
     }
 
-    func testEncodesRequest() throws {
-        XCTAssertEqual(
-            try HTTPEncoder.encodeRequest(
+    func testEncodesRequest() async throws {
+        await AsyncAssertEqual(
+            try await HTTPEncoder.encodeRequest(
                 .make(method: .GET,
                       version: .http11,
                       path: "greeting/hello world",
@@ -141,9 +141,9 @@ final class HTTPEncoderTests: XCTestCase {
         )
     }
 
-    func testEncodesRequest_WithQuery() throws {
-        XCTAssertEqual(
-            try HTTPEncoder.encodeRequest(
+    func testEncodesRequest_WithQuery() async throws {
+        await AsyncAssertEqual(
+            try await HTTPEncoder.encodeRequest(
                 .make(method: .GET,
                       version: .http11,
                       path: "greeting/hello world",

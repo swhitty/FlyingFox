@@ -37,21 +37,41 @@ public struct HTTPRequest: Sendable {
     public var path: String
     public var query: [QueryItem]
     public var headers: [HTTPHeader: String]
-    @UncheckedSendable
-    internal var payload: Data
+    public var bodySequence: HTTPBodySequence
 
     public var bodyData: Data {
-        get async throws { payload }
+        get async throws {
+            try await bodySequence.get()
+        }
     }
 
     public mutating func setBodyData(_ data: Data) {
-        payload = data
+        bodySequence = HTTPBodySequence(data: data)
     }
 
     @available(*, deprecated, renamed: "bodyData")
     public var body: Data {
-        get { payload }
-        set { payload = newValue }
+        get {
+            guard case .complete(let data) = bodySequence.storage else {
+                preconditionFailure("Body is too large for synchronous accessor. Iterate using HTTPBodySequence")
+            }
+            return data
+        }
+        set { setBodyData(newValue) }
+    }
+
+    public init(method: HTTPMethod,
+                version: HTTPVersion,
+                path: String,
+                query: [QueryItem],
+                headers: [HTTPHeader: String],
+                body: HTTPBodySequence) {
+        self.method = method
+        self.version = version
+        self.path = path
+        self.query = query
+        self.headers = headers
+        self.bodySequence = body
     }
 
     public init(method: HTTPMethod,
@@ -65,12 +85,26 @@ public struct HTTPRequest: Sendable {
         self.path = path
         self.query = query
         self.headers = headers
-        self.payload = body
+        self.bodySequence = HTTPBodySequence(data: body)
     }
 }
 
 @available(*, deprecated, message: "HTTPRequest will soon remove conformance to Equatable")
-extension HTTPRequest: Equatable { }
+extension HTTPRequest: Equatable {
+
+    public static func == (lhs: HTTPRequest, rhs: HTTPRequest) -> Bool {
+        guard case .complete(let lhsBody) = lhs.bodySequence.storage,
+              case .complete(let rhsBody) = rhs.bodySequence.storage else {
+            return false
+        }
+        return lhs.method == rhs.method &&
+               lhs.version == rhs.version &&
+               lhs.path == rhs.path &&
+               lhs.query == rhs.query &&
+               lhs.headers == rhs.headers &&
+               lhsBody == rhsBody
+    }
+}
 
 extension HTTPRequest {
     var shouldKeepAlive: Bool {
