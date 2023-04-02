@@ -71,9 +71,11 @@ public struct AsyncDataSequence: AsyncSequence, Sendable {
             return data
         }
     }
+
+    public func flushIfNeeded() async throws {
+        try await loader.flushIfNeeded()
+    }
 }
-
-
 
 private extension AsyncDataSequence {
 
@@ -112,6 +114,20 @@ private extension AsyncDataSequence {
             } catch {
                 state = .complete
                 throw error
+            }
+        }
+
+        public func flushIfNeeded() async throws {
+            switch state {
+            case .ready(index: var index):
+                while let data = try await nextData(from: index) {
+                    index += data.count
+                }
+                return
+            case .fetching:
+                throw Error.unexpectedState
+            case .complete:
+                return
             }
         }
 

@@ -135,7 +135,69 @@ final class AsyncDataSequenceTests: XCTestCase {
             try await it1.next()
         )
     }
-}
+
+    func testIsFlushed_FromStart() async {
+        // given
+        let buffer = ConsumingAsyncSequence<UInt8>(
+            [0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9]
+        )
+        let sequence = AsyncDataSequence(from: buffer, count: 10, chunkSize: 2)
+
+        // then
+        XCTAssertEqual(buffer.index, 0)
+
+        // when
+        await AsyncAssertNoThrow(
+            try await sequence.flushIfNeeded()
+        )
+
+        // then
+        XCTAssertEqual(buffer.index, 10)
+    }
+
+    func testIsFlushed_FromEnd() async {
+        // given
+        let buffer = ConsumingAsyncSequence<UInt8>(
+            [0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9]
+        )
+        let sequence = AsyncDataSequence(from: buffer, count: 10, chunkSize: 2)
+        await AsyncAssertNoThrow(
+            try await sequence.get()
+        )
+
+        // then
+        XCTAssertEqual(buffer.index, 10)
+
+        // when
+        await AsyncAssertNoThrow(
+            try await sequence.flushIfNeeded()
+        )
+
+        // then
+        XCTAssertEqual(buffer.index, 10)
+    }
+
+    func testIsFlushed_FromMiddle() async {
+        // given
+        let buffer = ConsumingAsyncSequence<UInt8>(
+            [0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9]
+        )
+        let sequence = AsyncDataSequence(from: buffer, count: 10, chunkSize: 2)
+        await AsyncAssertNoThrow(
+            try await sequence.first()
+        )
+
+        // then
+        XCTAssertEqual(buffer.index, 2)
+
+        // when
+        await AsyncAssertNoThrow(
+            try await sequence.flushIfNeeded()
+        )
+
+        // then
+        XCTAssertEqual(buffer.index, 10)
+    }}
 
 extension AsyncDataSequence {
 
@@ -146,11 +208,25 @@ extension AsyncDataSequence {
             chunkSize: chunkSize
         )
     }
+
+    func get() async throws -> Data {
+        try await reduce(into: Data()) {
+            $0.append($1)
+        }
+    }
+
+    func first() async throws -> Data {
+        guard let element = try await first(where: { _ in true }) else {
+            throw SocketError.disconnected
+        }
+        return element
+    }
 }
 
 private final class ConsumingAsyncSequence<Element>: AsyncChunkedSequence, AsyncChunkedIteratorProtocol {
 
     private var iterator: AnySequence<Element>.Iterator
+    private(set) var index: Int = 0
 
     init<T: Sequence>(_ sequence: T) where T.Element == Element {
         self.iterator = AnySequence(sequence).makeIterator()
@@ -168,6 +244,8 @@ private final class ConsumingAsyncSequence<Element>: AsyncChunkedSequence, Async
               let element = iterator.next() {
             buffer.append(element)
         }
+
+        index += buffer.count
 
         return buffer.count == count ? buffer : nil
     }

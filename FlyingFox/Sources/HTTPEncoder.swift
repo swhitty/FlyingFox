@@ -63,7 +63,7 @@ struct HTTPEncoder {
                       request.version.rawValue].joined(separator: " ")
 
         var httpHeaders = request.headers
-        httpHeaders[.contentLength] = String(request.payload.count)
+        httpHeaders[.contentLength] = String(request.bodySequence.count)
         let headers = httpHeaders.map { "\($0.key.rawValue): \($0.value)" }
 
         return [status] + headers + ["\r\n"]
@@ -79,12 +79,12 @@ struct HTTPEncoder {
         return "\(comps.percentEncodedPath)?\(query)"
     }
 
-    static func encodeRequest(_ request: HTTPRequest) throws -> Data {
+    static func encodeRequest(_ request: HTTPRequest) async throws -> Data {
         var data = makeHeaderLines(from: request)
             .joined(separator: "\r\n")
             .data(using: .utf8)!
 
-        data.append(request.payload)
+        try await data.append(request.bodyData)
 
         return data
     }

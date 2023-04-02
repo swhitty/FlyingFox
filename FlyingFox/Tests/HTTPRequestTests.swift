@@ -1,9 +1,9 @@
 //
-//  ConsumingAsyncSequence.swift
+//  HTTPRequestTests.swift
 //  FlyingFox
 //
-//  Created by Simon Whitty on 17/02/2022.
-//  Copyright © 2022 Simon Whitty. All rights reserved.
+//  Created by Simon Whitty on 02/04/2023.
+//  Copyright © 2023 Simon Whitty. All rights reserved.
 //
 //  Distributed under the permissive MIT license
 //  Get the latest version from here:
@@ -29,30 +29,28 @@
 //  SOFTWARE.
 //
 
-import FlyingSocks
+@testable import FlyingFox
+import XCTest
 
-final class ConsumingAsyncSequence<Element>: AsyncChunkedSequence, AsyncChunkedIteratorProtocol {
+final class HTTPRequestTests: XCTestCase {
 
-    private var iterator: AnySequence<Element>.Iterator
-    private(set) var index: Int = 0
+    func testRequestBodyData_CanBeChanged() async {
+        // when
+        var request = HTTPRequest.make(body: Data([0x01, 0x02]))
 
-    init<T: Sequence>(_ sequence: T) where T.Element == Element {
-        self.iterator = AnySequence(sequence).makeIterator()
-    }
+        // then
+        await AsyncAssertEqual(
+            try await request.bodyData,
+            Data([0x01, 0x02])
+        )
 
-    func makeAsyncIterator() -> ConsumingAsyncSequence<Element> { self }
+        // when
+        request.setBodyData(Data([0x05, 0x06]))
 
-    func next() async throws -> Element? {
-        iterator.next()
-    }
-
-    func nextChunk(count: Int) async throws -> [Element]? {
-        var buffer = [Element]()
-        while buffer.count < count,
-              let element = iterator.next() {
-            buffer.append(element)
-        }
-        index += buffer.count
-        return buffer.count == count ? buffer : nil
+        // then
+        await AsyncAssertEqual(
+            try await request.bodyData,
+            Data([0x05, 0x06])
+        )
     }
 }
