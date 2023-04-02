@@ -71,13 +71,19 @@ public struct FileHTTPHandler: HTTPHandler {
     }
 
     public func handleRequest(_ request: HTTPRequest) async throws -> HTTPResponse {
-        guard let path = path,
-              let data = try? Data(contentsOf: path) else {
-                  return HTTPResponse(statusCode: .notFound)
-              }
+        guard let path = path else {
+            return HTTPResponse(statusCode: .notFound)
+        }
 
-        return HTTPResponse(statusCode: .ok,
-                            headers: [.contentType: contentType],
-                            body: data)
+        do {
+            return try HTTPResponse(
+                statusCode: .ok,
+                headers: [.contentType: contentType],
+                body: HTTPBodySequence(file: path)
+            )
+        } catch {
+            print("🔴", error)
+            return HTTPResponse(statusCode: .notFound)
+        }
     }
 }

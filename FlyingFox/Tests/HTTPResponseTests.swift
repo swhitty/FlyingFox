@@ -32,85 +32,45 @@
 @testable import FlyingFox
 import XCTest
 
-final class HTTPResponseTests: XCTestCase {
+final class HTTPRequestTests: XCTestCase {
 
-    func testCompleteBodyData() async {
-        // given
-        let response = HTTPResponse.make(body: Data([0x01, 0x02]))
-
-        // then
-        await AsyncAssertEqual(
-            try await response.bodyData,
-            Data([0x01, 0x02])
-        )
-    }
-
-    func testSequenceBodyData() async {
-        // given
-        let buffer = ConsumingAsyncSequence<UInt8>(
-            [0x5, 0x6]
-        )
-        let sequence = HTTPBodySequence(from: buffer, count: 2, chunkSize: 2)
-        let response = HTTPResponse.make(body: sequence)
+    func testRequestBodyData_CanBeChanged() async {
+        // when
+        var request = HTTPRequest.make(body: Data([0x01, 0x02]))
 
         // then
         await AsyncAssertEqual(
-            try await response.bodyData,
-            Data([0x5, 0x6])
-        )
-    }
-
-    func testWebSocketBodyData() async {
-        // given
-        let response = HTTPResponse.make(webSocket: MessageFrameWSHandler.make())
-
-        // then
-        await AsyncAssertNil(
-            try await response.bodyData
-        )
-    }
-
-    func testDeprecatedBodyProperty_Complete() {
-        // given
-        var response = HTTPResponse.make(body: Data([0x01, 0x02]))
-
-        // then
-        XCTAssertEqual(
-            response.body,
+            try await request.bodyData,
             Data([0x01, 0x02])
         )
 
         // when
-        response.payload = .body(Data([0x04, 0x05]))
+        request.setBodyData(Data([0x05, 0x06]))
+
+        // then
+        await AsyncAssertEqual(
+            try await request.bodyData,
+            Data([0x05, 0x06])
+        )
+    }
+
+    func testDeprecatedBodyProperty() {
+        // when
+        var request = HTTPRequest.make(body: Data([0x01, 0x02]))
 
         // then
         XCTAssertEqual(
-            response.body,
+            request.body,
+            Data([0x01, 0x02])
+        )
+
+        // when
+        request.body = Data([0x04, 0x05])
+
+        // then
+        XCTAssertEqual(
+            request.body,
             Data([0x04, 0x05])
-        )
-    }
-
-    func testDeprecatedBodyProperty_Sequence() {
-        // given
-        let buffer = ConsumingAsyncSequence<UInt8>(
-            [0x5, 0x6]
-        )
-        let sequence = HTTPBodySequence(from: buffer, count: 2, chunkSize: 2)
-        let response = HTTPResponse.make(body: sequence)
-
-        // then
-        XCTAssertNil(
-            response.body
-        )
-    }
-
-    func testDeprecatedBodyProperty_WebSocket() {
-        // given
-        let response = HTTPResponse.make(webSocket: MessageFrameWSHandler.make())
-
-        // then
-        XCTAssertNil(
-            response.body
         )
     }
 }

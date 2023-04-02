@@ -46,8 +46,33 @@ public struct HTTPBodySequence: Sendable, AsyncSequence {
         self.storage = .complete(data)
     }
 
-    public init<S: AsyncChunkedSequence>(from bytes: S, count: Int, chunkSize: Int) where S.Element == UInt8 {
-        self.storage = .sequence(AsyncDataSequence(from: bytes, count: count, chunkSize: chunkSize))
+    public init<S: AsyncChunkedSequence>(from bytes: S, count: Int) where S.Element == UInt8 {
+        self.storage = .sequence(
+            AsyncDataSequence(from: bytes, count: count, chunkSize: 4096)
+        )
+    }
+
+    public init(file url: URL) throws {
+        try self.init(file: url, chunkSize: 4096)
+    }
+
+    init<S: AsyncChunkedSequence>(from bytes: S, count: Int, chunkSize: Int) where S.Element == UInt8 {
+        self.storage = .sequence(
+            AsyncDataSequence(from: bytes, count: count, chunkSize: chunkSize)
+        )
+    }
+
+    init(file url: URL, maxSizeForComplete: Int = 10_485_760, chunkSize: Int) throws {
+        let count = try AsyncDataSequence.size(of: url)
+        if count <= maxSizeForComplete {
+            self.storage = try .complete(Data(contentsOf: url))
+        } else {
+            self.storage = try .sequence(
+                AsyncDataSequence(file: FileHandle(forReadingFrom: url),
+                                  count: count,
+                                  chunkSize: chunkSize)
+            )
+        }
     }
 
     public func makeAsyncIterator() -> Iterator {

@@ -197,7 +197,43 @@ final class AsyncDataSequenceTests: XCTestCase {
 
         // then
         XCTAssertEqual(buffer.index, 10)
-    }}
+    }
+
+    func testFileCount() throws {
+        let sequence = try AsyncDataSequence.make(file: .jackOfHeartsRecital, chunkSize: 100)
+        XCTAssertEqual(sequence.count, 299)
+    }
+
+    func testFile_IsReturnedInChunks() async throws {
+        let sequence = try AsyncDataSequence.make(file: .jackOfHeartsRecital, chunkSize: 100)
+        var iterator = sequence.makeAsyncIterator()
+
+        await AsyncAssertEqual(
+            try await iterator.next()?.count,
+            100
+        )
+
+        await AsyncAssertEqual(
+            try await iterator.next()?.count,
+            100
+        )
+
+        await AsyncAssertEqual(
+            try await iterator.next()?.count,
+            99
+        )
+
+        await AsyncAssertNil(
+            try await iterator.next()
+        )
+    }
+}
+
+private extension URL {
+    static var jackOfHeartsRecital: URL {
+        Bundle.module.url(forResource: "Resources/JackOfHeartsRecital.txt", withExtension: nil)!
+    }
+}
 
 extension AsyncDataSequence {
 
@@ -205,6 +241,14 @@ extension AsyncDataSequence {
         AsyncDataSequence(
             from: ConsumingAsyncSequence(bytes),
             count: count ?? bytes.count,
+            chunkSize: chunkSize
+        )
+    }
+
+    static func make(file url: URL, chunkSize: Int = 2) throws -> Self {
+        try AsyncDataSequence(
+            file: FileHandle(forReadingFrom: url),
+            count: AsyncDataSequence.size(of: url),
             chunkSize: chunkSize
         )
     }

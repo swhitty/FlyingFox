@@ -38,14 +38,36 @@ public struct HTTPResponse: Sendable {
     public var payload: Payload
 
     public enum Payload: @unchecked Sendable {
-        case body(Data)
+        case httpBody(HTTPBodySequence)
         case webSocket(WSHandler)
+
+        @available(*, deprecated, renamed: "httpBody")
+        static func body(_ data: Data) -> Self {
+            .httpBody(HTTPBodySequence(data: data))
+        }
     }
 
+    public var bodyData: Data? {
+        get async throws {
+            switch payload {
+            case .httpBody(let body):
+                return try await body.get()
+            case .webSocket:
+                return nil
+            }
+        }
+    }
+
+    @available(*, deprecated, renamed: "bodyData")
     public var body: Data? {
         switch payload {
-        case .body(let body):
-            return body
+        case .httpBody(let body):
+            switch body.storage {
+            case .complete(let data):
+                return data
+            case .sequence:
+                return nil
+            }
         case .webSocket:
             return nil
         }
@@ -58,7 +80,17 @@ public struct HTTPResponse: Sendable {
         self.version = version
         self.statusCode = statusCode
         self.headers = headers
-        self.payload = .body(body)
+        self.payload = .httpBody(HTTPBodySequence(data: body))
+    }
+
+    public init(version: HTTPVersion = .http11,
+                statusCode: HTTPStatusCode,
+                headers: [HTTPHeader: String] = [:],
+                body: HTTPBodySequence) {
+        self.version = version
+        self.statusCode = statusCode
+        self.headers = headers
+        self.payload = .httpBody(body)
     }
 
     public init(headers: [HTTPHeader: String] = [:],

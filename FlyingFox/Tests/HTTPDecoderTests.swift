@@ -239,8 +239,8 @@ final class HTTPDecoderTests: XCTestCase {
             """
         )
 
-        XCTAssertEqual(
-            response.body,
+        await AsyncAssertEqual(
+            try await response.bodyData,
             Data()
         )
     }
@@ -255,8 +255,8 @@ final class HTTPDecoderTests: XCTestCase {
             """
         )
 
-        XCTAssertEqual(
-            response.body,
+        await AsyncAssertEqual(
+            try await response.bodyData,
             "Hello".data(using: .utf8)
         )
     }

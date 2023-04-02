@@ -105,9 +105,9 @@ final class HTTPEncoderTests: XCTestCase {
         )
     }
 
-    func testEncodesResponse() throws {
+    func testEncodesResponseHeader() throws {
         XCTAssertEqual(
-            HTTPEncoder.encodeResponse(
+            HTTPEncoder.encodeResponseHeader(
                 .make(version: .http11,
                       statusCode: .ok,
                       headers: [:],
@@ -117,7 +117,7 @@ final class HTTPEncoderTests: XCTestCase {
             HTTP/1.1 200 OK\r
             Content-Length: 12\r
             \r
-            Hello World!
+
             """.data(using: .utf8)
         )
     }
