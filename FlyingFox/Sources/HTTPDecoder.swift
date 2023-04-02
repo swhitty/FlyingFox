@@ -34,7 +34,7 @@ import Foundation
 
 struct HTTPDecoder {
 
-    static func decodeRequest<S>(from bytes: S) async throws -> HTTPRequest where S: ChunkedAsyncSequence, S.Element == UInt8 {
+    static func decodeRequest<S>(from bytes: S) async throws -> HTTPRequest where S: AsyncChunkedSequence, S.Element == UInt8 {
         let status = try await bytes.lines.takeNext()
         let comps = status
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -60,7 +60,7 @@ struct HTTPDecoder {
         )
     }
 
-    static func decodeResponse<S>(from bytes: S) async throws -> HTTPResponse where S: ChunkedAsyncSequence, S.Element == UInt8 {
+    static func decodeResponse<S>(from bytes: S) async throws -> HTTPResponse where S: AsyncChunkedSequence, S.Element == UInt8 {
         let comps = try await bytes.lines.takeNext()
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .split(separator: " ", maxSplits: 2, omittingEmptySubsequences: true)
@@ -104,7 +104,7 @@ struct HTTPDecoder {
         return (HTTPHeader(name), value)
     }
 
-    static func readHeaders<S: ChunkedAsyncSequence>(from bytes: S) async throws -> [HTTPHeader : String] where S.Element == UInt8 {
+    static func readHeaders<S: AsyncChunkedSequence>(from bytes: S) async throws -> [HTTPHeader : String] where S.Element == UInt8 {
         try await bytes
             .lines
             .prefix { $0 != "\r" && $0 != "" }
@@ -112,14 +112,14 @@ struct HTTPDecoder {
             .reduce(into: [HTTPHeader: String]()) { $0[$1.header] = $1.value }
     }
 
-    static func readBody<S: ChunkedAsyncSequence>(from bytes: S, length: String?) async throws -> Data where S.Element == UInt8 {
+    static func readBody<S: AsyncChunkedSequence>(from bytes: S, length: String?) async throws -> Data where S.Element == UInt8 {
         guard let length = length.flatMap(Int.init) else {
             return Data()
         }
 
         var iterator = bytes.makeAsyncIterator()
         guard let buffer = try await iterator.nextChunk(count: length) else {
-            throw Error("ChunkedAsyncSequence prematurely ended")
+            throw Error("AsyncChunkedSequence prematurely ended")
         }
 
         return Data(buffer)

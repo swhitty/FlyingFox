@@ -163,7 +163,7 @@ private extension AsyncSocketPool {
     }
 }
 
-public struct AsyncSocketReadSequence: ChunkedAsyncSequence, ChunkedAsyncIteratorProtocol, Sendable {
+public struct AsyncSocketReadSequence: AsyncChunkedSequence, AsyncChunkedIteratorProtocol, Sendable {
     public typealias Element = UInt8
 
     let socket: AsyncSocket

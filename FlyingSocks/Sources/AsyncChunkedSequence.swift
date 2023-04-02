@@ -1,5 +1,5 @@
 //
-//  ChunkedAsyncSequence.swift
+//  AsyncChunkedSequence.swift
 //  FlyingFox
 //
 //  Created by Simon Whitty on 20/02/2022.
@@ -30,13 +30,23 @@
 //
 
 /// AsyncSequence that is able to also receive elements in chunks, instead of just one-at-a-time.
+public protocol AsyncChunkedSequence: AsyncSequence where AsyncIterator: AsyncChunkedIteratorProtocol {
+
+}
+
+public protocol AsyncChunkedIteratorProtocol: AsyncIteratorProtocol {
+
+    /// Retrieves n elements from sequence in a single array.
+    /// - Returns: Array with the number of elements that was requested. Or Nil.
+    mutating func nextChunk(count: Int) async throws -> [Element]?
+}
+
+@available(*, deprecated, renamed: "AsyncChunkedSequence")
 public protocol ChunkedAsyncSequence: AsyncSequence where AsyncIterator: ChunkedAsyncIteratorProtocol {
 
 }
 
+@available(*, deprecated, renamed: "AsyncChunkedIteratorProtocol")
 public protocol ChunkedAsyncIteratorProtocol: AsyncIteratorProtocol {
-
-    /// Retrieves n elements from sequence in a single array.
-    /// - Returns: Array with the number of elements that was requested. Or Nil.
     mutating func nextChunk(count: Int) async throws -> [Element]?
 }

@@ -31,7 +31,7 @@
 
 import FlyingSocks
 
-final class ConsumingAsyncSequence<Element>: ChunkedAsyncSequence, ChunkedAsyncIteratorProtocol {
+final class ConsumingAsyncSequence<Element>: AsyncChunkedSequence, AsyncChunkedIteratorProtocol {
 
     private var iterator: AnySequence<Element>.Iterator
 

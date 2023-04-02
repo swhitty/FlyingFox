@@ -67,7 +67,7 @@ struct WSFrameEncoder {
         return data
     }
 
-    static func decodeFrame<S>(from bytes: S) async throws -> WSFrame where S: ChunkedAsyncSequence, S.Element == UInt8 {
+    static func decodeFrame<S>(from bytes: S) async throws -> WSFrame where S: AsyncChunkedSequence, S.Element == UInt8 {
         var frame = try await decodeFrame(from: bytes.take())
         let (length, mask) = try await decodeLengthMask(from: bytes)
         frame.payload = try await decodePayload(from: bytes, length: length, mask: mask)
@@ -117,7 +117,7 @@ struct WSFrameEncoder {
         }
     }
 
-    static func decodePayload<S>(from bytes: S, length: Int, mask: WSFrame.Mask?) async throws -> Data where S: ChunkedAsyncSequence, S.Element == UInt8 {
+    static func decodePayload<S>(from bytes: S, length: Int, mask: WSFrame.Mask?) async throws -> Data where S: AsyncChunkedSequence, S.Element == UInt8 {
         var iterator = bytes.makeAsyncIterator()
         guard var payload = try await iterator.nextChunk(count: length) else {
             throw SocketError.disconnected
@@ -130,7 +130,7 @@ struct WSFrameEncoder {
         return Data(payload)
     }
 
-    static func decodeLengthMask<S>(from bytes: S) async throws -> (length: Int, mask: WSFrame.Mask?) where S: ChunkedAsyncSequence, S.Element == UInt8 {
+    static func decodeLengthMask<S>(from bytes: S) async throws -> (length: Int, mask: WSFrame.Mask?) where S: AsyncChunkedSequence, S.Element == UInt8 {
         let byte0 = try await bytes.take()
         let hasMask = byte0 & 0b10000000 == 0b10000000
         let length0 = byte0 & 0b01111111
@@ -158,7 +158,7 @@ struct WSFrameEncoder {
         }
     }
 
-    static func decodeMask<S>(from bytes: S) async throws -> WSFrame.Mask where S: ChunkedAsyncSequence, S.Element == UInt8 {
+    static func decodeMask<S>(from bytes: S) async throws -> WSFrame.Mask where S: AsyncChunkedSequence, S.Element == UInt8 {
         try await WSFrame.Mask(m1: bytes.take(),
                                m2: bytes.take(),
                                m3: bytes.take(),

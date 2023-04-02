@@ -88,7 +88,7 @@ extension HTTPConnection: Hashable {
     }
 }
 
-actor HTTPRequestSequence<S: ChunkedAsyncSequence & Sendable>: AsyncSequence, AsyncIteratorProtocol, @unchecked Sendable where S.Element == UInt8 {
+actor HTTPRequestSequence<S: AsyncChunkedSequence & Sendable>: AsyncSequence, AsyncIteratorProtocol, @unchecked Sendable where S.Element == UInt8 {
     typealias Element = HTTPRequest
     private let bytes: S
 

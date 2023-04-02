@@ -272,7 +272,7 @@ private extension HTTPDecoder {
     }
 }
 
-private struct EmptyChunkedSequence: ChunkedAsyncSequence, ChunkedAsyncIteratorProtocol {
+private struct EmptyChunkedSequence: AsyncChunkedSequence, AsyncChunkedIteratorProtocol {
     mutating func next() async throws -> UInt8? {
         return nil
     }
