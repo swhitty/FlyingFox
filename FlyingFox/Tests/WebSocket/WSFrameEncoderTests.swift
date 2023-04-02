@@ -328,7 +328,6 @@ final class WSFrameEncoderTests: XCTestCase {
         request.headers[.connection] = "Upgrade"
         request.headers[.webSocketVersion] = "13"
         request.headers[.webSocketKey] = key
-        try print(String(data: HTTPEncoder.encodeRequest(request), encoding: .utf8)!)
 
         try await socket.writeRequest(request)
         let response = try await socket.readResponse()
@@ -337,19 +336,15 @@ final class WSFrameEncoderTests: XCTestCase {
             response.headers[.webSocketAccept],
             WebSocketHTTPHandler.makeSecWebSocketAcceptValue(for: key)
         )
-        print(String(data: HTTPEncoder.encodeResponse(response), encoding: .utf8)!)
 
         var frame = WSFrame.make(fin: true, opcode: .text, mask: .mock, payload: "FlyingFox".data(using: .utf8)!)
         try await socket.writeFrame(frame)
-        try await print("Frame", socket.readFrame())
 
         frame = WSFrame.make(fin: true, opcode: .text, mask: .mock, payload: "FlyingSox".data(using: .utf8)!)
         try await socket.writeFrame(frame)
-        try await print("Frame", socket.readFrame())
 
         frame = WSFrame.close(mask: .mock)
         try await socket.writeFrame(frame)
-        try await print("Frame", socket.readFrame())
     }
 }
 
