@@ -47,13 +47,13 @@ public struct HTTPResponse: Sendable {
         }
     }
 
-    public var bodyData: Data? {
+    public var bodyData: Data {
         get async throws {
             switch payload {
             case .httpBody(let body):
                 return try await body.get()
             case .webSocket:
-                return nil
+                return Data()
             }
         }
     }

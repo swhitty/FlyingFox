@@ -65,8 +65,9 @@ final class HTTPResponseTests: XCTestCase {
         let response = HTTPResponse.make(webSocket: MessageFrameWSHandler.make())
 
         // then
-        await AsyncAssertNil(
-            try await response.bodyData
+        await AsyncAssertEqual(
+            try await response.bodyData,
+            Data()
         )
     }
 
