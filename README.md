@@ -32,7 +32,7 @@ FlyingFox can be installed by using Swift Package Manager.
 To install using Swift Package Manager, add this to the `dependencies:` section in your Package.swift file:
 
 ```swift
-.package(url: "https://github.com/swhitty/FlyingFox.git", .upToNextMajor(from: "0.11.0"))
+.package(url: "https://github.com/swhitty/FlyingFox.git", .upToNextMajor(from: "0.11.1"))
 ```
 
 # Usage
