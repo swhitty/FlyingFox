@@ -82,7 +82,6 @@ public struct FileHTTPHandler: HTTPHandler {
                 body: HTTPBodySequence(file: path)
             )
         } catch {
-            print("🔴", error)
             return HTTPResponse(statusCode: .notFound)
         }
     }
