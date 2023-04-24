@@ -36,9 +36,9 @@ jobs:
       - name: Version
         run: swift --version
       - name: Build
-        run: swift test --enable-code-coverage --filter do_not_test
+        run: swift build --build-tests
       - name: Test
-        run: swift test --enable-code-coverage --skip-build
+        run: swift test --skip-build
 
   xcode_13_4:
     runs-on: macos-12
@@ -50,9 +50,9 @@ jobs:
       - name: Version
         run: swift --version
       - name: Build
-        run: swift test --enable-code-coverage --filter do_not_test
+        run: swift build --build-tests
       - name: Test
-        run: swift test --enable-code-coverage --skip-build
+        run: swift test --skip-build
 
   xcode_13_2_1:
     runs-on: macos-11
@@ -64,9 +64,9 @@ jobs:
       - name: Version
         run: swift --version
       - name: Build
-        run: swift test --enable-code-coverage --filter do_not_test
+        run: swift build --build-tests
       - name: Test
-        run: swift test --enable-code-coverage --skip-build
+        run: swift test --skip-build
 
   linux_swift_5_6_3:
     runs-on: ubuntu-latest
@@ -77,9 +77,9 @@ jobs:
       - name: Version
         run: swift --version
       - name: Build
-        run: swift test --enable-code-coverage --filter do_not_test
+        run: swift build --build-tests
       - name: Test
-        run: swift test --enable-code-coverage --skip-build
+        run: swift test --skip-build
 
   linux_swift_5_7:
     runs-on: ubuntu-latest
@@ -90,9 +90,9 @@ jobs:
       - name: Version
         run: swift --version
       - name: Build
-        run: swift test --enable-code-coverage --filter do_not_test
+        run: swift build --build-tests
       - name: Test
-        run: swift test --enable-code-coverage --skip-build
+        run: swift test --skip-build
 
   linux_swift_5_8:
     runs-on: ubuntu-latest
@@ -103,6 +103,6 @@ jobs:
       - name: Version
         run: swift --version
       - name: Build
-        run: swift test --enable-code-coverage --filter do_not_test
+        run: swift build --build-tests
       - name: Test
-        run: swift test --enable-code-coverage --skip-build
+        run: swift test --skip-build
