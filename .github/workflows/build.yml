@@ -6,10 +6,10 @@ on:
   workflow_dispatch:
 
 jobs:
-  xcode_14_2:
-    runs-on: macos-12
+  xcode_14_3:
+    runs-on: macos-13
     env:
-      DEVELOPER_DIR: /Applications/Xcode_14.2.app/Contents/Developer
+      DEVELOPER_DIR: /Applications/Xcode_14.3.app/Contents/Developer
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -25,6 +25,20 @@ jobs:
         uses: codecov/codecov-action@v3
         with:
           files: ./coverage_report.lcov
+
+  xcode_14_2:
+    runs-on: macos-12
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_14.2.app/Contents/Developer
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Version
+        run: swift --version
+      - name: Build
+        run: swift build --build-tests
+      - name: Test
+        run: swift test --skip-build
 
   xcode_13_4:
     runs-on: macos-12
