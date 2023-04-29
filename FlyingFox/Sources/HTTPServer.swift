@@ -142,9 +142,8 @@ public final actor HTTPServer {
                     await self.handleConnection(HTTPConnection(socket: socket, logger: logger))
                 }
             }
-            try await group.waitForAll()
-            throw SocketError.disconnected
         }
+        throw SocketError.disconnected
     }
 
     private(set) var connections: Set<HTTPConnection> = []
