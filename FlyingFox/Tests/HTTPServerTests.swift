@@ -279,13 +279,12 @@ final class HTTPServerTests: XCTestCase {
         )
     }
 
-
     func testServer_ListeningAddress_IP6() async throws {
-        let server = HTTPServer.make(address: .inet6(port: 8080))
+        let server = HTTPServer.make(address: .inet6(port: 5191))
         try await startServer(server)
         await AsyncAssertEqual(
             await server.listeningAddress,
-            .ip6("::", port: 8080)
+            .ip6("::", port: 5191)
         )
     }
 
