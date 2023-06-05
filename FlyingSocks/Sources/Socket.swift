@@ -80,8 +80,10 @@ public struct Socket: Sendable, Hashable {
 
     public func setValue<O: SocketOption>(_ value: O.Value, for option: O) throws {
         var value = option.makeSocketValue(from: value)
-        let length = socklen_t(MemoryLayout<O.SocketValue>.size)
-        guard Socket.setsockopt(file.rawValue, SOL_SOCKET, option.name, &value, length) >= 0 else {
+        let result = withUnsafeBytes(of: &value) {
+            Socket.setsockopt(file.rawValue, SOL_SOCKET, option.name, $0.baseAddress!, socklen_t($0.count))
+        }
+        guard result >= 0 else {
             throw SocketError.makeFailed("SetOption")
         }
     }
