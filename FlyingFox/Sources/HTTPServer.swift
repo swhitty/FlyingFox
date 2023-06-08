@@ -135,6 +135,35 @@ public final actor HTTPServer {
     }
 
     private func listenForConnections(on socket: AsyncSocket) async throws {
+#if compiler(>=5.9)
+        if #available(macOS 14.0, iOS 16.4, tvOS 16.4, *) {
+            try await listenForConnectionsDiscarding(on: socket)
+        } else {
+            try await listenForConnectionsFallback(on: socket)
+        }
+#else
+            try await listenForConnectionsFallback(on: socket)
+#endif
+    }
+
+#if compiler(>=5.9)
+    @available(macOS 14.0, iOS 16.4, tvOS 16.4, *)
+    private func listenForConnectionsDiscarding(on socket: AsyncSocket) async throws {
+        try await withThrowingDiscardingTaskGroup { [logger] group in
+            for try await socket in socket.sockets {
+                group.addTask {
+                    await self.handleConnection(HTTPConnection(socket: socket, logger: logger))
+                }
+            }
+        }
+        throw SocketError.disconnected
+    }
+#endif
+
+    @available(macOS, deprecated: 14.0, renamed: "listenForConnectionsDiscarding(on:)")
+    @available(iOS, deprecated: 16.4, renamed: "listenForConnectionsDiscarding(on:)")
+    @available(tvOS, deprecated: 16.4, renamed: "listenForConnectionsDiscarding(on:)")
+    private func listenForConnectionsFallback(on socket: AsyncSocket) async throws {
         try await withThrowingTaskGroup(of: Void.self) { [logger] group in
             for try await socket in socket.sockets {
                 group.addTask {
