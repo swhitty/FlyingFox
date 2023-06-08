@@ -92,7 +92,6 @@ public final actor HTTPServer {
         }
     }
 
-    var isListening: Bool { state != nil }
     var waiting: Set<Continuation> = []
     private(set) var state: (socket: Socket, task: Task<Void, Error>)? {
         didSet { isListeningDidUpdate(from: oldValue != nil ) }
