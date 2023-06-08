@@ -35,6 +35,8 @@ import FlyingSocks
 
 extension HTTPServer {
 
+    public var isListening: Bool { state != nil }
+
     public func waitUntilListening(timeout: TimeInterval = 5) async throws {
         try await withThrowingTimeout(seconds: timeout) {
             try await self.doWaitUntilListening()
