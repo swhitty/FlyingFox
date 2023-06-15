@@ -142,6 +142,10 @@ final class HTTPHandlerTests: XCTestCase {
             "application/pdf"
         )
         XCTAssertEqual(
+            FileHTTPHandler.makeContentType(for: "fish.svg"),
+            "image/svg+xml"
+        )
+        XCTAssertEqual(
             FileHTTPHandler.makeContentType(for: "fish.somefile"),
             "application/octet-stream"
         )

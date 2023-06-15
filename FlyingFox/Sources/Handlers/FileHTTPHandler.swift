@@ -65,6 +65,8 @@ public struct FileHTTPHandler: HTTPHandler {
             return "image/jpeg"
         case "pdf":
             return "application/pdf"
+        case "svg":
+            return "image/svg+xml"
         default:
             return "application/octet-stream"
         }
