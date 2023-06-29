@@ -146,6 +146,18 @@ final class HTTPHandlerTests: XCTestCase {
             "image/svg+xml"
         )
         XCTAssertEqual(
+            FileHTTPHandler.makeContentType(for: "fish.ico"),
+            "image/x-icon"
+        )
+        XCTAssertEqual(
+            FileHTTPHandler.makeContentType(for: "fish.webp"),
+            "image/webp"
+        )
+        XCTAssertEqual(
+            FileHTTPHandler.makeContentType(for: "fish.jp2"),
+            "image/jp2"
+        )
+        XCTAssertEqual(
             FileHTTPHandler.makeContentType(for: "fish.somefile"),
             "application/octet-stream"
         )
