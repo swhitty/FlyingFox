@@ -69,15 +69,21 @@ public final actor HTTPServer {
     }
 
     public func start() async throws {
-        let socket = try await preparePoolAndSocket()
+        guard state == nil else {
+            logger?.logCritical("server error: already started")
+            throw SocketError.unsupportedAddress
+        }
+        defer { state = nil }
         do {
+            let socket = try await preparePoolAndSocket()
             let task = Task { try await start(on: socket, pool: pool) }
             state = (socket: socket, task: task)
-            defer { state = nil }
             try await task.getValue(cancelling: .whenParentIsCancelled)
         } catch {
             logger?.logCritical("server error: \(error.localizedDescription)")
-            try? socket.close()
+            if let state = self.state {
+                try? state.socket.close()
+            }
             throw error
         }
     }
@@ -101,6 +107,7 @@ public final actor HTTPServer {
     /// - Parameter timeout: Seconds to allow for connections to close before server task is cancelled.
     public func stop(timeout: TimeInterval = 0) async {
         guard let (socket, task) = state else { return }
+        state = nil
         try? socket.close()
         for connection in connections {
             await connection.complete()
