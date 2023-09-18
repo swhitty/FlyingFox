@@ -47,14 +47,54 @@ final class HTTPServerTests: XCTestCase {
         return try await server.waitForListeningPort()
     }
 
-    func startServer(_ server: HTTPServer) async throws {
+    @discardableResult
+    func startServer(_ server: HTTPServer) async throws -> Task<Void, Error> {
         self.stopServer = server
-        Task { try await server.start() }
+        let task = Task { try await server.start() }
         try await server.waitUntilListening()
+        return task
     }
 
     override func tearDown() async throws {
         await stopServer?.stop(timeout: 0)
+    }
+
+    func testThrowsError_WhenAlreadyStarted() async throws {
+        let server = HTTPServer.make()
+        try await startServer(server)
+
+        await AsyncAssertThrowsError(try await server.start(), of: SocketError.self) {
+            XCTAssertEqual($0, .unsupportedAddress)
+        }
+    }
+
+    func testRestarts_AfterStopped() async throws {
+        let server = HTTPServer.make()
+        try await startServer(server)
+        await server.stop()
+
+        await AsyncAssertNoThrow(
+            try await startServer(server)
+        )
+    }
+
+    func testTaskCanBeCancelled() async throws {
+        let server = HTTPServer.make()
+        let task = try await startServer(server)
+
+        task.cancel()
+
+        await AsyncAssertThrowsError(try await task.value)
+    }
+
+    func testTaskCanBeCancelled_AfterServerIsStopped() async throws {
+        let server = HTTPServer.make()
+        let task = try await startServer(server)
+
+        await server.stop()
+        task.cancel()
+
+        await AsyncAssertThrowsError(try await task.value)
     }
 
     func testRequests_AreMatchedToHandlers_ViaRoute() async throws {
@@ -411,3 +451,4 @@ extension Task where Success == Never, Failure == Never {
         try await sleep(nanoseconds: UInt64(1_000_000_000 * seconds))
     }
 }
+
