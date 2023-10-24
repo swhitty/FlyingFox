@@ -37,14 +37,14 @@ final class SocketPoolTests: XCTestCase {
     typealias Continuation = CancellingContinuation<Void, SocketError>
     typealias Waiting = SocketPool<MockEventQueue>.Waiting
 
-#if canImport(Darwin) && compiler(>=5.7)
+#if canImport(Darwin)
     func testKqueuePool() {
         let pool = SocketPool.make(maxEvents: 5)
         XCTAssertTrue(type(of: pool) == SocketPool<kQueue>.self)
     }
 #endif
 
-#if canImport(CSystemLinux) && compiler(>=5.7)
+#if canImport(CSystemLinux)
     func testEPollPool() {
         let pool = SocketPool.make(maxEvents: 5)
         XCTAssertTrue(type(of: pool) == SocketPool<ePoll>.self)

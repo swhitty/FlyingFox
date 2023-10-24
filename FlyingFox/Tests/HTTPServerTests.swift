@@ -173,7 +173,7 @@ final class HTTPServerTests: XCTestCase {
         )
     }
 
-#if canImport(Darwin) && compiler(>=5.6)
+#if canImport(Darwin)
     func testServer_ReturnsWebSocketFramesToURLSession() async throws {
         try await Task.sleep(seconds: 0.3)
         let server = HTTPServer.make(address: .loopback(port: 0))
