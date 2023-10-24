@@ -68,6 +68,18 @@ final class HTTPServerTests: XCTestCase {
         }
     }
 
+    func testThrowsError_WhenSocketAlreadyListening() async throws {
+        let server = HTTPServer.make(port: 42185)
+        let socket = try await server.makeSocketAndListen()
+        defer { try! socket.close() }
+
+        await AsyncAssertThrowsError(try await server.start(), of: SocketError.self) {
+            XCTAssertTrue(
+                $0.errorDescription?.contains("Address already in use") == true
+            )
+        }
+    }
+
     func testRestarts_AfterStopped() async throws {
         let server = HTTPServer.make()
         try await startServer(server)
