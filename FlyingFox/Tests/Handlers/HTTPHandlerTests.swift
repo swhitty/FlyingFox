@@ -100,6 +100,13 @@ final class HTTPHandlerTests: XCTestCase {
         XCTAssertEqual(response.statusCode, .notFound)
     }
 
+    func testFileHandler_Returns404WhenPathDoesNotExist() async throws {
+        let handler = FileHTTPHandler(path: URL(fileURLWithPath: "unknown"), contentType: "chips")
+
+        let response = try await handler.handleRequest(.make())
+        XCTAssertEqual(response.statusCode, .notFound)
+    }
+
     func testFileHandler_DetectsCorrectContentType() {
         XCTAssertEqual(
             FileHTTPHandler.makeContentType(for: "fish.json"),
