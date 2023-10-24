@@ -148,12 +148,30 @@ final class AsyncSocketTests: XCTestCase {
         try s1.close()
         await AsyncAssertThrowsError(try s1.close(), of: SocketError.self)
     }
+
+    func testSocketSequence_Ends_WhenDisconnected() async throws {
+        let s1 = try AsyncSocket.makeListening(pool: DisconnectedPool())
+        var sockets = s1.sockets
+        await AsyncAssertNil(
+            try await sockets.next()
+        )
+    }
 }
 
 extension AsyncSocket {
 
     static func make() async throws -> AsyncSocket {
         try await make(pool: .client)
+    }
+
+    static func makeListening(pool: AsyncSocketPool) throws -> AsyncSocket {
+        let address = sockaddr_un.unix(path: "foxsocks")
+        try? Socket.unlink(address)
+        let socket = try Socket(domain: AF_UNIX, type: Socket.stream)
+        try socket.setValue(true, for: .localAddressReuse)
+        try socket.bind(to: address)
+        try socket.listen()
+        return try AsyncSocket(socket: socket, pool: pool)
     }
 
     static func make(pool: AsyncSocketPool) throws -> AsyncSocket {
@@ -186,5 +204,16 @@ extension AsyncSocket {
             throw SocketError.makeFailed("Read")
         }
         return string
+    }
+}
+
+struct DisconnectedPool: AsyncSocketPool {
+
+    func prepare() async throws { }
+
+    func run() async throws { }
+
+    func suspendSocket(_ socket: FlyingSocks.Socket, untilReadyFor events: FlyingSocks.Socket.Events) async throws {
+        throw SocketError.disconnected
     }
 }
