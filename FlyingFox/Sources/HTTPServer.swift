@@ -245,7 +245,6 @@ public final actor HTTPServer {
 
 public extension HTTPServer {
 
-#if compiler(>=5.7)
     init(port: UInt16,
          timeout: TimeInterval = 15,
          pool: AsyncSocketPool = defaultPool(),
@@ -274,37 +273,6 @@ public extension HTTPServer {
                   logger: logger,
                   handler: ClosureHTTPHandler(handler))
     }
-
-#else
-    convenience init(port: UInt16,
-                     timeout: TimeInterval = 15,
-                     pool: AsyncSocketPool = defaultPool(),
-                     logger: Logging? = defaultLogger(),
-                     handler: HTTPHandler? = nil) {
-#if canImport(WinSDK)
-        let address = sockaddr_in.inet(port: port)
-#else
-        let address = sockaddr_in6.inet6(port: port)
-#endif
-        self.init(address: address,
-                  timeout: timeout,
-                  pool: pool,
-                  logger: logger,
-                  handler: handler)
-    }
-
-    convenience init(port: UInt16,
-                     timeout: TimeInterval = 15,
-                     pool: AsyncSocketPool = defaultPool(),
-                     logger: Logging? = defaultLogger(),
-                     handler: @Sendable @escaping (HTTPRequest) async throws -> HTTPResponse) {
-        self.init(port: port,
-                  timeout: timeout,
-                  pool: pool,
-                  logger: logger,
-                  handler: ClosureHTTPHandler(handler))
-    }
-#endif
 }
 
 extension Logging {

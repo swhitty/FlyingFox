@@ -39,7 +39,6 @@ import FoundationNetworking
 
 final class HTTPConnectionTests: XCTestCase {
 
-#if compiler(>=5.6)
     func testConnection_ReceivesRequest() async throws {
         let (s1, s2) = try await AsyncSocket.makePair()
 
@@ -67,7 +66,6 @@ final class HTTPConnectionTests: XCTestCase {
         try s1.close()
         try s2.close()
     }
-#endif
 
     func testConnectionRequestsAreReceived_WhileConnectionIsKeptAlive() async throws {
         let (s1, s2) = try await AsyncSocket.makePair()
@@ -160,7 +158,6 @@ extension AsyncSequence {
     }
 }
 
-#if compiler(>=5.6)
 extension HTTPRequest: AsyncEquatable {
     static func ==(lhs: HTTPRequest, rhs: HTTPRequest) async -> Bool {
         guard (try? await lhs.bodyData == rhs.bodyData) == true else { return false }
@@ -171,4 +168,3 @@ extension HTTPRequest: AsyncEquatable {
                lhs.headers == rhs.headers
     }
 }
-#endif
