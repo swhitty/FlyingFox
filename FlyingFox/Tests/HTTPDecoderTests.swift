@@ -196,6 +196,18 @@ final class HTTPDecoderTests: XCTestCase {
         )
     }
 
+    func testBodySequence_IsComplete_WhenSizeIsLessThanMax() async throws {
+        let sequence = try await HTTPDecoder.readBodyFromString("Fish & Chips", maxSizeForComplete: 100)
+        XCTAssertEqual(sequence.count, 12)
+        XCTAssertTrue(sequence.storage.isComplete)
+    }
+
+    func testBodySequence_IsNotComplete_WhenSizeIsGreaterThanMax() async throws {
+        let sequence = try await HTTPDecoder.readBodyFromString("Fish & Chips", maxSizeForComplete: 2)
+        XCTAssertEqual(sequence.count, 12)
+        XCTAssertFalse(sequence.storage.isComplete)
+    }
+
     func testInvalidPathDecodes() {
         let comps = HTTPDecoder.makeComponents(from: nil)
         XCTAssertEqual(
@@ -270,6 +282,15 @@ private extension HTTPDecoder {
     static func decodeResponseFromString(_ string: String) async throws -> HTTPResponse {
         try await decodeResponse(from: ConsumingAsyncSequence(string.data(using: .utf8)!))
     }
+
+    static func readBodyFromString(_ string: String, maxSizeForComplete: Int) async throws -> HTTPBodySequence {
+        let data = string.data(using: .utf8)!
+        return try await readBody(
+            from: ConsumingAsyncSequence(data),
+            length: "\(data.count)",
+            maxSizeForComplete: maxSizeForComplete
+        )
+    }
 }
 
 private struct EmptyChunkedSequence: AsyncChunkedSequence, AsyncChunkedIteratorProtocol {
@@ -286,4 +307,13 @@ private struct EmptyChunkedSequence: AsyncChunkedSequence, AsyncChunkedIteratorP
     }
 
     typealias Element = UInt8
+}
+
+extension HTTPBodySequence.Storage {
+    var isComplete: Bool {
+        switch self {
+        case .complete: return true
+        case .sequence: return false
+        }
+    }
 }
