@@ -53,24 +53,4 @@ final class HTTPRequestTests: XCTestCase {
             Data([0x05, 0x06])
         )
     }
-
-    func testDeprecatedBodyProperty() {
-        // when
-        var request = HTTPRequest.make(body: Data([0x01, 0x02]))
-
-        // then
-        XCTAssertEqual(
-            request.body,
-            Data([0x01, 0x02])
-        )
-
-        // when
-        request.body = Data([0x04, 0x05])
-
-        // then
-        XCTAssertEqual(
-            request.body,
-            Data([0x04, 0x05])
-        )
-    }
 }

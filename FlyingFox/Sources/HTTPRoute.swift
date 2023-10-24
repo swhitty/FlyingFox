@@ -174,7 +174,7 @@ public extension HTTPRoute {
         return (method: String(comps[0]), path: String(comps[1]))
     }
 
-    @available(*, deprecated, message: "renamed: ~= async")
+    @available(*, unavailable, message: "renamed: ~= async")
     static func ~= (route: HTTPRoute, request: HTTPRequest) -> Bool {
         route.patternMatch(request: request)
     }

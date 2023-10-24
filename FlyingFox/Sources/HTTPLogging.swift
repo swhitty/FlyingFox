@@ -31,10 +31,10 @@
 
 import FlyingSocks
 
-@available(*, deprecated, renamed: "FlyingSocks.Logging")
+@available(*, unavailable, renamed: "FlyingSocks.Logging")
 public typealias HTTPLogging = FlyingSocks.Logging
 
-@available(*, deprecated, renamed: "FlyingSocks.PrintLogger")
+@available(*, unavailable, renamed: "FlyingSocks.PrintLogger")
 public typealias PrintHTTPLogger = FlyingSocks.PrintLogger
 
 public extension Logging where Self == PrintLogger {

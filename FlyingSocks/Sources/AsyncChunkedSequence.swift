@@ -41,12 +41,12 @@ public protocol AsyncChunkedIteratorProtocol: AsyncIteratorProtocol {
     mutating func nextChunk(count: Int) async throws -> [Element]?
 }
 
-@available(*, deprecated, renamed: "AsyncChunkedSequence")
+@available(*, unavailable, renamed: "AsyncChunkedSequence")
 public protocol ChunkedAsyncSequence: AsyncSequence where AsyncIterator: ChunkedAsyncIteratorProtocol {
 
 }
 
-@available(*, deprecated, renamed: "AsyncChunkedIteratorProtocol")
+@available(*, unavailable, renamed: "AsyncChunkedIteratorProtocol")
 public protocol ChunkedAsyncIteratorProtocol: AsyncIteratorProtocol {
     mutating func nextChunk(count: Int) async throws -> [Element]?
 }

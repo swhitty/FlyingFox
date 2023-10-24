@@ -41,7 +41,7 @@ public struct HTTPResponse: Sendable {
         case httpBody(HTTPBodySequence)
         case webSocket(WSHandler)
 
-        @available(*, deprecated, renamed: "httpBody")
+        @available(*, unavailable, renamed: "httpBody")
         static func body(_ data: Data) -> Self {
             .httpBody(HTTPBodySequence(data: data))
         }
@@ -58,7 +58,7 @@ public struct HTTPResponse: Sendable {
         }
     }
 
-    @available(*, deprecated, renamed: "bodyData")
+    @available(*, unavailable, renamed: "bodyData")
     public var body: Data? {
         switch payload {
         case .httpBody(let body):

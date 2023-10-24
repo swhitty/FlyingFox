@@ -70,48 +70,4 @@ final class HTTPResponseTests: XCTestCase {
             Data()
         )
     }
-
-    func testDeprecatedBodyProperty_Complete() {
-        // given
-        var response = HTTPResponse.make(body: Data([0x01, 0x02]))
-
-        // then
-        XCTAssertEqual(
-            response.body,
-            Data([0x01, 0x02])
-        )
-
-        // when
-        response.payload = .body(Data([0x04, 0x05]))
-
-        // then
-        XCTAssertEqual(
-            response.body,
-            Data([0x04, 0x05])
-        )
-    }
-
-    func testDeprecatedBodyProperty_Sequence() {
-        // given
-        let buffer = ConsumingAsyncSequence<UInt8>(
-            [0x5, 0x6]
-        )
-        let sequence = HTTPBodySequence(from: buffer, count: 2, chunkSize: 2)
-        let response = HTTPResponse.make(body: sequence)
-
-        // then
-        XCTAssertNil(
-            response.body
-        )
-    }
-
-    func testDeprecatedBodyProperty_WebSocket() {
-        // given
-        let response = HTTPResponse.make(webSocket: MessageFrameWSHandler.make())
-
-        // then
-        XCTAssertNil(
-            response.body
-        )
-    }
 }

@@ -49,15 +49,10 @@ public struct HTTPRequest: Sendable {
         bodySequence = HTTPBodySequence(data: data)
     }
 
-    @available(*, deprecated, renamed: "bodyData")
+    @available(*, unavailable, renamed: "bodyData")
     public var body: Data {
-        get {
-            guard case .complete(let data) = bodySequence.storage else {
-                preconditionFailure("Body is too large for synchronous accessor. Iterate using HTTPBodySequence")
-            }
-            return data
-        }
-        set { setBodyData(newValue) }
+        get { fatalError("unavailable") }
+        set { fatalError("unavailable") }
     }
 
     public init(method: HTTPMethod,
@@ -89,7 +84,7 @@ public struct HTTPRequest: Sendable {
     }
 }
 
-@available(*, deprecated, message: "HTTPRequest will soon remove conformance to Equatable")
+@available(*, unavailable, message: "HTTPRequest will soon remove conformance to Equatable")
 extension HTTPRequest: Equatable {
 
     public static func == (lhs: HTTPRequest, rhs: HTTPRequest) -> Bool {
