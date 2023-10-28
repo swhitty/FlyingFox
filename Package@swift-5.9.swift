@@ -30,7 +30,7 @@ let package = Package(
         ),
         .testTarget(
             name: "FlyingFoxTests",
-            dependencies: ["FlyingFox"],
+            dependencies: ["FlyingFox", "Macro"],
             path: "FlyingFox/Tests",
             resources: [
                 .copy("Stubs")
