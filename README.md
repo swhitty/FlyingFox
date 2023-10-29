@@ -13,7 +13,7 @@
 - [Usage](#usage)
 - [Handlers](#handlers)
 - [Routes](#routes)
-- [Macros](#previewmacrohandler)
+- [Macros](#preview-macro-handler)
 - [WebSockets](#websockets)
 - [FlyingSocks](#flyingsocks)
     - [Socket](#socket)
