@@ -104,6 +104,70 @@ Handlers can throw `HTTPUnhandledError` if after inspecting the request, they ca
 
 Requests that do not match any handled route receive `HTTP 404`.
 
+### Preview Macro Handler
+
+The branch [preview/macro](https://github.com/swhitty/FlyingFox/tree/preview/macro) contains an experimental preview implemenation of using Swift 5.9 macros to annotate functions with routes:
+
+```swift
+@HTTPHandler
+struct MyHandler {
+
+    @HTTPRoute("/ping")
+    func ping() { }
+    
+    @HTTPRoute("/pong")
+    func getPong(_ request: HTTPRequest) -> HTTPResponse {
+        HTTPResponse(statusCode: .accepted)
+    }
+}
+
+let server = HTTPServer(port: 80, handler: MyHandler())
+try await server.start()
+```
+
+The macro synthesises conformance to `HTTPHandler` delegating handling to the first matching route. Expanding the example above to the following:
+
+```swift
+func handleRequest(_ request: HTTPRequest) async throws -> HTTPResponse {
+  if await HTTPRoute("/ping") ~= request {
+    ping()
+    return HTTPResponse(statusCode: .ok, headers: [:])
+  }
+  if await HTTPRoute("/pong") ~= request {
+    return getPong(request)
+  }
+  throw HTTPUnhandledError()
+}
+```
+
+`@HTTPRoute` annotations can specify specific properties of the returned `HTTPResponse`:
+
+```swift
+@HTTPRoute("/refresh", statusCode: .teapot, headers: [.eTag: "t3a"])
+func refresh()
+```
+
+`@JSONRoute` annotations can be added to functions that accept `Codable` types. `JSONDecoder` decodes the body that is passed to the method, the returned object is encoded to the response body using `JSONEncoder`:
+
+```swift
+@JSONRoute("POST /account")
+func createAccount(body: AccountRequest) -> AccountResponse
+```
+
+The original `HTTPRequest` can be optionally passed to the method:
+
+```swift
+@JSONRoute("POST /account")
+func createAccount(request: HTTPRequest, body: AccountRequest) -> AccountResponse
+```
+
+`JSONEncoder` / `JSONDecoder` instances can be passed for specific JSON coding strategies:
+
+```swift
+@JSONRoute("GET /account", encoder: JSONEncoder())
+func getAccount() -> AccountResponse
+```
+
 ### FileHTTPHandler
 
 Requests can be routed to static files with `FileHTTPHandler`:
