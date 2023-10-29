@@ -293,7 +293,7 @@ protocol WSHandler {
 
 ## Preview Macro Handler
 
-The branch [`preview/macro`](https://github.com/swhitty/FlyingFox/tree/preview/macro) contains an experimental preview implementation where handlers can annotate its functions with routes:
+The branch [`preview/macro`](https://github.com/swhitty/FlyingFox/tree/preview/macro) contains an experimental preview implementation where handlers can annotate functions with routes:
 
 ```swift
 @HTTPHandler
