@@ -42,34 +42,27 @@ public enum HTTPHandlerMacro: MemberMacro {
         let memberList = declaration.memberBlock.members
 
         let routes = memberList.compactMap { member -> RouteDecl? in
-            guard let funcSyntax = member.decl.as(FunctionDeclSyntax.self) else {
+            guard let funcDecl = FunctionDecl.make(from: member),
+                  let routeAtt = funcDecl.attribute(name: "HTTPRoute") ?? funcDecl.attribute(name: "JSONRoute") else {
                 return nil
             }
 
-            let funcDecl = FunctionDecl.make(from: funcSyntax)
-            guard let routeAtt = funcDecl.attribute(name: "HTTPRoute") else {
-                return nil
-            }
-
-            guard let firstLabel = routeAtt.labelExpressions.first else {
-                return nil
-            }
+            let isJSON = routeAtt.name == "JSONRoute"
+            let defaultHeaders = isJSON ? #"[.contentType: "application/json"]"# : "[:]"
 
             return RouteDecl(
-                route: firstLabel.expression,
+                route: routeAtt.labelExpressions[0].expression,
                 statusCode: routeAtt.expression(name: "statusCode")?.expression ?? ".ok",
-                funcDecl: funcDecl
+                headers: routeAtt.expression(name: "headers")?.expression ?? defaultHeaders,
+                funcDecl: funcDecl,
+                isJSON: isJSON,
+                encoder: routeAtt.expression(name: "encoder")?.expression ?? "JSONEncoder()",
+                decoder: routeAtt.expression(name: "decoder")?.expression ?? "JSONDecoder()"
             )
         }
 
-        var validRoutes = Set<String>()
-        for route in routes {
-            guard !validRoutes.contains(route.route) else {
-                throw CustomError.message(
-                    "@HTTPRoute(\"\(route.route)\") is ambiguous"
-                )
-            }
-            validRoutes.insert(route.route)
+        if routes.isEmpty {
+            context.diagnoseWarning(for: node, "No HTTPRoute found")
         }
 
         let routeDecl: DeclSyntax = """
@@ -103,18 +96,62 @@ private extension HTTPHandlerMacro {
     struct RouteDecl {
         var route: String
         var statusCode: String
+        var headers: String
         var funcDecl: FunctionDecl
+        var isJSON: Bool
+        var encoder: String
+        var decoder: String
 
         var routeSyntax: String {
+            if isJSON {
+                jsonRouteSyntax
+            } else {
+                httpRouteSyntax
+            }
+        }
+
+        var httpRouteSyntax: String {
             if funcDecl.returnType.isVoid {
-                return """
+                """
                 if await HTTPRoute("\(route)") ~= request { \(funcCallSyntax)
-                return HTTPResponse(statusCode: \(statusCode))
+                return HTTPResponse(statusCode: \(statusCode), headers: \(headers))
                 }
                 """
             } else {
-                return """
+                """
                 if await HTTPRoute("\(route)") ~= request { return \(funcCallSyntax) }
+                """
+            }
+        }
+
+        var jsonBodyDecodeSyntax: String {
+            guard let bodyParam = funcDecl.parameters.first(where: { !$0.type.isHTTPRequest }) else {
+                return ""
+            }
+            return """
+            let body = try await \(decoder).decode(\(bodyParam.type).self, from: request.bodyData)
+            """
+        }
+
+        var jsonRouteSyntax: String {
+            if funcDecl.returnType.isVoid {
+                """
+                if await HTTPRoute("\(route)") ~= request {
+                \(jsonBodyDecodeSyntax)\(funcCallSyntax)
+                return HTTPResponse(statusCode: \(statusCode), headers: \(headers))
+                }
+                """
+            } else {
+                """
+                if await HTTPRoute("\(route)") ~= request {
+                \(jsonBodyDecodeSyntax)
+                let ret = \(funcCallSyntax)
+                return try HTTPResponse(
+                    statusCode: \(statusCode),
+                    headers: \(headers),
+                    body: \(encoder).encode(ret)
+                )
+                }
                 """
             }
         }
@@ -127,18 +164,24 @@ private extension HTTPHandlerMacro {
             if funcDecl.effects.contains(.async) {
                 call += "await "
             }
-            call += funcDecl.name
-            if let param = funcDecl.parameters.first {
-                if let label = param.label {
-                    call += "(" + label + ": request)"
-                } else {
-                    call += "(request)"
-                }
-            } else {
-                call += "()"
-            }
+            call += funcDecl.name + "("
+            call += funcDecl.parameters
+                .map(\.funcCallSyntax)
+                .joined(separator: ", ")
+
+            call += ")"
             return call
         }
+    }
+}
+
+extension FunctionDecl.Parameter {
+
+    var funcCallSyntax: String {
+        let variable = type.isHTTPRequest ? "request" : "body"
+        return [label, variable]
+            .compactMap { $0 }
+            .joined(separator: ": ")
     }
 }
 

@@ -31,6 +31,7 @@
 
 import SwiftDiagnostics
 import SwiftSyntax
+import SwiftSyntaxMacros
 
 enum CustomError: Error, CustomStringConvertible {
   case message(String)
@@ -41,4 +42,30 @@ enum CustomError: Error, CustomStringConvertible {
       return text
     }
   }
+}
+
+struct SimpleDiagnostic: DiagnosticMessage {
+    var message: String
+    var diagnosticID: MessageID
+    var severity: DiagnosticSeverity
+
+    static func warning(_ message: String) -> Self {
+        SimpleDiagnostic(
+            message: message,
+            diagnosticID: .init(domain: "Macro", id: message),
+            severity: .warning
+        )
+    }
+}
+
+extension MacroExpansionContext {
+
+    func diagnoseWarning(for node: some SyntaxProtocol, _ message: String) {
+        diagnose(
+          Diagnostic(
+            node: node,
+            message: SimpleDiagnostic.warning(message)
+          )
+        )
+    }
 }

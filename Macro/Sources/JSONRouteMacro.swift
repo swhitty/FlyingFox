@@ -1,8 +1,8 @@
 //
-//  HTTPRouteMacro.swift
+//  JSONRouteMacro.swift
 //  FlyingFox
 //
-//  Created by Simon Whitty on 26/10/2023.
+//  Created by Simon Whitty on 29/10/2023.
 //  Copyright © 2023 Simon Whitty. All rights reserved.
 //
 //  Distributed under the permissive MIT license
@@ -32,8 +32,9 @@
 import SwiftSyntax
 import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
+import SwiftDiagnostics
 
-public struct HTTPRouteMacro: PeerMacro {
+public struct JSONRouteMacro: PeerMacro {
     public static func expansion<
         Context: MacroExpansionContext,
         Declaration: DeclSyntaxProtocol
@@ -45,33 +46,35 @@ public struct HTTPRouteMacro: PeerMacro {
 
         // Only func can be a route
         guard let funcSyntax = declaration.as(FunctionDeclSyntax.self) else {
-            throw CustomError.message("@HTTPRoute can only be attacehd to functions")
+            throw CustomError.message("@JSONRoute can only be attached to functions")
         }
 
         let funcDecl = FunctionDecl.make(from: funcSyntax)
-        let routeAtt = funcDecl.attribute(name: "HTTPRoute")!
+        let routeAtt = funcDecl.attribute(name: "JSONRoute")!
 
-        guard funcDecl.returnType.isVoid || funcDecl.returnType.isHTTPResponse else {
+        switch funcDecl.parameters.count {
+        case 2:
+            guard funcDecl.parameters[0].type.isHTTPRequest else {
+                throw CustomError.message(
+                    "@JSONRoute requires the first parameter is HTTPRequest"
+                )
+            }
+        case 1, 0:
+            ()
+        default:
             throw CustomError.message(
-                "@HTTPRoute requires an function that returns HTTPResponse"
+                "@JSONRoute requires a function that accepts 1 paramerter"
             )
         }
 
-        guard funcDecl.parameters.isEmpty ||
-                (funcDecl.parameters[0].type.isHTTPRequest && funcDecl.parameters.count == 1) else {
-            throw CustomError.message(
-                "@HTTPRoute requires an function with argument `HTTPRequest`"
-            )
+        if routeAtt.expression(name: "decoder") != nil &&
+           !funcDecl.parameters.contains(where: { !$0.type.isHTTPRequest }) {
+            context.diagnoseWarning(for: node, "decoder is unused")
         }
 
         if routeAtt.expression(name: "encoder") != nil &&
                 (funcDecl.returnType.isHTTPResponse || funcDecl.returnType.isVoid) {
-
-        }
-
-        if funcDecl.returnType.isHTTPResponse &&
-           routeAtt.expression(name: "statusCode") != nil {
-            context.diagnoseWarning(for: node, "statusCode is unused for return type HTTPResponse")
+            context.diagnoseWarning(for: node, "encoder is unused for return type")
         }
 
         // Does nothing, used only to decorate functions with data

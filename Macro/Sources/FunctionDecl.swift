@@ -75,8 +75,14 @@ struct FunctionDecl {
     }
 }
 
-
 extension FunctionDecl {
+
+    static func make(from syntax: MemberBlockItemSyntax) -> Self? {
+        guard let funcSyntax = syntax.decl.as(FunctionDeclSyntax.self) else {
+            return nil
+        }
+        return .make(from: funcSyntax)
+    }
 
     static func make(from syntax: FunctionDeclSyntax) -> Self {
         var decl = FunctionDecl(
@@ -171,5 +177,37 @@ extension FunctionDecl.ReturnType: ExpressibleByStringLiteral {
 
     public init(stringLiteral value: String) {
         self = .init(value)
+    }
+}
+
+extension FunctionDecl.ReturnType {
+
+    var isVoid: Bool {
+        switch self {
+        case .void:
+            return true
+        case .type(let string):
+            return FunctionDecl.ReturnType.void == .init(string)
+        }
+    }
+
+    var isHTTPResponse: Bool {
+        switch self {
+        case .void:
+            return false
+        case .type(let string):
+            return string.isHTTPResponse
+        }
+    }
+}
+
+extension String {
+
+    var isHTTPResponse: Bool {
+        self == "HTTPResponse" || self == "FlyingFox.HTTPResponse"
+    }
+
+    var isHTTPRequest: Bool {
+        self == "HTTPRequest" || self == "FlyingFox.HTTPRequest"
     }
 }
