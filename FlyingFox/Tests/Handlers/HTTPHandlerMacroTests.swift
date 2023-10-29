@@ -52,6 +52,11 @@ final class HTTPHandlerMacroTests: XCTestCase {
             try await handler.handleRequest(.make(path: "/teapot")).statusCode,
             .teapot
         )
+
+        await AsyncAssertEqual(
+            try await handler.handleRequest(.make(path: "/fish")).jsonDictionaryBody,
+            ["name": "Pickles"]
+        )
     }
 }
 
@@ -69,6 +74,29 @@ struct MacroHandler {
     }
 
     @HTTPRoute("/teapot", statusCode: .teapot)
-    func willAppear() throws { }
+    func getTeapot() throws { }
+
+    @JSONRoute("/fish")
+    func getFish() -> Fish {
+        Fish(name: "Pickles")
+    }
+
+    struct Fish: Encodable {
+        var name: String
+    }
 }
+
+private extension HTTPResponse {
+
+    var jsonDictionaryBody: NSDictionary? {
+        get async {
+            guard let data = try? await bodyData,
+                  let object = try? JSONSerialization.jsonObject(with: data, options: []) else {
+                return nil
+            }
+            return object as? NSDictionary
+        }
+    }
+}
+
 #endif

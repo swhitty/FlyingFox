@@ -30,9 +30,23 @@
 //
 
 #if compiler(>=5.9)
+import Foundation
 
 @attached(peer)
-public macro HTTPRoute(_ name: StringLiteralType, statusCode: HTTPStatusCode = .ok) = #externalMacro(module: "Macro", type: "HTTPRouteMacro")
+public macro HTTPRoute(
+    _ route: StringLiteralType,
+    statusCode: HTTPStatusCode = .ok,
+    headers: [HTTPHeader: String] = [:]
+) = #externalMacro(module: "Macro", type: "HTTPRouteMacro")
+
+@attached(peer)
+public macro JSONRoute(
+    _ route: StringLiteralType,
+    statusCode: HTTPStatusCode = .ok,
+    headers: [HTTPHeader: String] = [.contentType: "application/json"],
+    encoder: JSONEncoder = JSONEncoder(),
+    decoder: JSONDecoder = JSONDecoder()
+) = #externalMacro(module: "Macro", type: "JSONRouteMacro")
 
 @attached(member, names: named(performAction), named(Action), named(handleRequest))
 @attached(extension, conformances: HTTPHandler, Sendable)
