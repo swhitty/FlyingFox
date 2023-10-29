@@ -107,24 +107,31 @@ Requests that do not match any handled route receive `HTTP 404`.
 
 ### Preview Macro Handler
 
-The branch [preview/macro](https://github.com/swhitty/FlyingFox/tree/preview/macro) contains an experimental preview implemenation of using Swift 5.9 macros to annotate functions with routes:
+The branch [`preview/macro`](https://github.com/swhitty/FlyingFox/tree/preview/macro) contains an experimental preview implementation where handlers can annotate its functions with routes:
 
 ```swift
 @HTTPHandler
 struct MyHandler {
 
-    @HTTPRoute("/ping")
-    func ping() { }
-    
-    @HTTPRoute("/pong")
-    func getPong(_ request: HTTPRequest) -> HTTPResponse {
-        HTTPResponse(statusCode: .accepted)
-    }
+  @HTTPRoute("/ping")
+  func ping() { }
+
+  @HTTPRoute("/pong")
+  func getPong(_ request: HTTPRequest) -> HTTPResponse {
+    HTTPResponse(statusCode: .accepted)
+  }
+
+  @JSONRoute("POST /account")
+  func createAccount(body: AccountRequest) -> AccountResponse {
+    AccountResponse(id: UUID(), balance: body.balance)
+  }
 }
 
 let server = HTTPServer(port: 80, handler: MyHandler())
 try await server.start()
 ```
+
+The annotations are implemented via [SE-0389 Attached Macros](https://github.com/apple/swift-evolution/blob/main/proposals/0389-attached-macros.md) available in Swift 5.9 and later. 
 
 The macro synthesises conformance to `HTTPHandler` delegating handling to the first matching route. Expanding the example above to the following:
 
@@ -136,6 +143,15 @@ func handleRequest(_ request: HTTPRequest) async throws -> HTTPResponse {
   }
   if await HTTPRoute("/pong") ~= request {
     return getPong(request)
+  }
+  if await HTTPRoute("POST /account") ~= request {
+    let body = try await JSONDecoder().decode(AccountRequest.self, from: request.bodyData)
+    let ret = createAccount(body: body)
+    return try HTTPResponse(
+      statusCode: .ok,
+      headers: [.contentType: "application/json"],
+      body: JSONEncoder().encode(ret)
+    )
   }
   throw HTTPUnhandledError()
 }
