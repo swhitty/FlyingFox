@@ -12,6 +12,7 @@
 - [Installation](#installation)
 - [Usage](#usage)
 - [Handlers](#handlers)
+  - [Macro Handler](#preview-macro-handler)
 - [Routes](#routes)
 - [Macros](#preview-macro-handler)
 - [WebSockets](#websockets)
