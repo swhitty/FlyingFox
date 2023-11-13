@@ -1,9 +1,9 @@
 //
-//  HTTPRequest+Mock.swift
+//  FormData.swift
 //  FlyingFox
 //
-//  Created by Simon Whitty on 18/02/2022.
-//  Copyright © 2022 Simon Whitty. All rights reserved.
+//  Created by Simon Whitty on 09/11/2023.
+//  Copyright © 2023 Simon Whitty. All rights reserved.
 //
 //  Distributed under the permissive MIT license
 //  Get the latest version from here:
@@ -29,35 +29,22 @@
 //  SOFTWARE.
 //
 
-@testable import FlyingFox
 import Foundation
 
-extension HTTPRequest {
-    static func make(method: HTTPMethod = .GET,
-                     version: HTTPVersion = .http11,
-                     path: String = "/",
-                     query: [QueryItem] = [],
-                     headers: [HTTPHeader: String] = [:],
-                     body: Data = Data()) -> Self {
-        HTTPRequest(method: method,
-                    version: version,
-                    path: path,
-                    query: query,
-                    headers: headers,
-                    body: body)
+public struct FormData: Sendable, Hashable {
+    public var headers: [FormHeader: String]
+
+    // required property
+    public var name: String? {
+        HTTPDecoder.multipartFormDataName(from: headers[.contentDisposition])
     }
 
-    static func make(method: HTTPMethod = .GET,
-                     version: HTTPVersion = .http11,
-                     path: String = "/",
-                     query: [QueryItem] = [],
-                     headers: [HTTPHeader: String] = [:],
-                     body: String) -> Self {
-        HTTPRequest(method: method,
-                    version: version,
-                    path: path,
-                    query: query,
-                    headers: headers,
-                    body: body.data(using: .utf8)!)
+    // todo Sequence of bytes
+    public var body: Data
+
+    public init(headers: [FormHeader: String],
+                body: Data) {
+        self.headers = headers
+        self.body = body
     }
 }

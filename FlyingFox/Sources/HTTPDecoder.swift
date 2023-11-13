@@ -95,21 +95,58 @@ struct HTTPDecoder {
         return (path, query ?? [])
     }
 
-    @Sendable
-    static func readHeader(from line: String) -> (header: HTTPHeader, value: String)? {
-        let comps = line.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: true)
+    static func readField<S: StringProtocol>(from line: S, separator: S.Element) -> (name: String, value: String)? {
+        let comps = line.split(separator: separator, maxSplits: 1, omittingEmptySubsequences: true)
         guard comps.count > 1 else { return nil }
         let name = comps[0].trimmingCharacters(in: .whitespacesAndNewlines)
         let value = comps[1].trimmingCharacters(in: .whitespacesAndNewlines)
-        return (HTTPHeader(name), value)
+        return (name, value)
     }
 
-    static func readHeaders<S: AsyncChunkedSequence>(from bytes: S) async throws -> [HTTPHeader : String] where S.Element == UInt8 {
+    @Sendable
+    static func readHeader(from line: some StringProtocol) -> (header: HTTPHeader, value: String)? {
+        guard let field = readField(from: line, separator: ":") else {
+            return nil
+        }
+        return (HTTPHeader(field.name), field.value)
+    }
+
+    static func readHeaders<S: AsyncSequence>(from bytes: S) async throws -> [HTTPHeader : String] where S.Element == UInt8 {
         try await bytes
             .lines
             .prefix { $0 != "\r" && $0 != "" }
             .compactMap(Self.readHeader)
             .reduce(into: [HTTPHeader: String]()) { $0[$1.header] = $1.value }
+    }
+
+    static func multipartFormDataBoundary(from contentType: String?) throws -> String {
+        guard let components = contentType?.split(separator: ";"),
+              components.first?.trimmingCharacters(in: .whitespaces) == "multipart/form-data" else {
+            throw Error("Expected Content-Type: multipart/form-data")
+        }
+
+        for comp in components {
+            if let field = readField(from: comp, separator: "="),
+               field.name == "boundary" {
+                return field.value
+            }
+        }
+        throw Error("Expected boundary=")
+    }
+
+    static func multipartFormDataName(from contentDisposition: String?) -> String? {
+        guard let components = contentDisposition?.split(separator: ";"),
+              components.first?.trimmingCharacters(in: .whitespaces) == "form-data" else {
+            return nil
+        }
+
+        for comp in components {
+            if let field = readField(from: comp, separator: "="),
+               field.name == "name" {
+                return field.value.trimmingCharacters(in: CharacterSet(charactersIn: "\""))
+            }
+        }
+        return nil
     }
 
     static func readBody<S: AsyncChunkedSequence>(from bytes: S, length: String?, maxSizeForComplete: Int = 10_485_760) async throws -> HTTPBodySequence where S.Element == UInt8 {

@@ -1,9 +1,9 @@
 //
-//  HTTPRequest+Mock.swift
+//  FormHeader.swift
 //  FlyingFox
 //
-//  Created by Simon Whitty on 18/02/2022.
-//  Copyright © 2022 Simon Whitty. All rights reserved.
+//  Created by Simon Whitty on 09/11/2023.
+//  Copyright © 2023 Simon Whitty. All rights reserved.
 //
 //  Distributed under the permissive MIT license
 //  Get the latest version from here:
@@ -29,35 +29,27 @@
 //  SOFTWARE.
 //
 
-@testable import FlyingFox
-import Foundation
+public struct FormHeader: Sendable, RawRepresentable, Hashable {
+    public var rawValue: String
 
-extension HTTPRequest {
-    static func make(method: HTTPMethod = .GET,
-                     version: HTTPVersion = .http11,
-                     path: String = "/",
-                     query: [QueryItem] = [],
-                     headers: [HTTPHeader: String] = [:],
-                     body: Data = Data()) -> Self {
-        HTTPRequest(method: method,
-                    version: version,
-                    path: path,
-                    query: query,
-                    headers: headers,
-                    body: body)
+    public init(rawValue: String) {
+        self.rawValue = rawValue
     }
 
-    static func make(method: HTTPMethod = .GET,
-                     version: HTTPVersion = .http11,
-                     path: String = "/",
-                     query: [QueryItem] = [],
-                     headers: [HTTPHeader: String] = [:],
-                     body: String) -> Self {
-        HTTPRequest(method: method,
-                    version: version,
-                    path: path,
-                    query: query,
-                    headers: headers,
-                    body: body.data(using: .utf8)!)
+    public init(_ rawValue: String) {
+        self.init(rawValue: rawValue)
     }
+
+    public func hash(into hasher: inout Hasher) {
+        rawValue.lowercased().hash(into: &hasher)
+    }
+
+    public static func == (lhs: FormHeader, rhs: FormHeader) -> Bool {
+        lhs.rawValue.caseInsensitiveCompare(rhs.rawValue) == .orderedSame
+    }
+}
+
+public extension FormHeader {
+    static let contentDisposition = FormHeader("Content-Disposition")
+    static let contentType        = FormHeader("Content-Type")
 }
