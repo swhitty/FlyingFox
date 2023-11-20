@@ -115,8 +115,10 @@ private extension FormData {
     static func make(
         headers: [FormHeader: String] = [:],
         body: String = ""
-    ) ->Self {
-        FormData(headers: headers, body: body.data(using: .utf8)!)
+    ) -> Self {
+        FormData(
+            headers: headers,
+            body: body.data(using: .utf8)!
+        )
     }
 }
-
