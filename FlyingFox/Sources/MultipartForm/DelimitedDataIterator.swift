@@ -76,7 +76,7 @@ struct DelimitedDataIterator<I: AsyncIteratorProtocol> where I.Element == Data {
         let slice = Data(buffer[..<range.startIndex])
         buffer = Data(buffer[range.endIndex...])
 
-        return slice.isEmpty ? nil : slice
+        return slice
     }
 
     mutating func next() async throws -> Data? {

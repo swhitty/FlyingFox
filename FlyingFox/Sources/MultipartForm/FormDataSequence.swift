@@ -53,11 +53,11 @@ public struct FormDataSequence<S: AsyncSequence & Sendable>: Sendable, AsyncSequ
     public static func make(body: S, boundary: String) async throws -> Self {
         var delimiter = DelimitedDataIterator(
             iterator: body.makeAsyncIterator(),
-            delimiter: "\n--\(boundary)".data(using: .utf8)!
+            delimiter: "\r\n--\(boundary)".data(using: .utf8)!
         )
         // consume first delimiter
         _ = try await delimiter.nextUntil("--\(boundary)".data(using: .utf8)!)
-        try await delimiter.consumeNext(of: "\n", "--")
+        try await delimiter.consumeNext(of: "\r\n", "--")
         return FormDataSequence(delimiter: delimiter)
     }
 
@@ -83,7 +83,7 @@ public struct FormDataSequence<S: AsyncSequence & Sendable>: Sendable, AsyncSequ
             }
 
             // todo `--` end sequence
-            try await iterator.consumeNext(of: "\n", "--")
+            try await iterator.consumeNext(of: "\r\n", "--")
 
             return FormData(
                 headers: headers,
@@ -105,7 +105,7 @@ extension DelimitedDataIterator {
     }
 
     mutating func nextLine() async throws -> String? {
-        guard let data = try await nextUntil("\n".data(using: .utf8)!) else {
+        guard let data = try await nextUntil("\r\n".data(using: .utf8)!) else {
             return nil
         }
         return String(data: data, encoding: .utf8)!

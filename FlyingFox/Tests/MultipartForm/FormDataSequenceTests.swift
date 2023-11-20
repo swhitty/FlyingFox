@@ -41,20 +41,20 @@ final class FormDataSequenceTests: XCTestCase {
         let request = HTTPRequest.make(
             headers: [.contentType: "multipart/form-data; boundary=**ZZ"],
             body: #"""
-            --**ZZ
-            Content-Disposition: form-data; name="text1"
-            Content-Type: text/plain
-
-            Fish & Chips
-            --**ZZ
-            Content-Disposition: form-data; name="text2"
-
+            --**ZZ\#r
+            Content-Disposition: form-data; name="text1"\#r
+            Content-Type: text/plain\#r
+            \#r
+            Fish & Chips\#r
+            --**ZZ\#r
+            Content-Disposition: form-data; name="text2"\#r
+            \#r
             Shrimp
-            Scampi
-            --**ZZ
-            Content-Disposition: form-data; name="text3"
-
-            Ocean
+            Scampi\#r
+            --**ZZ\#r
+            Content-Disposition: form-data; name="text3"\#r
+            \#r
+            \#r
             --**ZZ--
             """#
         )
@@ -81,7 +81,7 @@ final class FormDataSequenceTests: XCTestCase {
                     headers: [
                         .contentDisposition: #"form-data; name="text3""#,
                     ],
-                    body: "Ocean"
+                    body: ""
                 )
             ]
         )
