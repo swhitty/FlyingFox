@@ -218,6 +218,28 @@ final class HTTPDecoderTests: XCTestCase {
         )
     }
 
+    func testPercentEncodedPathDecodes() {
+        XCTAssertEqual(
+            HTTPDecoder.readComponents(from: "/fish%20chips").path,
+            "/fish chips"
+        )
+        XCTAssertEqual(
+            HTTPDecoder.readComponents(from: "/ocean/fish%20and%20chips").path,
+            "/ocean/fish and chips"
+        )
+    }
+
+    func testPercentQueryStringDecodes() {
+        XCTAssertEqual(
+            HTTPDecoder.readComponents(from: "/?fish=%F0%9F%90%9F").query,
+            [.init(name: "fish", value: "🐟")]
+        )
+        XCTAssertEqual(
+            HTTPDecoder.readComponents(from: "?%F0%9F%90%A1=chips").query,
+            [.init(name: "🐡", value: "chips")]
+        )
+    }
+
     func testEmptyQueryItem_Decodes() {
         var urlComps = URLComponents()
         urlComps.queryItems = [.init(name: "name", value: nil)]
