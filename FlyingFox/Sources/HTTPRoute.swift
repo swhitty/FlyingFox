@@ -49,7 +49,8 @@ public struct HTTPRoute: Sendable {
 
     init(method: String, path: String, headers: [HTTPHeader: String], body: HTTPBodyPattern?) {
         self.method = Component(method)
-        let comps = HTTPDecoder.readComponents(from: path)
+
+        let comps = HTTPRoute.readComponents(from: path)
         self.path = comps.path
             .split(separator: "/", omittingEmptySubsequences: true)
             .map { Component(String($0)) }
@@ -167,8 +168,8 @@ public extension HTTPRoute {
     }
 
     private static func components(for target: String) -> (method: String, path: String) {
-        let comps = target.split(separator: " ", maxSplits: 2, omittingEmptySubsequences: true)
-        guard comps.count > 1 else {
+        let comps = target.split(separator: " ", maxSplits: 1, omittingEmptySubsequences: true)
+        guard comps.count > 1 && !comps[0].hasPrefix("/") else {
             return (method: "*", path: target)
         }
         return (method: String(comps[0]), path: String(comps[1]))
@@ -181,6 +182,18 @@ public extension HTTPRoute {
 
     static func ~= (route: HTTPRoute, request: HTTPRequest) async -> Bool {
         route.patternMatch(request: request)
+    }
+}
+
+private extension HTTPRoute {
+
+    static func readComponents(from path: String) -> (path: String, query: [HTTPRequest.QueryItem]) {
+        guard path.removingPercentEncoding == path else {
+            return HTTPDecoder.readComponents(from: path)
+        }
+
+        let escaped = path.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)
+        return HTTPDecoder.readComponents(from: escaped ?? path)
     }
 }
 

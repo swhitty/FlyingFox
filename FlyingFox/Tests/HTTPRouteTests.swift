@@ -62,6 +62,39 @@ final class HTTPRouteTests: XCTestCase {
         )
     }
 
+    func testPercentEncodedPathComponents() {
+        XCTAssertEqual(
+            HTTPRoute("GET /hello world").path,
+            [.caseInsensitive("hello world")]
+        )
+
+        XCTAssertEqual(
+            HTTPRoute("/hello%20world").path,
+            [.caseInsensitive("hello world")]
+        )
+
+        XCTAssertEqual(
+            HTTPRoute("🐡/*").path,
+            [.caseInsensitive("🐡"), .wildcard]
+        )
+
+        XCTAssertEqual(
+            HTTPRoute("%F0%9F%90%A1/*").path,
+            [.caseInsensitive("🐡"), .wildcard]
+        )
+    }
+
+    func testPercentEncodedQueryItems() {
+        XCTAssertEqual(
+            HTTPRoute("/?fish=%F0%9F%90%9F").query,
+            [.init(name: "fish", value: .caseInsensitive("🐟"))]
+        )
+        XCTAssertEqual(
+            HTTPRoute("/?%F0%9F%90%A1=chips").query,
+            [.init(name: "🐡", value: .caseInsensitive("chips"))]
+        )
+    }
+
     func testMethod() {
         XCTAssertEqual(
             HTTPRoute("hello/world").method,
