@@ -77,7 +77,7 @@ final class CancellingContinuationTests: XCTestCase {
     }
 
     func testResumeIsReturned() async {
-        let continuation = CancellingContinuation<Void, Error>()
+        let continuation = CancellingContinuation<Void, any Error>()
 
         let task = Task { try await continuation.value }
         continuation.resume()
@@ -87,7 +87,7 @@ final class CancellingContinuationTests: XCTestCase {
     }
 
     func testErrorIsReturned() async {
-        let continuation = CancellingContinuation<String, Error>()
+        let continuation = CancellingContinuation<String, any Error>()
 
         let task = Task { try await continuation.value }
         continuation.resume(throwing: SocketError.disconnected)

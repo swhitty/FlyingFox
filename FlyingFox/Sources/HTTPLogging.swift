@@ -46,11 +46,11 @@ public extension Logging where Self == PrintLogger {
 
 extension HTTPServer {
 
-    public static func defaultLogger(category: String = "FlyingFox") -> Logging {
+    public static func defaultLogger(category: String = "FlyingFox") -> any Logging {
         defaultLogger(category: category, forceFallback: false)
     }
 
-    static func defaultLogger(category: String = "FlyingFox", forceFallback: Bool) -> Logging {
+    static func defaultLogger(category: String = "FlyingFox", forceFallback: Bool) -> any Logging {
         guard !forceFallback, #available(macOS 11.0, iOS 14.0, tvOS 14.0, *) else {
             return .print(category: category)
         }

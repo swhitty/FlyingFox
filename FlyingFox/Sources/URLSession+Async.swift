@@ -52,7 +52,7 @@ extension URLSession {
     }
 
     func makeData(for request: URLRequest) async throws -> (Data, URLResponse) {
-        let continuation = CancellingContinuation<(Data, URLResponse), Error>()
+        let continuation = CancellingContinuation<(Data, URLResponse), any Error>()
         let task = dataTask(with: request) { data, response, error in
             guard let data = data, let response = response else {
                 continuation.resume(throwing: error!)

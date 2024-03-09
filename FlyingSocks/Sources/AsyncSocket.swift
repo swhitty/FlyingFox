@@ -49,7 +49,7 @@ public protocol AsyncSocketPool: Sendable {
 public extension AsyncSocketPool where Self == SocketPool<Poll> {
 
     @available(*, unavailable, renamed: "client")
-    static var pollingClient: AsyncSocketPool {
+    static var pollingClient: Self {
         fatalError("use .client")
     }
 
@@ -63,9 +63,9 @@ public extension AsyncSocketPool where Self == SocketPool<Poll> {
 public struct AsyncSocket: Sendable {
 
     public let socket: Socket
-    let pool: AsyncSocketPool
+    let pool: any AsyncSocketPool
 
-    public init(socket: Socket, pool: AsyncSocketPool) throws {
+    public init(socket: Socket, pool: some AsyncSocketPool) throws {
         self.socket = socket
         self.pool = pool
         try socket.setFlags(.nonBlocking)
@@ -75,7 +75,7 @@ public struct AsyncSocket: Sendable {
         try await connected(to: address, pool: ClientPoolLoader.shared.getPool())
     }
 
-    public static func connected<A: SocketAddress>(to address: A,  pool: AsyncSocketPool) async throws -> Self {
+    public static func connected<A: SocketAddress>(to address: A,  pool: some AsyncSocketPool) async throws -> Self {
         let socket = try Socket(domain: Int32(address.makeStorage().ss_family), type: Socket.stream)
         let asyncSocket = try AsyncSocket(socket: socket, pool: pool)
         try await asyncSocket.connect(to: address)

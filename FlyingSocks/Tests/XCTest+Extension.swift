@@ -86,9 +86,9 @@ func AsyncAssertThrowsError<T>(_ expression: @autoclosure () async throws -> T,
                                _ message: @autoclosure () -> String = "",
                                file: StaticString = #filePath,
                                line: UInt = #line,
-                               _ errorHandler: (_ error: Error) -> Void = { _ in }) async {
+                               _ errorHandler: (_ error: any Error) -> Void = { _ in }) async {
     await AsyncAssertThrowsError(try await expression(),
-                                 of: Error.self,
+                                 of: (any Error).self,
                                  message(),
                                  file: file,
                                  line: line,
@@ -119,7 +119,7 @@ func AsyncAssertNotNil<T>(_ expression: @autoclosure () async throws -> T?,
     XCTAssertNotNil(try result.get(), message(), file: file, line: line)
 }
 
-private extension Result where Failure == Error {
+private extension Result where Failure == any Error {
     init(catching body: () async throws -> Success) async {
         do {
             self = .success(try await body())

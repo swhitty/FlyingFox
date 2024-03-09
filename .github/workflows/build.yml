@@ -6,10 +6,10 @@ on:
   workflow_dispatch:
 
 jobs:
-  xcode_14_3_1:
-    runs-on: macos-13
+  xcode_15_2:
+    runs-on: macos-14
     env:
-      DEVELOPER_DIR: /Applications/Xcode_14.3.1.app/Contents/Developer
+      DEVELOPER_DIR: /Applications/Xcode_15.2.app/Contents/Developer
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -26,10 +26,10 @@ jobs:
         with:
           files: ./coverage_report.lcov
 
-  xcode_15_1:
+  xcode_14_3_1:
     runs-on: macos-13
     env:
-      DEVELOPER_DIR: /Applications/Xcode_15.1.app/Contents/Developer
+      DEVELOPER_DIR: /Applications/Xcode_14.3.1.app/Contents/Developer
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -54,9 +54,22 @@ jobs:
       - name: Test
         run: swift test --skip-build
 
-  linux_swift_5_7:
+  linux_swift_5_10:
     runs-on: ubuntu-latest
-    container: swift:5.7
+    container: swift:5.10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Version
+        run: swift --version
+      - name: Build
+        run: swift build --build-tests
+      - name: Test
+        run: swift test --skip-build
+
+  linux_swift_5_9:
+    runs-on: ubuntu-latest
+    container: swift:5.9
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -80,9 +93,9 @@ jobs:
       - name: Test
         run: swift test --skip-build
 
-  linux_swift_5_9:
+  linux_swift_5_7:
     runs-on: ubuntu-latest
-    container: swift:5.9
+    container: swift:5.7
     steps:
       - name: Checkout
         uses: actions/checkout@v3

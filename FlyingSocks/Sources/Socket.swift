@@ -256,7 +256,7 @@ public struct Socket: Sendable, Hashable {
 }
 
 public extension Socket {
-    struct Flags: OptionSet {
+    struct Flags: OptionSet, Sendable {
         public var rawValue: Int32
 
         public init(rawValue: Int32) {
@@ -269,7 +269,7 @@ public extension Socket {
 
 public extension Socket {
 
-    enum Event {
+    enum Event: Sendable {
         case read
         case write
     }

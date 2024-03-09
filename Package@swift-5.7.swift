@@ -1,4 +1,4 @@
-// swift-tools-version:5.8
+// swift-tools-version:5.7
 
 import PackageDescription
 
@@ -21,8 +21,7 @@ let package = Package(
         .target(
             name: "FlyingFox",
             dependencies: ["FlyingSocks"],
-            path: "FlyingFox/Sources",
-            swiftSettings: .upcomingFeatures
+            path: "FlyingFox/Sources"
         ),
         .testTarget(
             name: "FlyingFoxTests",
@@ -30,14 +29,12 @@ let package = Package(
             path: "FlyingFox/Tests",
             resources: [
                 .copy("Stubs")
-            ],
-            swiftSettings: .upcomingFeatures
+            ]
         ),
         .target(
             name: "FlyingSocks",
             dependencies: [.target(name: "CSystemLinux", condition: .when(platforms: [.linux]))],
-            path: "FlyingSocks/Sources",
-            swiftSettings: .upcomingFeatures
+            path: "FlyingSocks/Sources"
         ),
         .testTarget(
             name: "FlyingSocksTests",
@@ -45,8 +42,7 @@ let package = Package(
             path: "FlyingSocks/Tests",
             resources: [
                 .copy("Resources")
-            ],
-            swiftSettings: .upcomingFeatures
+            ]
         ),
         .target(
              name: "CSystemLinux",
@@ -54,13 +50,3 @@ let package = Package(
         )
     ]
 )
-
-extension Array where Element == SwiftSetting {
-
-    static var upcomingFeatures: [SwiftSetting] {
-        [
-            .enableUpcomingFeature("ExistentialAny"),
-            //.enableExperimentalFeature("StrictConcurrency")
-        ]
-    }
-}

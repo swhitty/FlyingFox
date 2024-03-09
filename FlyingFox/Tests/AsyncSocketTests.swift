@@ -39,7 +39,7 @@ extension AsyncSocket {
         try await make(pool: .client)
     }
 
-    static func make(pool: AsyncSocketPool) throws -> AsyncSocket {
+    static func make(pool: some AsyncSocketPool) throws -> AsyncSocket {
         let socket = try Socket(domain: AF_UNIX, type: Socket.stream)
         return try AsyncSocket(socket: socket, pool: pool)
     }
@@ -48,7 +48,7 @@ extension AsyncSocket {
         try await makePair(pool: .client)
     }
 
-    static func makePair(pool: AsyncSocketPool) throws -> (AsyncSocket, AsyncSocket) {
+    static func makePair(pool: some AsyncSocketPool) throws -> (AsyncSocket, AsyncSocket) {
         let (file1, file2) = Socket.socketpair(AF_UNIX, Socket.stream, 0)
         guard file1.rawValue > -1, file2.rawValue > -1 else {
             throw SocketError.makeFailed("SocketPair")

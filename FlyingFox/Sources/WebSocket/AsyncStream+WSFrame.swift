@@ -31,10 +31,10 @@
 
 import FlyingSocks
 
-extension AsyncThrowingStream where Element == WSFrame, Failure == Error {
+extension AsyncThrowingStream<WSFrame, any Error> {
 
     static func decodingFrames<S: AsyncChunkedSequence>(from bytes: S) -> Self where S.Element == UInt8 {
-        AsyncThrowingStream<WSFrame, Error> {
+        AsyncThrowingStream<WSFrame, any Error> {
             do {
                 return try await WSFrameEncoder.decodeFrame(from: bytes)
             } catch SocketError.disconnected, is SequenceTerminationError {
@@ -46,7 +46,7 @@ extension AsyncThrowingStream where Element == WSFrame, Failure == Error {
     }
 }
 
-extension AsyncStream where Element == WSFrame {
+extension AsyncStream<WSFrame> {
 
     static func protocolFrames<S: AsyncSequence>(from frames: S) -> Self where S.Element == WSFrame {
         var iterator: S.AsyncIterator? = frames.makeAsyncIterator()

@@ -41,10 +41,10 @@ public struct WSInvalidHandshakeError: LocalizedError {
 
 public struct WebSocketHTTPHandler: HTTPHandler, Sendable {
 
-    private let handler: WSHandler
+    private let handler: any WSHandler
     private let acceptedMethods: Set<HTTPMethod>
 
-    public init(handler: WSHandler, accepts methods: Set<HTTPMethod> = [.GET]) {
+    public init(handler: some WSHandler, accepts methods: Set<HTTPMethod> = [.GET]) {
         self.handler = handler
         self.acceptedMethods = methods
     }

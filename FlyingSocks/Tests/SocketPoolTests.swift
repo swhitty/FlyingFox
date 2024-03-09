@@ -52,7 +52,7 @@ final class SocketPoolTests: XCTestCase {
 #endif
 
     func testPoll() {
-        let pool: AsyncSocketPool = .poll()
+        let pool: some AsyncSocketPool = .poll()
         XCTAssertTrue(type(of: pool) == SocketPool<Poll>.self)
     }
 
@@ -68,7 +68,7 @@ final class SocketPoolTests: XCTestCase {
     func testQueueRun_ThrowsError_WhenNotReady() async throws {
         let pool = SocketPool.make()
 
-        await AsyncAssertThrowsError(try await pool.run(), of: Error.self)
+        await AsyncAssertThrowsError(try await pool.run(), of: (any Error).self)
     }
 
     func testSuspendedSockets_ThrowError_WhenCancelled() async throws {
@@ -249,11 +249,11 @@ private extension SocketPool where Queue == MockEventQueue  {
     }
 }
 
-final class MockEventQueue: EventQueue {
+final class MockEventQueue: EventQueue, @unchecked Sendable {
 
     private var isWaiting: Bool = false
     private let semaphore = DispatchSemaphore(value: 0)
-    private var result: Result<[EventNotification], Error>?
+    private var result: Result<[EventNotification], any Error>?
 
     private(set) var state: State?
 
@@ -269,7 +269,7 @@ final class MockEventQueue: EventQueue {
         }
     }
 
-    func sendResult(throwing error: Error) {
+    func sendResult(throwing error: some Error) {
         result = .failure(error)
         if isWaiting {
             semaphore.signal()

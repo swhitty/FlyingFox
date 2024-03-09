@@ -198,13 +198,13 @@ private extension Dictionary where Key == HTTPHeader, Value == String {
 }
 
 private extension WebSocketHTTPHandler {
-    static func make(handler: WSHandler = MockHandler(), accepts methods: Set<HTTPMethod> = [.GET]) -> WebSocketHTTPHandler {
+    static func make(handler: some WSHandler = MockHandler(), accepts methods: Set<HTTPMethod> = [.GET]) -> WebSocketHTTPHandler {
         WebSocketHTTPHandler(handler: MockHandler(), accepts: methods)
     }
 }
 
 private struct MockHandler: WSHandler {
-    func makeFrames(for client: AsyncThrowingStream<WSFrame, Error>) async throws -> AsyncStream<WSFrame> {
+    func makeFrames(for client: AsyncThrowingStream<WSFrame, any Error>) async throws -> AsyncStream<WSFrame> {
         var iterator = client.makeAsyncIterator()
         return AsyncStream<WSFrame> {
             try? await iterator.next()

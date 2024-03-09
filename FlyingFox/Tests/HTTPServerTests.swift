@@ -48,7 +48,7 @@ final class HTTPServerTests: XCTestCase {
     }
 
     @discardableResult
-    func startServer(_ server: HTTPServer) async throws -> Task<Void, Error> {
+    func startServer(_ server: HTTPServer) async throws -> Task<Void, any Error> {
         self.stopServer = server
         let task = Task { try await server.start() }
         try await server.waitUntilListening()
@@ -358,7 +358,7 @@ final class HTTPServerTests: XCTestCase {
     func testWaitUntilListing_WaitsUntil_SocketIsListening() async {
         let server = HTTPServer.make()
 
-        let waiting = Task<Bool, Error> {
+        let waiting = Task<Bool, any Error> {
             try await server.waitUntilListening()
             return true
         }
@@ -372,7 +372,7 @@ final class HTTPServerTests: XCTestCase {
     func testWaitUntilListing_ThrowsWhen_TaskIsCancelled() async {
         let server = HTTPServer.make()
 
-        let waiting = Task<Bool, Error> {
+        let waiting = Task<Bool, any Error> {
             try await server.waitUntilListening()
             return true
         }
@@ -384,12 +384,12 @@ final class HTTPServerTests: XCTestCase {
     func testWaitUntilListing_ThrowsWhen_TimeoutExpires() async throws {
         let server = HTTPServer.make()
 
-        let waiting = Task<Bool, Error> {
+        let waiting = Task<Bool, any Error> {
             try await server.waitUntilListening(timeout: 1)
             return true
         }
 
-        await AsyncAssertThrowsError(try await waiting.value, of: Error.self)
+        await AsyncAssertThrowsError(try await waiting.value, of: (any Error).self)
     }
 }
 
@@ -397,8 +397,8 @@ extension HTTPServer {
 
     static func make<A: SocketAddress>(address: A,
                                        timeout: TimeInterval = 15,
-                                       logger: Logging? = defaultLogger(),
-                                       handler: HTTPHandler? = nil) -> HTTPServer {
+                                       logger: any Logging = defaultLogger(),
+                                       handler: (any HTTPHandler)? = nil) -> HTTPServer {
         HTTPServer(address: address,
                    timeout: timeout,
                    logger: logger,
@@ -407,8 +407,8 @@ extension HTTPServer {
 
     static func make(port: UInt16 = 0,
                      timeout: TimeInterval = 15,
-                     logger: Logging? = nil,
-                     handler: HTTPHandler? = nil) -> HTTPServer {
+                     logger: some Logging = .disabled,
+                     handler: (any HTTPHandler)? = nil) -> HTTPServer {
         HTTPServer(port: port,
                    timeout: timeout,
                    logger: logger,
@@ -417,7 +417,7 @@ extension HTTPServer {
 
     static func make(port: UInt16 = 0,
                      timeout: TimeInterval = 15,
-                     logger: Logging? = nil,
+                     logger: some Logging = .disabled,
                      handler: @Sendable @escaping (HTTPRequest) async throws -> HTTPResponse) -> HTTPServer {
         HTTPServer(port: port,
                    timeout: timeout,

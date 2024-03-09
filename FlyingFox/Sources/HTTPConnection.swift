@@ -37,10 +37,10 @@ struct HTTPConnection: Sendable {
 
     let hostname: String
     private let socket: AsyncSocket
-    private let logger: Logging?
+    private let logger: any Logging
     let requests: HTTPRequestSequence<AsyncSocketReadSequence>
 
-    init(socket: AsyncSocket, logger: Logging?) {
+    init(socket: AsyncSocket, logger: some Logging) {
         self.socket = socket
         self.logger = logger
         self.hostname = HTTPConnection.makeIdentifer(from: socket.socket)
@@ -65,11 +65,11 @@ struct HTTPConnection: Sendable {
         }
     }
 
-    func switchToWebSocket(with handler: WSHandler, response: Data) async throws {
+    func switchToWebSocket(with handler: some WSHandler, response: Data) async throws {
         let client = AsyncThrowingStream.decodingFrames(from: socket.bytes)
         let server = try await handler.makeFrames(for: client)
         try await socket.write(response)
-        logger?.logSwitchProtocol(self, to: "websocket")
+        logger.logSwitchProtocol(self, to: "websocket")
         await requests.complete()
         for await frame in server {
             try await socket.write(WSFrameEncoder.encodeFrame(frame))
@@ -97,7 +97,7 @@ actor HTTPRequestSequence<S: AsyncChunkedSequence & Sendable>: AsyncSequence, As
     private let bytes: S
 
     private var isComplete: Bool
-    private var task: Task<Element, Error>?
+    private var task: Task<Element, any Error>?
 
     init(bytes: S) {
         self.bytes = bytes

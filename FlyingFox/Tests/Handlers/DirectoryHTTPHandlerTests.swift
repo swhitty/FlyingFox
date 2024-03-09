@@ -60,7 +60,7 @@ final class DirectoryHTTPHandlerTests: XCTestCase {
     }
 
     func testDirectoryHandler_ReturnsSubDirectoryFile() async throws {
-        let handler: HTTPHandler = .directory(for: .module, subPath: "Stubs", serverPath: "server/path")
+        let handler: some HTTPHandler = .directory(for: .module, subPath: "Stubs", serverPath: "server/path")
 
         let response = try await handler.handleRequest(.make(path: "server/path/subdir/vinegar.json"))
         XCTAssertEqual(response.statusCode, .ok)
@@ -72,7 +72,7 @@ final class DirectoryHTTPHandlerTests: XCTestCase {
     }
 
     func testDirectoryHandler_Returns404WhenFileDoesNotExist() async throws {
-        let handler: HTTPHandler = .directory(for: .module, subPath: "Stubs", serverPath: "server/path")
+        let handler: some HTTPHandler = .directory(for: .module, subPath: "Stubs", serverPath: "server/path")
 
         let response = try await handler.handleRequest(.make())
         XCTAssertEqual(response.statusCode, .notFound)

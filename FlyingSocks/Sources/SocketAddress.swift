@@ -113,7 +113,7 @@ public extension SocketAddress {
 
 extension Socket {
 
-    public enum Address: Hashable {
+    public enum Address: Sendable, Hashable {
         case ip4(String, port: UInt16)
         case ip6(String, port: UInt16)
         case unix(String)

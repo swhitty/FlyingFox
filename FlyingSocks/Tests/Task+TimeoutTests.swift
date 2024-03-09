@@ -46,7 +46,7 @@ final class TaskTimeoutTests: XCTestCase {
 
     func testTimeoutThrowsError_WhenTimeoutExpires() async {
         // given
-        let task = Task<Void, Error>(timeout: 0.5) {
+        let task = Task<Void, any Error>(timeout: 0.5) {
             try? await Task.sleep(seconds: 10)
         }
 
@@ -146,7 +146,7 @@ final class TaskTimeoutTests: XCTestCase {
 
 @_spi(Private) import func FlyingSocks.withThrowingTimeout
 
-extension Task where Success: Sendable, Failure == Error {
+extension Task where Success: Sendable, Failure == any Error {
 
     // Start a new Task with a timeout.
     init(priority: TaskPriority? = nil, timeout: TimeInterval, operation: @escaping @Sendable () async throws -> Success) {

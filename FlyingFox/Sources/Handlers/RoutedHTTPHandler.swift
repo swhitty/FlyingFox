@@ -31,11 +31,11 @@
 
 public struct RoutedHTTPHandler: HTTPHandler, Sendable {
 
-    private var handlers: [(route: HTTPRoute, handler: HTTPHandler)] = []
+    private var handlers: [(route: HTTPRoute, handler: any HTTPHandler)] = []
 
     public init() { }
 
-    public mutating func appendRoute(_ route: HTTPRoute, to handler: HTTPHandler) {
+    public mutating func appendRoute(_ route: HTTPRoute, to handler: some HTTPHandler) {
         handlers.append((route, handler))
     }
 

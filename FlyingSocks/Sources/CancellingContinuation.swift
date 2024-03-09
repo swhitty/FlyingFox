@@ -62,7 +62,7 @@ public struct CancellingContinuation<Success, Failure: Error>: Sendable {
     }
 
     public func resume(with result: Result<Success, Failure>) {
-        Task { await inner.resume(with: result.mapError { $0 as Error }) }
+        Task { await inner.resume(with: result.mapError { $0 as any Error }) }
     }
 
     public func cancel() {
@@ -73,8 +73,8 @@ public struct CancellingContinuation<Success, Failure: Error>: Sendable {
 extension CancellingContinuation {
 
     actor Inner {
-        private var continuation: UnsafeContinuation<Success, Error>?
-        private var result: Result<Success, Error>?
+        private var continuation: UnsafeContinuation<Success, any Error>?
+        private var result: Result<Success, any Error>?
         private var hasStarted: Bool = false
 
         func getValue() async throws -> Success {
@@ -88,7 +88,7 @@ extension CancellingContinuation {
             return try result.get()
         }
 
-        func resume(with result: Result<Success, Error>) {
+        func resume(with result: Result<Success, any Error>) {
             if let continuation = continuation {
                 self.continuation = nil
                 continuation.resume(with: result)

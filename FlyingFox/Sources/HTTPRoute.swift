@@ -36,18 +36,18 @@ public struct HTTPRoute: Sendable {
     public var path: [Component]
     public var query: [QueryItem]
     public var headers: [HTTPHeader: Component]
-    public var body: HTTPBodyPattern?
+    public var body: (any HTTPBodyPattern)?
 
-    public init(_ string: String, headers: [HTTPHeader: String] = [:], body: HTTPBodyPattern? = nil) {
+    public init(_ string: String, headers: [HTTPHeader: String] = [:], body: (any HTTPBodyPattern)? = nil) {
         let comps = Self.components(for: string)
         self.init(method: comps.method, path: comps.path, headers: headers, body: body)
     }
 
-    public init(method: HTTPMethod, path: String, headers: [HTTPHeader: String] = [:], body: HTTPBodyPattern? = nil) {
+    public init(method: HTTPMethod, path: String, headers: [HTTPHeader: String] = [:], body: (any HTTPBodyPattern)? = nil) {
         self.init(method: method.rawValue, path: path, headers: headers, body: body)
     }
 
-    init(method: String, path: String, headers: [HTTPHeader: String], body: HTTPBodyPattern?) {
+    init(method: String, path: String, headers: [HTTPHeader: String], body: (any HTTPBodyPattern)?) {
         self.method = Component(method)
 
         let comps = HTTPRoute.readComponents(from: path)
