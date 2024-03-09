@@ -145,7 +145,7 @@ final class HTTPConnectionTests: XCTestCase {
 
 private extension HTTPConnection {
     init(socket: AsyncSocket) {
-        self.init(socket: socket, logger: nil)
+        self.init(socket: socket, logger: .disabled)
     }
 }
 

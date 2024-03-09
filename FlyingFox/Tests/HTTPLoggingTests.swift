@@ -86,4 +86,69 @@ final class HTTPLoggingTests: XCTestCase {
             "starting server"
         )
     }
+
+    func testDisabledLogger_DoesNotExecuteDebugClosure() {
+        let logger = DisabledLogger()
+        let didNotReturnString = expectation(description: "debug closure")
+        didNotReturnString.isInverted = true
+
+        logger.logDebug({
+            didNotReturnString.fulfill()
+            return "disabled"
+        }())
+
+        wait(for: [didNotReturnString], timeout: 0.1)
+    }
+
+    func testDisabledLogger_DoesNotExecuteInfoClosure() {
+        let logger = DisabledLogger()
+        let didNotReturnString = expectation(description: "info closure")
+        didNotReturnString.isInverted = true
+
+        logger.logInfo({
+            didNotReturnString.fulfill()
+            return "disabled"
+        }())
+
+        wait(for: [didNotReturnString], timeout: 0.1)
+    }
+
+    func testDisabledLogger_DoesNotExecuteWarningClosure() {
+        let logger = DisabledLogger()
+        let didNotReturnString = expectation(description: "warning closure")
+        didNotReturnString.isInverted = true
+
+        logger.logWarning({
+            didNotReturnString.fulfill()
+            return "disabled"
+        }())
+
+        wait(for: [didNotReturnString], timeout: 0.1)
+    }
+
+    func testDisabledLogger_DoesNotExecuteErrorClosure() {
+        let logger = DisabledLogger()
+        let didNotReturnString = expectation(description: "error closure")
+        didNotReturnString.isInverted = true
+
+        logger.logError({
+            didNotReturnString.fulfill()
+            return "disabled"
+        }())
+
+        wait(for: [didNotReturnString], timeout: 0.1)
+    }
+
+    func testDisabledLogger_DoesNotExecuteCriticalClosure() {
+        let logger = DisabledLogger()
+        let didNotReturnString = expectation(description: "critical closure")
+        didNotReturnString.isInverted = true
+
+        logger.logCritical({
+            didNotReturnString.fulfill()
+            return "disabled"
+        }())
+
+        wait(for: [didNotReturnString], timeout: 0.1)
+    }
 }

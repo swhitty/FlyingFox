@@ -5,5 +5,5 @@ set -eu
 docker run -it \
   --rm \
   --mount src="$(pwd)",target=/flyingfox,type=bind \
-  swiftlang/swift:nightly-5.9-jammy \
+  swift:5.10-jammy \
   /usr/bin/swift test --package-path /flyingfox

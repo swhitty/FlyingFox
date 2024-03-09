@@ -30,11 +30,11 @@
 //
 
 public protocol Logging: Sendable {
-    func logDebug(_ debug: String)
-    func logInfo(_ info: String)
-    func logWarning(_ warning: String)
-    func logError(_ error: String)
-    func logCritical(_ critical: String)
+    func logDebug(_ debug: @autoclosure () -> String)
+    func logInfo(_ info: @autoclosure () -> String)
+    func logWarning(_ warning: @autoclosure () -> String)
+    func logError(_ error: @autoclosure () -> String)
+    func logCritical(_ critical: @autoclosure () -> String)
 }
 
 public struct PrintLogger: Logging {
@@ -45,30 +45,50 @@ public struct PrintLogger: Logging {
         self.category = category
     }
 
-    public func logDebug(_ debug: String) {
-        Swift.print("[\(category)] debug: \(debug)")
+    public func logDebug(_ debug: @autoclosure () -> String) {
+        Swift.print("[\(category)] debug: \(debug())")
     }
     
-    public func logInfo(_ info: String) {
-        Swift.print("[\(category)] info: \(info)")
+    public func logInfo(_ info: @autoclosure () -> String) {
+        Swift.print("[\(category)] info: \(info())")
     }
 
-    public func logWarning(_ warning: String) {
-        Swift.print("[\(category)] warning: \(warning)")
+    public func logWarning(_ warning: @autoclosure () -> String) {
+        Swift.print("[\(category)] warning: \(warning())")
     }
     
-    public func logError(_ error: String) {
-        Swift.print("[\(category)] error: \(error)")
+    public func logError(_ error: @autoclosure () -> String) {
+        Swift.print("[\(category)] error: \(error())")
     }
     
-    public func logCritical(_ critical: String) {
-        Swift.print("[\(category)] critical: \(critical)")
+    public func logCritical(_ critical: @autoclosure () -> String) {
+        Swift.print("[\(category)] critical: \(critical())")
     }
+}
+
+public struct DisabledLogger: Logging {
+
+    public func logDebug(_ debug: @autoclosure () -> String) { }
+
+    public func logInfo(_ info: @autoclosure () -> String) { }
+
+    public func logWarning(_ warning: @autoclosure () -> String) { }
+
+    public func logError(_ error: @autoclosure () -> String) { }
+
+    public func logCritical(_ critical: @autoclosure () -> String) { }
 }
 
 public extension Logging where Self == PrintLogger {
 
     static func print(category: String) -> Self {
-        return PrintLogger(category: category)
+        PrintLogger(category: category)
+    }
+}
+
+public extension Logging where Self == DisabledLogger {
+
+    static var disabled: Self {
+        DisabledLogger()
     }
 }

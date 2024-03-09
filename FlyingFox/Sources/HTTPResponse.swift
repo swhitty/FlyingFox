@@ -39,7 +39,7 @@ public struct HTTPResponse: Sendable {
 
     public enum Payload: @unchecked Sendable {
         case httpBody(HTTPBodySequence)
-        case webSocket(WSHandler)
+        case webSocket(any WSHandler)
 
         @available(*, unavailable, renamed: "httpBody")
         static func body(_ data: Data) -> Self {
@@ -94,7 +94,7 @@ public struct HTTPResponse: Sendable {
     }
 
     public init(headers: [HTTPHeader: String] = [:],
-                webSocket handler: WSHandler) {
+                webSocket handler: some WSHandler) {
         self.version = .http11
         self.statusCode = .switchingProtocols
         self.headers = headers

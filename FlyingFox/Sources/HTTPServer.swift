@@ -38,17 +38,17 @@ import WinSDK.WinSock2
 
 public final actor HTTPServer {
 
-    let pool: AsyncSocketPool
+    let pool: any AsyncSocketPool
     private let address: sockaddr_storage
     private let timeout: TimeInterval
-    private let logger: Logging?
+    private let logger: any Logging
     private var handlers: RoutedHTTPHandler
 
     public init<A: SocketAddress>(address: A,
                                   timeout: TimeInterval = 15,
-                                  pool: AsyncSocketPool = defaultPool(),
-                                  logger: Logging? = defaultLogger(),
-                                  handler: HTTPHandler? = nil) {
+                                  pool: some AsyncSocketPool = defaultPool(),
+                                  logger: any Logging = defaultLogger(),
+                                  handler: (any HTTPHandler)? = nil) {
         self.address = address.makeStorage()
         self.timeout = timeout
         self.pool = pool
@@ -60,7 +60,7 @@ public final actor HTTPServer {
         try? state?.socket.sockname()
     }
 
-    public func appendRoute(_ route: HTTPRoute, to handler: HTTPHandler) {
+    public func appendRoute(_ route: HTTPRoute, to handler: some HTTPHandler) {
         handlers.appendRoute(route, to: handler)
     }
 
@@ -70,7 +70,7 @@ public final actor HTTPServer {
 
     public func start() async throws {
         guard state == nil else {
-            logger?.logCritical("server error: already started")
+            logger.logCritical("server error: already started")
             throw SocketError.unsupportedAddress
         }
         defer { state = nil }
@@ -80,7 +80,7 @@ public final actor HTTPServer {
             state = (socket: socket, task: task)
             try await task.getValue(cancelling: .whenParentIsCancelled)
         } catch {
-            logger?.logCritical("server error: \(error.localizedDescription)")
+            logger.logCritical("server error: \(error.localizedDescription)")
             if let state = self.state {
                 try? state.socket.close()
             }
@@ -93,13 +93,13 @@ public final actor HTTPServer {
             try await pool.prepare()
             return try makeSocketAndListen()
         } catch {
-            logger?.logCritical("server error: \(error.localizedDescription)")
+            logger.logCritical("server error: \(error.localizedDescription)")
             throw error
         }
     }
 
     var waiting: Set<Continuation> = []
-    private(set) var state: (socket: Socket, task: Task<Void, Error>)? {
+    private(set) var state: (socket: Socket, task: Task<Void, any Error>)? {
         didSet { isListeningDidUpdate(from: oldValue != nil ) }
     }
 
@@ -123,14 +123,14 @@ public final actor HTTPServer {
         #endif
         try socket.bind(to: address)
         try socket.listen()
-        logger?.logListening(on: socket)
+        logger.logListening(on: socket)
         return socket
     }
 
-    func start(on socket: Socket, pool: AsyncSocketPool) async throws {
+    func start(on socket: Socket, pool: some AsyncSocketPool) async throws {
         let asyncSocket = try AsyncSocket(socket: socket, pool: pool)
 
-        return try await withThrowingTaskGroup(of: Void.self) { group in
+        try await withThrowingTaskGroup(of: Void.self) { group in
             group.addTask {
                 try await pool.run()
             }
@@ -184,21 +184,21 @@ public final actor HTTPServer {
     private(set) var connections: Set<HTTPConnection> = []
 
     private func handleConnection(_ connection: HTTPConnection) async {
-        logger?.logOpenConnection(connection)
+        logger.logOpenConnection(connection)
         connections.insert(connection)
         do {
             for try await request in connection.requests {
-                logger?.logRequest(request, on: connection)
+                logger.logRequest(request, on: connection)
                 let response = await handleRequest(request)
                 try await request.bodySequence.flushIfNeeded()
                 try await connection.sendResponse(response)
             }
         } catch {
-            logger?.logError(error, on: connection)
+            logger.logError(error, on: connection)
         }
         connections.remove(connection)
         try? connection.close()
-        logger?.logCloseConnection(connection)
+        logger.logCloseConnection(connection)
     }
 
     func handleRequest(_ request: HTTPRequest) async -> HTTPResponse {
@@ -215,16 +215,16 @@ public final actor HTTPServer {
                 try await handlers.handleRequest(request)
             }
         } catch is HTTPUnhandledError {
-            logger?.logError("unhandled request")
+            logger.logError("unhandled request")
             return HTTPResponse(statusCode: .notFound)
         }
         catch {
-            logger?.logError("handler error: \(error.localizedDescription)")
+            logger.logError("handler error: \(error.localizedDescription)")
             return HTTPResponse(statusCode: .internalServerError)
         }
     }
 
-    private static func makeRootHandler(to handler: HTTPHandler?) -> RoutedHTTPHandler {
+    private static func makeRootHandler(to handler: (any HTTPHandler)?) -> RoutedHTTPHandler {
         var root = RoutedHTTPHandler()
         if let handler = handler {
             root.appendRoute("*", to: handler)
@@ -232,7 +232,7 @@ public final actor HTTPServer {
         return root
     }
 
-    public static func defaultPool(logger: Logging? = nil) -> AsyncSocketPool {
+    public static func defaultPool(logger: some Logging = .disabled) -> some AsyncSocketPool {
 #if canImport(Darwin)
         return .kQueue(logger: logger)
 #elseif canImport(CSystemLinux)
@@ -247,9 +247,9 @@ public extension HTTPServer {
 
     init(port: UInt16,
          timeout: TimeInterval = 15,
-         pool: AsyncSocketPool = defaultPool(),
-         logger: Logging? = defaultLogger(),
-         handler: HTTPHandler? = nil) {
+         pool: some AsyncSocketPool = defaultPool(),
+         logger: any Logging = defaultLogger(),
+         handler: (any HTTPHandler)? = nil) {
 #if canImport(WinSDK)
         let address = sockaddr_in.inet(port: port)
 #else
@@ -264,8 +264,8 @@ public extension HTTPServer {
 
     init(port: UInt16,
          timeout: TimeInterval = 15,
-         pool: AsyncSocketPool = defaultPool(),
-         logger: Logging? = defaultLogger(),
+         pool: some AsyncSocketPool = defaultPool(),
+         logger: any Logging = defaultLogger(),
          handler: @Sendable @escaping (HTTPRequest) async throws -> HTTPResponse) {
         self.init(port: port,
                   timeout: timeout,
@@ -293,7 +293,7 @@ extension Logging {
         logInfo("\(connection.identifer) request: \(request.method.rawValue) \(request.path)")
     }
 
-    func logError(_ error: Error, on connection: HTTPConnection) {
+    func logError(_ error: any Error, on connection: HTTPConnection) {
         logError("\(connection.identifer) error: \(error.localizedDescription)")
     }
 

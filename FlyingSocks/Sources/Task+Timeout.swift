@@ -55,7 +55,7 @@ public struct TimeoutError: LocalizedError {
 @_spi(Private)
 public extension Task {
 
-    enum CancellationPolicy {
+    enum CancellationPolicy: Sendable {
         /// Cancels the task when the task retrieving the value is cancelled
         case whenParentIsCancelled
 

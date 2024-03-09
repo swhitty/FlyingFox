@@ -41,25 +41,25 @@ public protocol EventQueue {
     func getNotifications() throws -> [EventNotification]
 }
 
-public struct EventNotification: Equatable {
+public struct EventNotification: Equatable, Sendable {
     public var file: Socket.FileDescriptor
     public var events: Socket.Events
     public var errors: Set<Error>
 
-    public enum Error {
+    public enum Error: Sendable {
         case endOfFile
         case error
     }
 }
 
 @available(*, unavailable, message: "use .make(maxEvents:)")
-public func makeEventQueuePool(maxEvents limit: Int = 20) -> AsyncSocketPool {
+public func makeEventQueuePool(maxEvents limit: Int = 20) -> any AsyncSocketPool {
     fatalError("init pool directly")
 }
 
 public extension AsyncSocketPool where Self == SocketPool<Poll> {
 
-    static func make(maxEvents limit: Int = 20, logger: Logging? = nil) -> some AsyncSocketPool {
+    static func make(maxEvents limit: Int = 20, logger: some Logging = .disabled) -> some AsyncSocketPool {
     #if canImport(Darwin)
         return .kQueue(maxEvents: limit, logger: logger)
     #elseif canImport(CSystemLinux)
@@ -75,16 +75,16 @@ public final actor SocketPool<Queue: EventQueue>: AsyncSocketPool {
     private(set) var queue: Queue
     private let dispatchQueue: DispatchQueue
     private(set) var state: State?
-    private let logger: Logging?
+    private let logger: any Logging
 
-    public init(queue: Queue, dispatchQueue: DispatchQueue = .init(label: "flyingfox"), logger: Logging? = nil) {
+    public init(queue: Queue, dispatchQueue: DispatchQueue = .init(label: "flyingfox"), logger: some Logging = .disabled) {
         self.queue = queue
         self.dispatchQueue = dispatchQueue
         self.logger = logger
     }
 
     public func prepare() async throws {
-        logger?.logInfo("SocketPoll prepare")
+        logger.logInfo("SocketPoll prepare")
         try queue.open()
         state = .ready
     }
@@ -111,7 +111,7 @@ public final actor SocketPool<Queue: EventQueue>: AsyncSocketPool {
     }
 
     private func getNotifications() async throws -> [EventNotification] {
-        let continuation = CancellingContinuation<[EventNotification], Swift.Error>()
+        let continuation = CancellingContinuation<[EventNotification], any Swift.Error>()
         dispatchQueue.async { [queue] in
             let result = Result {
                 try queue.getNotifications()
@@ -151,7 +151,7 @@ public final actor SocketPool<Queue: EventQueue>: AsyncSocketPool {
     }
 
     private func cancellAll() {
-        logger?.logInfo("SocketPoll cancellAll")
+        logger.logInfo("SocketPoll cancellAll")
         try? queue.close()
         state = .complete
         waiting.cancellAll()

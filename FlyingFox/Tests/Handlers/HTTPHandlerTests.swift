@@ -37,7 +37,7 @@ final class HTTPHandlerTests: XCTestCase {
     //MARK: - HTTPHandler
     
     func testUnhandledHandler_ThrowsError() async {
-        let handler: HTTPHandler = .unhandled()
+        let handler: some HTTPHandler = .unhandled()
 
         await AsyncAssertThrowsError(try await handler.handleRequest(.make()), of: HTTPUnhandledError.self)
     }
@@ -75,7 +75,7 @@ final class HTTPHandlerTests: XCTestCase {
     }
     
     func testFileHandler_Returns200WithData() async throws {
-        let handler: HTTPHandler = .file(named: "Stubs/fish.json", in: .module)
+        let handler: some HTTPHandler = .file(named: "Stubs/fish.json", in: .module)
 
         let response = try await handler.handleRequest(.make())
         XCTAssertEqual(response.statusCode, .ok)

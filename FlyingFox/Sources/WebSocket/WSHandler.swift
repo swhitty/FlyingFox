@@ -32,7 +32,7 @@
 import Foundation
 
 public protocol WSHandler: Sendable {
-    func makeFrames(for client: AsyncThrowingStream<WSFrame, Error>) async throws -> AsyncStream<WSFrame>
+    func makeFrames(for client: AsyncThrowingStream<WSFrame, any Error>) async throws -> AsyncStream<WSFrame>
 }
 
 /// `MessageFrameWSHandler` manages the websocket protocol by splitting the messages from the incoming frames into a separate stream,
@@ -63,15 +63,15 @@ public protocol WSHandler: Sendable {
 
 public struct MessageFrameWSHandler: WSHandler {
 
-    private let handler: WSMessageHandler
+    private let handler: any WSMessageHandler
     private let frameSize: Int
 
-    public init(handler: WSMessageHandler, frameSize: Int = 16384) {
+    public init(handler: some WSMessageHandler, frameSize: Int = 16384) {
         self.handler = handler
         self.frameSize = frameSize
     }
 
-    public func makeFrames(for client: AsyncThrowingStream<WSFrame, Error>) async throws -> AsyncStream<WSFrame> {
+    public func makeFrames(for client: AsyncThrowingStream<WSFrame, any Error>) async throws -> AsyncStream<WSFrame> {
         let framesIn = WSFrameValidator.validateFrames(from: client)
 
         var messagesIn: AsyncStream<WSMessage>.Continuation!
@@ -80,7 +80,7 @@ public struct MessageFrameWSHandler: WSHandler {
         }
 
         let messagesOut = try await handler.makeMessages(for: messages)
-        let serverFrames = AsyncThrowingStream<WSFrame, Error> { [messagesIn] continuation in
+        let serverFrames = AsyncThrowingStream<WSFrame, any Error> { [messagesIn] continuation in
             let task = Task {
                 await start(framesIn: framesIn, framesOut: continuation,
                             messagesIn: messagesIn!, messagesOut: messagesOut)
@@ -91,10 +91,12 @@ public struct MessageFrameWSHandler: WSHandler {
         return AsyncStream.protocolFrames(from: serverFrames)
     }
 
-    func start<S: AsyncSequence>(framesIn: S,
-                                 framesOut: AsyncThrowingStream<WSFrame, Error>.Continuation,
-                                 messagesIn: AsyncStream<WSMessage>.Continuation,
-                                 messagesOut: AsyncStream<WSMessage>) async where S.Element == WSFrame {
+    func start<S: AsyncSequence & Sendable>(
+        framesIn: S,
+        framesOut: AsyncThrowingStream<WSFrame, any Error>.Continuation,
+        messagesIn: AsyncStream<WSMessage>.Continuation,
+        messagesOut: AsyncStream<WSMessage>
+    ) async where S.Element == WSFrame {
         await withTaskGroup(of: Void.self) { group in
             group.addTask {
                 do {

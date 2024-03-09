@@ -55,7 +55,7 @@ extension HTTPResponse {
     }
 
     static func make(headers: [HTTPHeader: String] = [:],
-                     webSocket handler: WSHandler) -> Self {
+                     webSocket handler: some WSHandler) -> Self {
         HTTPResponse(headers: headers,
                      webSocket: handler)
     }

@@ -129,7 +129,7 @@ final class WSHandlerTests: XCTestCase {
 
 extension MessageFrameWSHandler {
 
-    static func make(handler: WSMessageHandler = Messages(),
+    static func make(handler: some WSMessageHandler = Messages(),
                      frameSize: Int = 1024) -> Self {
         MessageFrameWSHandler(handler: handler,
                               frameSize: frameSize)
@@ -140,7 +140,7 @@ extension MessageFrameWSHandler {
     }
 }
 
-private final class Messages: WSMessageHandler, @unchecked Sendable {
+final class Messages: WSMessageHandler, @unchecked Sendable {
 
     var input: AsyncStream<WSMessage>!
     var output: AsyncStream<WSMessage>.Continuation!

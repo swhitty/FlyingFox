@@ -105,10 +105,10 @@ private extension AsyncDataSequence {
     actor DataLoader {
         nonisolated fileprivate let count: Int
         nonisolated fileprivate let chunkSize: Int
-        private let iterator: AsyncDataIterator
+        private let iterator: any AsyncDataIterator
         private var state: State
 
-        init(count: Int, chunkSize: Int, iterator: AsyncDataIterator) {
+        init(count: Int, chunkSize: Int, iterator: some AsyncDataIterator) {
             self.count = count
             self.chunkSize = chunkSize
             self.iterator = iterator

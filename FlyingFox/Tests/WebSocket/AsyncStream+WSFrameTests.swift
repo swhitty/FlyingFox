@@ -53,7 +53,7 @@ final class WSFrameSequenceTests: XCTestCase {
 
     func testProtocolFrames_CatchErrors_AndCloseStream() async throws {
         var continuation: AsyncThrowingStream<WSFrame, Error>.Continuation!
-        let stream = AsyncThrowingStream<WSFrame, Error> {
+        let stream = AsyncThrowingStream<WSFrame, any Error> {
             continuation = $0
         }
 
@@ -76,7 +76,7 @@ extension WSFrame {
     static let pong = WSFrame.make(opcode: .pong)
 }
 
-extension AsyncThrowingStream where Element == WSFrame, Failure == Error {
+extension AsyncThrowingStream where Element == WSFrame, Failure == any Error {
     static func make(_ frames: [WSFrame]) -> Self {
         let bytes = ConsumingAsyncSequence(frames.flatMap(WSFrameEncoder.encodeFrame))
         return AsyncThrowingStream.decodingFrames(from: bytes)
