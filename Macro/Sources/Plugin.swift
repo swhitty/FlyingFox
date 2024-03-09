@@ -3,7 +3,7 @@ import SwiftSyntaxMacros
 
 @main
 struct MyMacroPlugin: CompilerPlugin {
-    let providingMacros: [Macro.Type] = [
+    let providingMacros: [any Macro.Type] = [
         HTTPRouteMacro.self,
         JSONRouteMacro.self,
         HTTPHandlerMacro.self

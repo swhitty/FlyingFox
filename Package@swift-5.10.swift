@@ -19,14 +19,15 @@ let package = Package(
         )
     ],
     dependencies: [
-        // Depend on the Swift 5.9 release of SwiftSyntax
-        .package(url: "https://github.com/apple/swift-syntax.git", from: "509.0.0"),
+        // Depend on the Swift 5.10 release of SwiftSyntax
+        .package(url: "https://github.com/apple/swift-syntax.git", from: "510.0.0"),
     ],
     targets: [
         .target(
             name: "FlyingFox",
             dependencies: ["FlyingSocks", "Macro"],
-            path: "FlyingFox/Sources"
+            path: "FlyingFox/Sources",
+            swiftSettings: .upcomingFeatures
         ),
         .testTarget(
             name: "FlyingFoxTests",
@@ -34,12 +35,14 @@ let package = Package(
             path: "FlyingFox/Tests",
             resources: [
                 .copy("Stubs")
-            ]
+            ],
+            swiftSettings: .upcomingFeatures
         ),
         .target(
             name: "FlyingSocks",
             dependencies: [.target(name: "CSystemLinux", condition: .when(platforms: [.linux]))],
-            path: "FlyingSocks/Sources"
+            path: "FlyingSocks/Sources",
+            swiftSettings: .upcomingFeatures
         ),
         .testTarget(
             name: "FlyingSocksTests",
@@ -47,7 +50,8 @@ let package = Package(
             path: "FlyingSocks/Tests",
             resources: [
                 .copy("Resources")
-            ]
+            ],
+            swiftSettings: .upcomingFeatures
         ),
         .target(
              name: "CSystemLinux",
@@ -59,7 +63,18 @@ let package = Package(
                 .product(name: "SwiftSyntaxMacros", package: "swift-syntax"),
                 .product(name: "SwiftCompilerPlugin", package: "swift-syntax")
             ],
-            path: "Macro/Sources"
+            path: "Macro/Sources",
+            swiftSettings: .upcomingFeatures
         )
     ]
 )
+
+extension Array where Element == SwiftSetting {
+
+    static var upcomingFeatures: [SwiftSetting] {
+        [
+            .enableUpcomingFeature("ExistentialAny"),
+            //.enableExperimentalFeature("StrictConcurrency")
+        ]
+    }
+}
