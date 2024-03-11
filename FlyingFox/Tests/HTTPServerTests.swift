@@ -323,7 +323,7 @@ final class HTTPServerTests: XCTestCase {
         let port = try await startServerWithPort(server)
 
         let request = URLRequest(url: URL(string: "http://127.0.0.1:\(port)")!)
-        let (_, response) = try await URLSession.shared.makeData(for: request)
+        let (_, response) = try await URLSession.shared.data(for: request)
 
         XCTAssertEqual(
             (response as? HTTPURLResponse)?.statusCode,
