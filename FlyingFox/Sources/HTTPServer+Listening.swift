@@ -32,6 +32,7 @@
 import Foundation
 import FlyingSocks
 @_spi(Private) import func FlyingSocks.withThrowingTimeout
+@_spi(Private) import func FlyingSocks.withIdentifiableThrowingContinuation
 
 extension HTTPServer {
 
@@ -45,21 +46,28 @@ extension HTTPServer {
 
     private func doWaitUntilListening() async throws {
         guard !isListening else { return }
-        let continuation = Continuation()
-        waiting.insert(continuation)
-        defer { waiting.remove(continuation) }
-        return try await continuation.value
+        try await withIdentifiableThrowingContinuation(isolation: self) {
+            waiting[$0.id] = $0
+        } onCancel: { id in
+            Task { await self.cancelContinuation(with: id) }
+        }
+    }
+
+    private func cancelContinuation(with id: Continuation.ID) {
+        if let continuation = waiting.removeValue(forKey: id) {
+            continuation.resume(throwing: CancellationError())
+        }
     }
 
     func isListeningDidUpdate(from previous: Bool) {
         guard isListening else { return }
         let waiting = self.waiting
-        self.waiting = []
+        self.waiting = [:]
 
-        for continuation in waiting {
+        for continuation in waiting.values {
             continuation.resume()
         }
     }
 
-    typealias Continuation = CancellingContinuation<Void, Never>
+    typealias Continuation = IdentifiableContinuation<Void, any Error>
 }
