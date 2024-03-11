@@ -30,45 +30,48 @@
 //
 
 import Foundation
+@_spi(Private) import struct FlyingSocks.AllocatedLock
+
 #if canImport(FoundationNetworking)
 import FoundationNetworking
-#endif
-import FlyingSocks
 
-@available(iOS, deprecated: 15.0, message: "use data(for request: URLRequest) directly")
-@available(tvOS, deprecated: 15.0, message: "use data(for request: URLRequest) directly")
-@available(macOS, deprecated: 12.0, message: "use data(for request: URLRequest) directly")
 extension URLSession {
 
-    func getData(for request: URLRequest, forceFallback: Bool = false) async throws -> (Data, URLResponse) {
-        guard !forceFallback, #available(macOS 12.0, iOS 15.0, tvOS 15.0, *) else {
-            return try await makeData(for: request)
-        }
-#if canImport(FoundationNetworking)
-        return try await makeData(for: request)
-#else
-        return try await data(for: request, delegate: nil)
-#endif
-    }
-
-    func makeData(for request: URLRequest) async throws -> (Data, URLResponse) {
-        let continuation = CancellingContinuation<(Data, URLResponse), any Error>()
-        let task = dataTask(with: request) { data, response, error in
-            guard let data = data, let response = response else {
-                continuation.resume(throwing: error!)
-                return
+    // Ports macOS Foundation method to Linux
+    func data(for request: URLRequest) async throws -> (Data, URLResponse) {
+        let state = AllocatedLock(initialState: (isCancelled: false, task: URLSessionDataTask?.none))
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                let task = dataTask(with: request) { data, response, error in
+                    guard let data = data, let response = response else {
+                        continuation.resume(throwing: error!)
+                        return
+                    }
+                    continuation.resume(returning: (data, response))
+                }
+                let shouldCancel = state.withLock {
+                    $0.task = task
+                    return $0.isCancelled
+                }
+                task.resume()
+                if shouldCancel {
+                    task.cancel()
+                }
             }
-            continuation.resume(returning: (data, response))
-        }
-        defer { task.cancel() }
-        task.resume()
-
-        do {
-            return try await continuation.value
-        } catch is CancellationError {
-            throw URLError(.cancelled)
-        } catch {
-            throw error
+        } onCancel: {
+            let taskToCancel = state.withLock {
+                $0.isCancelled = true
+                return $0.task
+            }
+            if let taskToCancel {
+                taskToCancel.cancel()
+            }
         }
     }
 }
+
+#elseif compiler(<5.7.1)
+
+#error("FlyingFox requires Xcode 14.1 and later on macOS for backported `func URLSession.data(for:) async throws`")
+
+#endif

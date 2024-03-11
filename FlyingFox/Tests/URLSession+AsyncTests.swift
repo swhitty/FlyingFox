@@ -40,7 +40,7 @@ final class URLSessionAsyncTests: XCTestCase {
 
     func testURLSession_MakesRequest() async throws {
         let request = URLRequest(url: URL(string: "https://pie.dev/status/208")!)
-        let (_, response) = try await URLSession.shared.getData(for: request, forceFallback: false)
+        let (_, response) = try await URLSession.shared.data(for: request)
 
         XCTAssertEqual(
             (response as! HTTPURLResponse).statusCode,
@@ -48,40 +48,16 @@ final class URLSessionAsyncTests: XCTestCase {
         )
     }
 
-    func testURLSessionFallback_MakesRequest() async throws {
-        let request = URLRequest(url: URL(string: "https://pie.dev/status/208")!)
-        let (_, response) = try await URLSession.shared.getData(for: request, forceFallback: true)
-
-        XCTAssertEqual(
-            (response as! HTTPURLResponse).statusCode,
-            208
-        )
-    }
-
-    func testURLSessionFallback_ReturnsError() async throws {
+    func testURLSession_ReturnsError() async throws {
         let request = URLRequest(url: URL(string: "https://flying.fox.invalid/")!)
-        await AsyncAssertThrowsError(try await URLSession.shared.getData(for: request, forceFallback: true), of: URLError.self)
+        await AsyncAssertThrowsError(try await URLSession.shared.data(for: request), of: URLError.self)
     }
 
     func testURLSession_CancelsRequest() async throws {
         let request = URLRequest(url: URL(string: "https://httpstat.us/200?sleep=10000")!)
 
         let task = Task {
-            _ = try await URLSession.shared.getData(for: request)
-        }
-
-        task.cancel()
-
-        await AsyncAssertThrowsError(try await task.value, of: URLError.self) {
-            XCTAssertEqual($0.code, .cancelled)
-        }
-    }
-
-    func testURLSessionFallback_CancelsRequest() async throws {
-        let request = URLRequest(url: URL(string: "https://httpstat.us/200?sleep=10000")!)
-
-        let task = Task {
-            _ = try await URLSession.shared.getData(for: request, forceFallback: true)
+            _ = try await URLSession.shared.data(for: request)
         }
 
         task.cancel()
