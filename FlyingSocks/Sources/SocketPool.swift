@@ -156,25 +156,34 @@ public final actor SocketPool<Queue: EventQueue>: AsyncSocketPool {
         state = .complete
         waiting.cancellAll()
         waiting = Waiting()
-        loop?.cancel()
+        loop?.resume(throwing: CancellationError())
         loop = nil
     }
 
     typealias Continuation = CancellingContinuation<Void, SocketError>
-    private var loop: CancellingContinuation<Void, Never>?
+    private var loop: IdentifiableContinuation<Void, any Swift.Error>?
     private var waiting = Waiting() {
         didSet {
             if !waiting.isEmpty, let continuation = loop {
                 continuation.resume()
+                loop = nil
             }
         }
     }
 
     private func suspendUntilContinuationsExist() async throws {
-        let continuation = CancellingContinuation<Void, Never>()
-        loop = continuation
-        defer { loop = nil }
-        return try await continuation.value
+        try await withIdentifiableThrowingContinuation(isolation: self) {
+            loop = $0
+        } onCancel: { id in
+            Task { await self.cancelLoopContinuation(with: id) }
+        }
+    }
+
+    private func cancelLoopContinuation(with id: IdentifiableContinuation<Void, any Swift.Error>.ID) {
+        if loop?.id == id {
+            loop?.resume(throwing: CancellationError())
+            loop = nil
+        }
     }
 
     private func appendContinuation(_ continuation: Continuation,
