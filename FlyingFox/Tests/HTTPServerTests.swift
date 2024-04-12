@@ -41,9 +41,13 @@ final class HTTPServerTests: XCTestCase {
 
     private var stopServer: HTTPServer?
 
-    func startServerWithPort(_ server: HTTPServer) async throws -> UInt16 {
+    func startServerWithPort(_ server: HTTPServer, preferConnectionsDiscarding: Bool = true) async throws -> UInt16 {
         self.stopServer = server
-        Task { try await server.start() }
+        Task {
+            try await HTTPServer.$preferConnectionsDiscarding.withValue(preferConnectionsDiscarding) {
+                try await server.start()
+            }
+        }
         return try await server.waitForListeningPort()
     }
 
@@ -151,6 +155,32 @@ final class HTTPServerTests: XCTestCase {
         XCTAssertEqual(
             response.statusCode,
             .notFound
+        )
+    }
+
+    func testConnections_AreHandled_DiscardingTaskGroup() async throws {
+        let server = HTTPServer.make()
+        let port = try await startServerWithPort(server, preferConnectionsDiscarding: true)
+
+        let request = URLRequest(url: URL(string: "http://127.0.0.1:\(port)")!)
+        let (_, response) = try await URLSession.shared.data(for: request)
+
+        XCTAssertEqual(
+            (response as? HTTPURLResponse)?.statusCode,
+            404
+        )
+    }
+
+    func testConnections_AreHandled_FallbackTaskGroup() async throws {
+        let server = HTTPServer.make()
+        let port = try await startServerWithPort(server, preferConnectionsDiscarding: false)
+
+        let request = URLRequest(url: URL(string: "http://127.0.0.1:\(port)")!)
+        let (_, response) = try await URLSession.shared.data(for: request)
+
+        XCTAssertEqual(
+            (response as? HTTPURLResponse)?.statusCode,
+            404
         )
     }
 

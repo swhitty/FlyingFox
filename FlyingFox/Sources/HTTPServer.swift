@@ -44,11 +44,11 @@ public final actor HTTPServer {
     private let logger: any Logging
     private var handlers: RoutedHTTPHandler
 
-    public init<A: SocketAddress>(address: A,
-                                  timeout: TimeInterval = 15,
-                                  pool: some AsyncSocketPool = defaultPool(),
-                                  logger: any Logging = defaultLogger(),
-                                  handler: (any HTTPHandler)? = nil) {
+    public init(address: some SocketAddress,
+                timeout: TimeInterval = 15,
+                pool: some AsyncSocketPool = defaultPool(),
+                logger: any Logging = defaultLogger(),
+                handler: (any HTTPHandler)? = nil) {
         self.address = address.makeStorage()
         self.timeout = timeout
         self.pool = pool
@@ -141,9 +141,11 @@ public final actor HTTPServer {
         }
     }
 
+    @TaskLocal static var preferConnectionsDiscarding = true
+
     private func listenForConnections(on socket: AsyncSocket) async throws {
 #if compiler(>=5.9)
-        if #available(macOS 14.0, iOS 17.0, tvOS 17.0, *) {
+        if #available(macOS 14.0, iOS 17.0, tvOS 17.0, *), Self.preferConnectionsDiscarding {
             try await listenForConnectionsDiscarding(on: socket)
         } else {
             try await listenForConnectionsFallback(on: socket)
