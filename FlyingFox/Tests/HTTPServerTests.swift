@@ -68,6 +68,18 @@ final class HTTPServerTests: XCTestCase {
         }
     }
 
+    func testWaitsUntilListening() async throws {
+        let server = HTTPServer.make()
+        let task = Task { try await server.waitUntilListening() }
+        try await Task.sleep(seconds: 0.1)
+
+        try await startServer(server)
+
+        await AsyncAssertNoThrow(
+            try await task.result.get()
+        )
+    }
+
     func testThrowsError_WhenSocketAlreadyListening() async throws {
         let server = HTTPServer.make(port: 42185)
         let socket = try await server.makeSocketAndListen()

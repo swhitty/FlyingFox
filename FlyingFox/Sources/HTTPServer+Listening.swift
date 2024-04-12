@@ -47,10 +47,14 @@ extension HTTPServer {
     private func doWaitUntilListening() async throws {
         guard !isListening else { return }
         try await withIdentifiableThrowingContinuation(isolation: self) {
-            waiting[$0.id] = $0
+            appendContinuation($0)
         } onCancel: { id in
             Task { await self.cancelContinuation(with: id) }
         }
+    }
+
+    private func appendContinuation(_ continuation: Continuation) {
+        waiting[continuation.id] = continuation
     }
 
     private func cancelContinuation(with id: Continuation.ID) {
