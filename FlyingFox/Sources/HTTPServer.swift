@@ -98,7 +98,7 @@ public final actor HTTPServer {
         }
     }
 
-    var waiting: Set<Continuation> = []
+    var waiting = [Continuation.ID: Continuation]()
     private(set) var state: (socket: Socket, task: Task<Void, any Error>)? {
         didSet { isListeningDidUpdate(from: oldValue != nil ) }
     }
