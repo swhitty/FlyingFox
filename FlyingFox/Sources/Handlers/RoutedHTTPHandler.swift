@@ -1,5 +1,5 @@
 //
-//  CompositeHTTPHandler.swift
+//  RoutedHTTPHandler.swift
 //  FlyingFox
 //
 //  Created by Simon Whitty on 25/02/2022.
@@ -36,12 +36,24 @@ public struct RoutedHTTPHandler: HTTPHandler, Sendable {
     public init() { }
 
     public mutating func appendRoute(_ route: HTTPRoute, to handler: some HTTPHandler) {
-        handlers.append((route, handler))
+        append((route, handler))
     }
 
     public mutating func appendRoute(_ route: HTTPRoute,
                                      handler: @Sendable @escaping (HTTPRequest) async throws -> HTTPResponse) {
-        handlers.append((route, ClosureHTTPHandler(handler)))
+        append((route, ClosureHTTPHandler(handler)))
+    }
+
+    public mutating func insertRoute(_ route: HTTPRoute, 
+                                     at index: Index,
+                                     to handler: some HTTPHandler) {
+        insert((route, handler), at: index)
+    }
+
+    public mutating func insertRoute(_ route: HTTPRoute,
+                                     at index: Index,
+                                     handler: @Sendable @escaping (HTTPRequest) async throws -> HTTPResponse) {
+        insert((route, ClosureHTTPHandler(handler)), at: index)
     }
 
     public func handleRequest(_ request: HTTPRequest) async throws -> HTTPResponse {
@@ -57,5 +69,26 @@ public struct RoutedHTTPHandler: HTTPHandler, Sendable {
             }
         }
         throw HTTPUnhandledError()
+    }
+}
+
+extension RoutedHTTPHandler: RangeReplaceableCollection {
+    public typealias Index = Array<Element>.Index
+    public typealias Element = (route: HTTPRoute, handler: any HTTPHandler)
+
+    public var startIndex: Index { handlers.startIndex }
+    public var endIndex: Index { handlers.endIndex }
+
+    public subscript(index: Index) -> Element {
+        get { handlers[index] }
+        set { handlers[index] = newValue }
+    }
+
+    public func index(after i: Index) -> Index {
+        handlers.index(after: i)
+    }
+
+    public mutating func replaceSubrange(_ subrange: Range<Index>, with newElements: some Collection<Element>) {
+        handlers.replaceSubrange(subrange, with: newElements)
     }
 }
