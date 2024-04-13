@@ -71,15 +71,23 @@ public struct AsyncSocket: Sendable {
         try socket.setFlags(.nonBlocking)
     }
 
-    public static func connected<A: SocketAddress>(to address: A) async throws -> Self {
-        try await connected(to: address, pool: ClientPoolLoader.shared.getPool())
+    public static func connected(to address: some SocketAddress, timeout: TimeInterval = 5) async throws -> Self {
+        try await connected(
+            to: address,
+            pool: ClientPoolLoader.shared.getPool(),
+            timeout: timeout
+        )
     }
 
-    public static func connected<A: SocketAddress>(to address: A,  pool: some AsyncSocketPool) async throws -> Self {
-        let socket = try Socket(domain: Int32(address.makeStorage().ss_family), type: Socket.stream)
-        let asyncSocket = try AsyncSocket(socket: socket, pool: pool)
-        try await asyncSocket.connect(to: address)
-        return asyncSocket
+    public static func connected(to address: some SocketAddress,
+                                 pool: some AsyncSocketPool,
+                                 timeout: TimeInterval = 5) async throws -> Self {
+        try await withThrowingTimeout(seconds: timeout) {
+            let socket = try Socket(domain: Int32(address.makeStorage().ss_family), type: Socket.stream)
+            let asyncSocket = try AsyncSocket(socket: socket, pool: pool)
+            try await asyncSocket.connect(to: address)
+            return asyncSocket
+        }
     }
 
     @Sendable
@@ -91,7 +99,7 @@ public struct AsyncSocket: Sendable {
         }
     }
 
-    public func connect<A: SocketAddress>(to address: A) async throws {
+    public func connect(to address: some SocketAddress) async throws {
         return try await pool.loopUntilReady(for: [.write], on: socket) {
             try socket.connect(to: address)
         }

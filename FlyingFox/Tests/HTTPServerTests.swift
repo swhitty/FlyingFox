@@ -439,10 +439,10 @@ final class HTTPServerTests: XCTestCase {
 
 extension HTTPServer {
 
-    static func make<A: SocketAddress>(address: A,
-                                       timeout: TimeInterval = 15,
-                                       logger: any Logging = defaultLogger(),
-                                       handler: (any HTTPHandler)? = nil) -> HTTPServer {
+    static func make(address: some SocketAddress,
+                      timeout: TimeInterval = 15,
+                      logger: any Logging = defaultLogger(),
+                      handler: (any HTTPHandler)? = nil) -> HTTPServer {
         HTTPServer(address: address,
                    timeout: timeout,
                    logger: logger,
