@@ -34,16 +34,10 @@
 import Glibc
 import FlyingSocks
 
-extension sockaddr_in: SocketAddress {
-    public static let family = sa_family_t(AF_INET)
-}
+extension sockaddr_in: SocketAddress { }
 
-extension sockaddr_in6: SocketAddress {
-    public static let family = sa_family_t(AF_INET6)
-}
+extension sockaddr_in6: SocketAddress { }
 
-extension sockaddr_un: SocketAddress {
-    public static let family = sa_family_t(AF_UNIX)
-}
+extension sockaddr_un: SocketAddress { }
 
 #endif
