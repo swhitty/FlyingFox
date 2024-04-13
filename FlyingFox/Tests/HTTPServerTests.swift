@@ -158,6 +158,7 @@ final class HTTPServerTests: XCTestCase {
         )
     }
 
+#if canImport(Darwin) || compiler(>=5.8)
     func testConnections_AreHandled_DiscardingTaskGroup() async throws {
         let server = HTTPServer.make()
         let port = try await startServerWithPort(server, preferConnectionsDiscarding: true)
@@ -183,6 +184,7 @@ final class HTTPServerTests: XCTestCase {
             404
         )
     }
+#endif
 
     func testHandlerErrors_Return500() async throws {
         let server = HTTPServer.make() { _ in
