@@ -67,7 +67,7 @@ struct WSFrameEncoder {
         return data
     }
 
-    static func decodeFrame<S>(from bytes: S) async throws -> WSFrame where S: AsyncChunkedSequence, S.Element == UInt8 {
+    static func decodeFrame(from bytes: some AsyncChunkedSequence<UInt8>) async throws -> WSFrame {
         var frame = try await decodeFrame(from: bytes.take())
         let (length, mask) = try await decodeLengthMask(from: bytes)
         frame.payload = try await decodePayload(from: bytes, length: length, mask: mask)

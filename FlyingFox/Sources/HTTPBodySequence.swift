@@ -46,7 +46,7 @@ public struct HTTPBodySequence: Sendable, AsyncSequence {
         self.storage = .complete(data)
     }
 
-    public init<S: AsyncChunkedSequence>(from bytes: S, count: Int) where S.Element == UInt8 {
+    public init(from bytes: some AsyncChunkedSequence<UInt8>, count: Int) {
         self.storage = .sequence(
             AsyncDataSequence(from: bytes, count: count, chunkSize: 4096)
         )
@@ -56,7 +56,7 @@ public struct HTTPBodySequence: Sendable, AsyncSequence {
         try self.init(file: url, chunkSize: 4096)
     }
 
-    init<S: AsyncChunkedSequence>(from bytes: S, count: Int, chunkSize: Int) where S.Element == UInt8 {
+    init(from bytes: some AsyncChunkedSequence<UInt8>, count: Int, chunkSize: Int) {
         self.storage = .sequence(
             AsyncDataSequence(from: bytes, count: count, chunkSize: chunkSize)
         )

@@ -104,7 +104,7 @@ struct HTTPDecoder {
         return (HTTPHeader(name), value)
     }
 
-    static func readHeaders<S: AsyncChunkedSequence>(from bytes: S) async throws -> [HTTPHeader : String] where S.Element == UInt8 {
+    static func readHeaders(from bytes: some AsyncChunkedSequence<UInt8>) async throws -> [HTTPHeader : String] {
         try await bytes
             .lines
             .prefix { $0 != "\r" && $0 != "" }
@@ -112,7 +112,7 @@ struct HTTPDecoder {
             .reduce(into: [HTTPHeader: String]()) { $0[$1.header] = $1.value }
     }
 
-    static func readBody<S: AsyncChunkedSequence>(from bytes: S, length: String?, maxSizeForComplete: Int = 10_485_760) async throws -> HTTPBodySequence where S.Element == UInt8 {
+    static func readBody(from bytes: some AsyncChunkedSequence<UInt8>, length: String?, maxSizeForComplete: Int = 10_485_760) async throws -> HTTPBodySequence {
         guard let length = length.flatMap(Int.init) else {
             return HTTPBodySequence(data: Data())
         }
@@ -124,7 +124,7 @@ struct HTTPDecoder {
         }
     }
 
-    static func makeBodyData<S: AsyncChunkedSequence>(from bytes: S, length: Int) async throws -> Data where S.Element == UInt8 {
+    static func makeBodyData(from bytes: some AsyncChunkedSequence<UInt8>, length: Int) async throws -> Data {
         var iterator = bytes.makeAsyncIterator()
         guard let buffer = try await iterator.nextChunk(count: length) else {
             throw Error("AsyncChunkedSequence prematurely ended")

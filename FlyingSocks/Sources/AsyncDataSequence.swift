@@ -38,7 +38,7 @@ public struct AsyncDataSequence: AsyncSequence, Sendable {
 
     private let loader: DataLoader
 
-    public init<S: AsyncChunkedSequence>(from bytes: S, count: Int, chunkSize: Int) where S.Element == UInt8 {
+    public init(from bytes: some AsyncChunkedSequence<UInt8>, count: Int, chunkSize: Int) {
         self.loader = DataLoader(
             count: count,
             chunkSize: chunkSize,

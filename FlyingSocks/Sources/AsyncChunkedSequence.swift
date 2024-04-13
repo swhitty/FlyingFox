@@ -30,7 +30,7 @@
 //
 
 /// AsyncSequence that is able to also receive elements in chunks, instead of just one-at-a-time.
-public protocol AsyncChunkedSequence: AsyncSequence where AsyncIterator: AsyncChunkedIteratorProtocol {
+public protocol AsyncChunkedSequence<Element>: AsyncSequence where AsyncIterator: AsyncChunkedIteratorProtocol {
 
 }
 

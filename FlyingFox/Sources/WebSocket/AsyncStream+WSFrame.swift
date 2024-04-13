@@ -33,7 +33,7 @@ import FlyingSocks
 
 extension AsyncThrowingStream<WSFrame, any Error> {
 
-    static func decodingFrames<S: AsyncChunkedSequence>(from bytes: S) -> Self where S.Element == UInt8 {
+    static func decodingFrames(from bytes: some AsyncChunkedSequence<UInt8>) -> Self {
         AsyncThrowingStream<WSFrame, any Error> {
             do {
                 return try await WSFrameEncoder.decodeFrame(from: bytes)
