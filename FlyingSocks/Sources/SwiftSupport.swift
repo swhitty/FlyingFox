@@ -29,6 +29,6 @@
 //  SOFTWARE.
 //
 
-#if compiler(<5.8)
-#warning("FlyingFox will soon remove support for Swift 5.7")
+#if compiler(<5.9)
+#warning("FlyingFox will soon remove support for Swift 5.8")
 #endif

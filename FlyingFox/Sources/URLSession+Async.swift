@@ -69,9 +69,4 @@ extension URLSession {
         }
     }
 }
-
-#elseif compiler(<5.7.1)
-
-#error("FlyingFox requires Xcode 14.1 and later on macOS for backported `func URLSession.data(for:) async throws`")
-
 #endif
