@@ -30,11 +30,13 @@
 //
 
 @testable import FlyingSocks
+@_spi(Private) import struct FlyingSocks.IdentifiableContinuation
+@_spi(Private) import func FlyingSocks.withIdentifiableThrowingContinuation
 import XCTest
 
 final class SocketPoolTests: XCTestCase {
 
-    typealias Continuation = CancellingContinuation<Void, SocketError>
+    typealias Continuation = IdentifiableContinuation<Void, any Swift.Error>
     typealias Waiting = SocketPool<MockEventQueue>.Waiting
 
 #if canImport(Darwin)
@@ -161,8 +163,8 @@ final class SocketPoolTests: XCTestCase {
         ) { XCTAssertEqual($0, .disconnected) }
     }
 
-    func testWaiting_IsEmpty() {
-        let cn = Continuation()
+    func testWaiting_IsEmpty() async {
+        let cn = await Continuation.make()
 
         var waiting = Waiting()
         XCTAssertTrue(waiting.isEmpty)
@@ -170,15 +172,15 @@ final class SocketPoolTests: XCTestCase {
         _ = waiting.appendContinuation(cn, for: .validMock, events: .read)
         XCTAssertFalse(waiting.isEmpty)
 
-        _ = waiting.removeContinuation(cn, for: .validMock)
+        _ = waiting.resumeContinuation(id: cn.id, with: .success(()), for: .validMock)
         XCTAssertTrue(waiting.isEmpty)
     }
 
-    func testWaitingEvents() {
+    func testWaitingEvents() async {
         var waiting = Waiting()
-        let cnRead = Continuation()
-        let cnRead1 = Continuation()
-        let cnWrite = Continuation()
+        let cnRead = await Continuation.make()
+        let cnRead1 = await Continuation.make()
+        let cnWrite = await Continuation.make()
 
         XCTAssertEqual(
             waiting.appendContinuation(cnRead, for: .validMock, events: .read),
@@ -193,51 +195,51 @@ final class SocketPoolTests: XCTestCase {
             [.read, .write]
         )
         XCTAssertEqual(
-            waiting.removeContinuation(.init(), for: .validMock),
+            waiting.resumeContinuation(id: .init(), with: .success(()), for: .validMock),
             []
         )
         XCTAssertEqual(
-            waiting.removeContinuation(cnWrite, for: .validMock),
+            waiting.resumeContinuation(id: cnWrite.id, with: .success(()), for: .validMock),
             [.write]
         )
         XCTAssertEqual(
-            waiting.removeContinuation(cnRead, for: .validMock),
+            waiting.resumeContinuation(id: cnRead.id, with: .success(()), for: .validMock),
             []
         )
         XCTAssertEqual(
-            waiting.removeContinuation(cnRead1, for: .validMock),
+            waiting.resumeContinuation(id: cnRead1.id, with: .success(()), for: .validMock),
             [.read]
         )
     }
 
-    func testWaitingContinuations() {
+    func testWaitingContinuations() async {
         var waiting = Waiting()
-        let cnRead = Continuation()
-        let cnRead1 = Continuation()
-        let cnWrite = Continuation()
+        let cnRead = await Continuation.make()
+        let cnRead1 = await Continuation.make()
+        let cnWrite = await Continuation.make()
 
         _ = waiting.appendContinuation(cnRead, for: .validMock, events: .read)
         _ = waiting.appendContinuation(cnRead1, for: .validMock, events: .read)
         _ = waiting.appendContinuation(cnWrite, for: .validMock, events: .write)
 
         XCTAssertEqual(
-            Set(waiting.continuations(for: .validMock, events: .read)),
-            [cnRead1, cnRead]
+            Set(waiting.continuationIDs(for: .validMock, events: .read)),
+            [cnRead1.id, cnRead.id]
         )
         XCTAssertEqual(
-            Set(waiting.continuations(for: .validMock, events: .write)),
-            [cnWrite]
+            Set(waiting.continuationIDs(for: .validMock, events: .write)),
+            [cnWrite.id]
         )
         XCTAssertEqual(
-            Set(waiting.continuations(for: .validMock, events: .connection)),
-            [cnRead1, cnRead, cnWrite]
+            Set(waiting.continuationIDs(for: .validMock, events: .connection)),
+            [cnRead1.id, cnRead.id, cnWrite.id]
         )
         XCTAssertEqual(
-            Set(waiting.continuations(for: .validMock, events: [])),
+            Set(waiting.continuationIDs(for: .validMock, events: [])),
             []
         )
         XCTAssertEqual(
-            Set(waiting.continuations(for: .invalid, events: .connection)),
+            Set(waiting.continuationIDs(for: .invalid, events: .connection)),
             []
         )
     }
@@ -309,3 +311,23 @@ final class MockEventQueue: EventQueue, @unchecked Sendable {
         }
     }
 }
+
+
+extension IdentifiableContinuation {
+    static func make() async -> IdentifiableContinuation<T, any Error> {
+        await Host().makeThrowingContinuation()
+    }
+
+    private actor Host {
+        func makeThrowingContinuation() async -> IdentifiableContinuation<T, any Error> {
+            await withCheckedContinuation { outer in
+                Task {
+                    try? await withIdentifiableThrowingContinuation(isolation: self) {
+                        outer.resume(returning: $0)
+                    } onCancel: { _ in }
+                }
+            }
+        }
+    }
+}
+

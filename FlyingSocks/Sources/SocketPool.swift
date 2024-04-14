@@ -104,10 +104,13 @@ public final actor SocketPool<Queue: EventQueue>: AsyncSocketPool {
 
     public func suspendSocket(_ socket: Socket, untilReadyFor events: Socket.Events) async throws {
         guard state == .running || state == .ready else { throw Error("Not Ready") }
-        let continuation = Continuation()
-        defer { removeContinuation(continuation, for: socket.file) }
-        try appendContinuation(continuation, for: socket.file, events: events)
-        return try await continuation.value
+        return try await withIdentifiableThrowingContinuation(isolation: self) {
+            appendContinuation($0, for: socket.file, events: events)
+        } onCancel: { id in
+            Task {
+                await self.resumeContinuation(id: id, with: .failure(CancellationError()), for: socket.file)
+            }
+        }
     }
 
     private func getNotifications() async throws -> [EventNotification] {
@@ -128,19 +131,8 @@ public final actor SocketPool<Queue: EventQueue>: AsyncSocketPool {
     }
 
     private func processNotification(_ notification: EventNotification) {
-        let continuations = waiting.continuations(
-            for: notification.file,
-            events: notification.events
-        )
-
-        if notification.errors.isEmpty {
-            for c in continuations {
-                c.resume()
-            }
-        } else {
-            for c in continuations {
-                c.resume(throwing: .disconnected)
-            }
+        for id in waiting.continuationIDs(for: notification.file, events: notification.events) {
+            resumeContinuation(id: id, with: notification.result, for: notification.file)
         }
     }
 
@@ -156,17 +148,19 @@ public final actor SocketPool<Queue: EventQueue>: AsyncSocketPool {
         state = .complete
         waiting.cancellAll()
         waiting = Waiting()
-        loop?.resume(throwing: CancellationError())
-        loop = nil
+        if let loop {
+            self.loop = nil
+            loop.resume(throwing: CancellationError())
+        }
     }
 
-    typealias Continuation = CancellingContinuation<Void, SocketError>
-    private var loop: IdentifiableContinuation<Void, any Swift.Error>?
+    typealias Continuation = IdentifiableContinuation<Void, any Swift.Error>
+    private var loop: Continuation?
     private var waiting = Waiting() {
         didSet {
-            if !waiting.isEmpty, let continuation = loop {
-                continuation.resume()
-                loop = nil
+            if let loop, !waiting.isEmpty {
+                self.loop = nil
+                loop.resume()
             }
         }
     }
@@ -179,26 +173,41 @@ public final actor SocketPool<Queue: EventQueue>: AsyncSocketPool {
         }
     }
 
-    private func cancelLoopContinuation(with id: IdentifiableContinuation<Void, any Swift.Error>.ID) {
-        if loop?.id == id {
-            loop?.resume(throwing: CancellationError())
-            loop = nil
+    private func cancelLoopContinuation(with id: Continuation.ID) {
+        if let loop, loop.id == id {
+            self.loop = nil
+            loop.resume(throwing: CancellationError())
         }
     }
 
-    private func appendContinuation(_ continuation: Continuation,
-                                    for socket: Socket.FileDescriptor,
-                                    events: Socket.Events) throws {
-        let events = waiting.appendContinuation(continuation,
-                                                for: socket,
-                                                events: events)
-        try queue.addEvents(events, for: socket)
+    private func appendContinuation(
+        _ continuation: Continuation,
+        for socket: Socket.FileDescriptor,
+        events: Socket.Events
+    ) {
+        let events = waiting.appendContinuation(continuation, for: socket, events: events)
+        do  {
+            try queue.addEvents(events, for: socket)
+        } catch {
+            resumeContinuation(
+                id: continuation.id,
+                with: .failure(error),
+                for: socket
+            )
+        }
     }
 
-    private func removeContinuation(_ continuation: Continuation,
-                                    for socket: Socket.FileDescriptor) {
-        let events = waiting.removeContinuation(continuation, for: socket)
-        try? queue.removeEvents(events, for: socket)
+    private func resumeContinuation(
+        id: Continuation.ID,
+        with result: Result<Void, any Swift.Error>,
+        for socket: Socket.FileDescriptor
+    ) {
+        do {
+            let events = waiting.resumeContinuation(id: id, with: result, for: socket)
+            try queue.removeEvents(events, for: socket)
+        } catch {
+            logger.logError("resumeContinuation queue.removeEvents: \(error.localizedDescription)")
+        }
     }
 
     private struct Error: LocalizedError {
@@ -210,7 +219,7 @@ public final actor SocketPool<Queue: EventQueue>: AsyncSocketPool {
     }
 
     struct Waiting {
-        private var storage: [Socket.FileDescriptor: [Continuation: Socket.Events]] = [:]
+        private var storage: [Socket.FileDescriptor: [Continuation.ID: (continuation: Continuation, events: Socket.Events)]] = [:]
 
         var isEmpty: Bool { storage.isEmpty }
 
@@ -219,41 +228,50 @@ public final actor SocketPool<Queue: EventQueue>: AsyncSocketPool {
                                          for socket: Socket.FileDescriptor,
                                          events: Socket.Events) -> Socket.Events {
             var entries = storage[socket] ?? [:]
-            entries[continuation] = events
+            entries[continuation.id] = (continuation, events)
             storage[socket] = entries
             return entries.values.reduce(Socket.Events()) {
-                $0.union($1)
+                $0.union($1.events)
             }
         }
 
-        // Removes continuation returning any events that are no longer being waited
-        mutating func removeContinuation(_ continuation: Continuation,
+        // Resumes and removes continuation, returning any events that are no longer being waited
+        mutating func resumeContinuation(id: Continuation.ID,
+                                         with result: Result<Void, any Swift.Error>,
                                          for socket: Socket.FileDescriptor) -> Socket.Events {
             var entries = storage[socket] ?? [:]
-            guard let events = entries[continuation] else { return [] }
-            entries[continuation] = nil
+            guard let (continuation, events) = entries.removeValue(forKey: id) else { return [] }
+            continuation.resume(with: result)
             storage[socket] = entries.isEmpty ? nil : entries
             let remaining = entries.values.reduce(Socket.Events()) {
-                $0.union($1)
+                $0.union($1.events)
             }
             return events.filter { !remaining.contains($0) }
         }
 
-        func continuations(for socket: Socket.FileDescriptor, events: Socket.Events) -> [Continuation] {
+        func continuationIDs(for socket: Socket.FileDescriptor, events: Socket.Events) -> [Continuation.ID] {
             let entries = storage[socket] ?? [:]
-            return entries.compactMap { c, ev in
-                if events.intersection(ev).isEmpty {
+            return entries.compactMap { id, ev in
+                if events.intersection(ev.events).isEmpty {
                     return nil
                 } else {
-                    return c
+                    return id
                 }
             }
         }
 
-        func cancellAll() {
-            for continuation in storage.values.flatMap(\.keys) {
-                continuation.cancel()
+        mutating func cancellAll() {
+            let continuations = storage.values.flatMap(\.values).map(\.continuation)
+            storage = [:]
+            for continuation in continuations {
+                continuation.resume(throwing: CancellationError())
             }
         }
+    }
+}
+
+private extension EventNotification {
+    var result: Result<Void, any Swift.Error> {
+        errors.isEmpty ? .success(()) : .failure(SocketError.disconnected)
     }
 }
