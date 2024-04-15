@@ -342,7 +342,7 @@ final class HTTPServerTests: XCTestCase {
     }
 
     func testServer_DisconnectsWaitingRequests_WhenStopped() async throws {
-        let server = HTTPServer.make(logger: HTTPServer.defaultLogger())
+        let server = HTTPServer.make()
 
         let port = try await startServerWithPort(server)
         let socket = try await AsyncSocket.connected(to: .inet(ip4: "127.0.0.1", port: port))
@@ -440,9 +440,9 @@ final class HTTPServerTests: XCTestCase {
 extension HTTPServer {
 
     static func make(address: some SocketAddress,
-                      timeout: TimeInterval = 15,
-                      logger: any Logging = defaultLogger(),
-                      handler: (any HTTPHandler)? = nil) -> HTTPServer {
+                     timeout: TimeInterval = 15,
+                     logger: any Logging = .disabled,
+                     handler: (any HTTPHandler)? = nil) -> HTTPServer {
         HTTPServer(address: address,
                    timeout: timeout,
                    logger: logger,
