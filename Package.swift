@@ -52,7 +52,8 @@ let package = Package(
              name: "CSystemLinux",
              path: "CSystemLinux"
         )
-    ]
+    ],
+    swiftLanguageVersions: [.v5]
 )
 
 extension Array where Element == SwiftSetting {
