@@ -113,6 +113,22 @@ public final actor SocketPool<Queue: EventQueue>: AsyncSocketPool {
         }
     }
 
+    #if canImport(Darwin)
+    private func getNotifications() async throws -> [EventNotification] {
+        try Task.checkCancellation()
+        return try await withIdentifiableThrowingContinuation(isolation: self) { continuation in
+            dispatchQueue.async { [queue] in
+                let result = Result {
+                    try queue.getNotifications()
+                }
+                continuation.resume(with: result)
+            }
+        } onCancel: { _ in
+            Task { await self.closeQueue() }
+        }
+    }
+    #else
+    // EPOLL does not throw error when queue FD is closed while currently waiting for events.
     private func getNotifications() async throws -> [EventNotification] {
         let continuation = CancellingContinuation<[EventNotification], any Swift.Error>()
         dispatchQueue.async { [queue] in
@@ -122,6 +138,11 @@ public final actor SocketPool<Queue: EventQueue>: AsyncSocketPool {
             continuation.resume(with: result)
         }
         return try await continuation.value
+    }
+    #endif
+
+    private func closeQueue() {
+        try? queue.close()
     }
 
     private func processNotifications(_ notifications: [EventNotification]) {
