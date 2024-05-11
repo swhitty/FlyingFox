@@ -60,7 +60,15 @@ extension Array where Element == SwiftSetting {
 
     static var upcomingFeatures: [SwiftSetting] {
         [
+            .enableUpcomingFeature("BareSlashRegexLiterals"),
+            .enableUpcomingFeature("ConciseMagicFile"),
+            .enableUpcomingFeature("DeprecateApplicationMain"),
+            .enableUpcomingFeature("DisableOutwardActorInference"),
             .enableUpcomingFeature("ExistentialAny"),
+            .enableUpcomingFeature("ForwardTrailingClosures"),
+            .enableUpcomingFeature("GlobalConcurrency"),
+            .enableUpcomingFeature("ImportObjcForwardDeclarations"),
+            .enableUpcomingFeature("IsolatedDefaultValues")
             //.enableExperimentalFeature("StrictConcurrency")
         ]
     }
