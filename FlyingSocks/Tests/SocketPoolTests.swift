@@ -323,7 +323,7 @@ final class MockEventQueue: EventQueue, @unchecked Sendable {
 }
 
 
-extension IdentifiableContinuation {
+extension IdentifiableContinuation where T: Sendable {
     static func make() async -> IdentifiableContinuation<T, any Error> {
         await Host().makeThrowingContinuation()
     }

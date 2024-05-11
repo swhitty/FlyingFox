@@ -35,7 +35,7 @@ import WinSDK.WinSock2
 #endif
 
 
-public protocol SocketAddress {
+public protocol SocketAddress: Sendable {
     static var family: sa_family_t { get }
 }
 
@@ -76,15 +76,15 @@ public extension SocketAddress where Self == sockaddr_un {
     }
 }
 
-extension sockaddr_in: SocketAddress {
+extension sockaddr_in: SocketAddress, @unchecked Sendable {
     public static let family = sa_family_t(AF_INET)
 }
 
-extension sockaddr_in6: SocketAddress {
+extension sockaddr_in6: SocketAddress, @unchecked Sendable {
     public static let family = sa_family_t(AF_INET6)
 }
 
-extension sockaddr_un: SocketAddress {
+extension sockaddr_un: SocketAddress, @unchecked Sendable {
     public static let family = sa_family_t(AF_UNIX)
 }
 

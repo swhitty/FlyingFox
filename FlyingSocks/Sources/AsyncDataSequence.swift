@@ -105,10 +105,10 @@ private extension AsyncDataSequence {
     actor DataLoader {
         nonisolated fileprivate let count: Int
         nonisolated fileprivate let chunkSize: Int
-        private let iterator: any AsyncDataIterator
+        private let iterator: any AsyncDataIterator & Sendable
         private var state: State
 
-        init(count: Int, chunkSize: Int, iterator: some AsyncDataIterator) {
+        init(count: Int, chunkSize: Int, iterator: some AsyncDataIterator & Sendable) {
             self.count = count
             self.chunkSize = chunkSize
             self.iterator = iterator
@@ -166,7 +166,7 @@ private extension AsyncDataSequence {
         }
     }
 
-    final class AsyncChunkedSequenceIterator<I: AsyncChunkedIteratorProtocol>: AsyncDataIterator where I.Element == UInt8 {
+    final class AsyncChunkedSequenceIterator<I: AsyncChunkedIteratorProtocol>: AsyncDataIterator, @unchecked Sendable where I.Element == UInt8 {
         private var iterator: I
 
         init(_ iterator: I) {

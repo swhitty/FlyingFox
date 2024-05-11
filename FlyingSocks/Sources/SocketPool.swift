@@ -116,10 +116,11 @@ public final actor SocketPool<Queue: EventQueue>: AsyncSocketPool {
 
     private func getNotifications() async throws -> [EventNotification] {
         try Task.checkCancellation()
+        let queue = UncheckedSendable(wrappedValue: queue)
         return try await withIdentifiableThrowingContinuation(isolation: self) { continuation in
-            dispatchQueue.async { [queue] in
+            dispatchQueue.async {
                 let result = Result {
-                    try queue.getNotifications()
+                    try queue.wrappedValue.getNotifications()
                 }
                 continuation.resume(with: result)
             }
@@ -282,5 +283,13 @@ public final actor SocketPool<Queue: EventQueue>: AsyncSocketPool {
 private extension EventNotification {
     var result: Result<Void, any Swift.Error> {
         errors.isEmpty ? .success(()) : .failure(SocketError.disconnected)
+    }
+}
+
+struct UncheckedSendable<Value>: @unchecked Sendable {
+    var wrappedValue: Value
+
+    init(wrappedValue: Value) {
+        self.wrappedValue = wrappedValue
     }
 }
