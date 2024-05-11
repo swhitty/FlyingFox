@@ -69,6 +69,8 @@ public struct FileHTTPHandler: HTTPHandler {
             return "image/svg+xml"
         case "ico":
             return "image/x-icon"
+        case "wasm":
+            return "application/wasm"
         case "webp":
             return "image/webp"
         case "jp2":

@@ -157,6 +157,10 @@ final class HTTPHandlerTests: XCTestCase {
             "image/x-icon"
         )
         XCTAssertEqual(
+            FileHTTPHandler.makeContentType(for: "fish.wasm"),
+            "application/wasm"
+        )
+        XCTAssertEqual(
             FileHTTPHandler.makeContentType(for: "fish.webp"),
             "image/webp"
         )
