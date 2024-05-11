@@ -61,13 +61,17 @@ public struct kQueue: EventQueue {
         self.file = try Self.makeQueue()
     }
 
-    public mutating func close() throws {
+    public mutating func stop() throws {
         existing = [:]
         guard file != .invalid else {
             throw SocketError.disconnected
         }
         defer { file = .invalid }
         try Self.closeQueue(file: file)
+    }
+
+    public mutating func close() throws {
+        // stop closes
     }
 
     public mutating func addEvents(_ events: Socket.Events, for socket: Socket.FileDescriptor) throws {

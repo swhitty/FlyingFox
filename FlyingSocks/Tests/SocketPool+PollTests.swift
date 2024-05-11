@@ -58,7 +58,7 @@ final class PollTests: XCTestCase {
 
     func testAddingEventWhenNotOpen_ThrowsError() {
         var queue = Poll.make()
-        queue.close()
+        queue.stop()
 
         XCTAssertThrowsError(
             try queue.addEvents(.read, for: .validMock)
@@ -67,7 +67,7 @@ final class PollTests: XCTestCase {
 
     func testRemovingEventWhenNotOpen_ThrowsError() {
         var queue = Poll.make()
-        queue.close()
+        queue.stop()
 
         XCTAssertThrowsError(
             try queue.removeEvents(.read, for: .validMock)
@@ -212,7 +212,7 @@ final class PollTests: XCTestCase {
 
     func testGetEventsWhenNotReady_ThrowsError() async {
         var queue = Poll.make()
-        queue.close()
+        queue.stop()
 
         await AsyncAssertThrowsError(
             try await queue.getEvents()

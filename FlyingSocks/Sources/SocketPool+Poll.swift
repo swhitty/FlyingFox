@@ -69,9 +69,13 @@ public struct Poll: EventQueue {
         isOpen = true
     }
 
-    public mutating func close() {
+    public mutating func stop() {
         entries = []
         isOpen = false
+    }
+
+    public mutating func close() {
+        // stop closes
     }
 
     public mutating func addEvents(_ events: Socket.Events, for socket: Socket.FileDescriptor) throws {

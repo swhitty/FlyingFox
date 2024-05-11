@@ -261,7 +261,8 @@ final class MockEventQueue: EventQueue, @unchecked Sendable {
 
     enum State {
         case open
-        case close
+        case stopped
+        case closed
     }
 
     func sendResult(returning success: [EventNotification]) {
@@ -287,15 +288,22 @@ final class MockEventQueue: EventQueue, @unchecked Sendable {
     }
 
     func open() throws {
+        guard (state == nil || state == .closed) else { throw InvalidStateError() }
         state = .open
     }
 
-    func close() throws {
-        state = .close
+    func stop() throws {
+        guard state == .open else { throw InvalidStateError() }
+        state = .stopped
         result = .failure(CancellationError())
         if isWaiting {
             semaphore.signal()
         }
+    }
+
+    func close() throws {
+        guard state == .stopped else { throw InvalidStateError() }
+        state = .closed
     }
 
     func getNotifications() throws -> [EventNotification] {
@@ -310,6 +318,8 @@ final class MockEventQueue: EventQueue, @unchecked Sendable {
             return try result!.get()
         }
     }
+
+    private struct InvalidStateError: Error { }
 }
 
 
