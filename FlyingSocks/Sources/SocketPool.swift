@@ -34,6 +34,7 @@ import Foundation
 
 public protocol EventQueue {
     mutating func open() throws
+    mutating func stop() throws
     mutating func close() throws
 
     mutating func addEvents(_ events: Socket.Events, for socket: Socket.FileDescriptor) throws
@@ -124,7 +125,7 @@ public final actor SocketPool<Queue: EventQueue>: AsyncSocketPool {
                 continuation.resume(with: result)
             }
         } onCancel: { _ in
-            Task { await self.closeQueue() }
+            Task { await self.stopQueue() }
         }
     }
     #else
@@ -141,8 +142,8 @@ public final actor SocketPool<Queue: EventQueue>: AsyncSocketPool {
     }
     #endif
 
-    private func closeQueue() {
-        try? queue.close()
+    private func stopQueue() {
+        try? queue.stop()
     }
 
     private func processNotifications(_ notifications: [EventNotification]) {
@@ -165,7 +166,7 @@ public final actor SocketPool<Queue: EventQueue>: AsyncSocketPool {
 
     private func cancellAll() {
         logger.logInfo("SocketPoll cancellAll")
-        try? queue.close()
+        try? queue.stop()
         state = .complete
         waiting.cancellAll()
         waiting = Waiting()
@@ -173,6 +174,7 @@ public final actor SocketPool<Queue: EventQueue>: AsyncSocketPool {
             self.loop = nil
             loop.resume(throwing: CancellationError())
         }
+        try? queue.close()
     }
 
     typealias Continuation = IdentifiableContinuation<Void, any Swift.Error>
