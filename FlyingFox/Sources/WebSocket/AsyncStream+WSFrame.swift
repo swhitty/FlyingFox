@@ -49,14 +49,30 @@ extension AsyncThrowingStream<WSFrame, any Error> {
 extension AsyncStream<WSFrame> {
 
     static func protocolFrames<S: AsyncSequence>(from frames: S) -> Self where S.Element == WSFrame {
-        var iterator: S.AsyncIterator? = frames.makeAsyncIterator()
+        let iterator = Iterator(from: frames)
         return AsyncStream<WSFrame> {
             do {
-                return try await iterator?.next()
+                return try await iterator.next()
             } catch {
-                iterator = nil
+                iterator.close()
                 return .close(message: "Protocol Error")
             }
+        }
+    }
+
+    private final class Iterator<S: AsyncSequence>: @unchecked Sendable where S.Element == WSFrame {
+        var iterator: S.AsyncIterator?
+
+        init(from frames: S){
+            self.iterator = frames.makeAsyncIterator()
+        }
+
+        func next() async throws -> WSFrame? {
+            try await iterator?.next()
+        }
+
+        func close() {
+            iterator = nil
         }
     }
 }

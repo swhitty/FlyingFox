@@ -52,7 +52,7 @@ final class WSFrameSequenceTests: XCTestCase {
     }
 
     func testProtocolFrames_CatchErrors_AndCloseStream() async throws {
-        var continuation: AsyncThrowingStream<WSFrame, Error>.Continuation!
+        var continuation: AsyncThrowingStream<WSFrame, any Error>.Continuation!
         let stream = AsyncThrowingStream<WSFrame, any Error> {
             continuation = $0
         }
