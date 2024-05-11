@@ -45,12 +45,14 @@ public extension AsyncSocketPool where Self == SocketPool<ePoll> {
 public struct ePoll: EventQueue {
 
     private(set) var file: Socket.FileDescriptor
+    private(set) var canary: Socket.FileDescriptor
     private(set) var existing: [Socket.FileDescriptor: Socket.Events]
     private let eventsLimit: Int
     private let logger: any Logging
 
     public init(maxEvents limit: Int, logger: some Logging = .disabled) {
         self.file = .invalid
+        self.canary = .invalid
         self.existing = [:]
         self.eventsLimit = limit
         self.logger = logger
@@ -59,19 +61,33 @@ public struct ePoll: EventQueue {
     public mutating func open() throws {
         existing = [:]
         self.file = try Self.makeQueue()
+        self.canary = try Self.makeEventTrigger()
+
+        var event = CSystemLinux.epoll_event()
+        let options: EPOLLEvents = [EPOLLEvents.edgeTriggered, EPOLLEvents.read]
+        event.events = options.rawValue
+        event.data.fd = canary.rawValue
+        guard epoll_ctl(file.rawValue, EPOLL_CTL_ADD, canary.rawValue, &event) != -1 else {
+            throw SocketError.makeFailed("epoll_ctl EPOLL_CTL_ADD")
+        }
     }
 
     public mutating func stop() throws {
         existing = [:]
+        guard canary != .invalid else {
+            throw SocketError.disconnected
+        }
+        eventfd_write(canary.rawValue, 1);
+        canary = .invalid
+
+    }
+
+    public mutating func close() throws {
         guard file != .invalid else {
             throw SocketError.disconnected
         }
         defer { file = .invalid }
         try Self.closeQueue(file: file)
-    }
-
-    public mutating func close() throws {
-        // should really close file here
     }
 
     public mutating func addEvents(_ events: Socket.Events, for socket: Socket.FileDescriptor) throws {
@@ -117,21 +133,28 @@ public struct ePoll: EventQueue {
     }
 
     public func getNotifications() throws -> [EventNotification] {
+        guard canary != .invalid else {
+            throw SocketError.disconnected
+        }
         var events = Array(repeating: epoll_event(), count: eventsLimit)
         let status = CSystemLinux.epoll_wait(file.rawValue, &events, Int32(eventsLimit), -1)
         guard status > 0 else {
             throw SocketError.makeFailed("epoll wait")
         }
 
-        return events
+        return try events
             .prefix(Int(status))
             .map(makeNotification)
     }
 
-    func makeNotification(from event: epoll_event) -> EventNotification {
+    func makeNotification(from event: epoll_event) throws -> EventNotification {
         var notification = EventNotification.make(from: event)
         if notification.events.isEmpty, let existing = existing[notification.file] {
             notification.events = existing
+        }
+
+        if event.data.fd == self.canary.rawValue {
+            throw SocketError.disconnected
         }
         return notification
     }
@@ -140,6 +163,14 @@ public struct ePoll: EventQueue {
         let file = Socket.FileDescriptor(rawValue: file)
         guard file != .invalid else {
             throw SocketError.makeFailed("epoll")
+        }
+        return file
+    }
+
+    static func makeEventTrigger(file: Int32 = CSystemLinux.eventfd(0, Int32(EFD_NONBLOCK))) throws -> Socket.FileDescriptor {
+        let file = Socket.FileDescriptor(rawValue: file)
+        guard file != .invalid else {
+            throw SocketError.makeFailed("eventfd")
         }
         return file
     }
@@ -194,6 +225,7 @@ private struct EPOLLEvents: OptionSet, Hashable {
     static let rdhup = EPOLLEvents(rawValue: EPOLLRDHUP.rawValue)
     static let err = EPOLLEvents(rawValue: EPOLLERR.rawValue)
     static let pri = EPOLLEvents(rawValue: EPOLLPRI.rawValue)
+    static let edgeTriggered = EPOLLEvents(rawValue: EPOLLET.rawValue)
 }
 
 private extension Socket.Events {
