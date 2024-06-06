@@ -85,8 +85,8 @@ private struct MockHandler: HTTPHandler {
 private extension HTTPRoute {
 
     var stringValue: String {
-        let method = method.stringValue
-        let path = path.map(\.stringValue).joined(separator: "/")
+        let method = method.rawValue
+        let path = path.compactMap(\.stringValue).joined(separator: "/")
         return method + " /" + path
     }
 }

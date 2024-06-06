@@ -32,7 +32,7 @@
 import Foundation
 
 public struct HTTPRoute: Sendable {
-    public var method: Component
+    public var method: HTTPMethod
     public var path: [Component]
     public var query: [QueryItem]
     public var headers: [HTTPHeader: Component]
@@ -48,7 +48,7 @@ public struct HTTPRoute: Sendable {
     }
 
     init(method: String, path: String, headers: [HTTPHeader: String], body: (any HTTPBodyPattern)?) {
-        self.method = Component(method)
+        self.method = HTTPMethod(method)
 
         let comps = HTTPRoute.readComponents(from: path)
         self.path = comps.path
@@ -124,7 +124,7 @@ public extension HTTPRoute {
               patternMatch(body: request.bodySequence) else { return false }
 
         let nodes = request.path.split(separator: "/", omittingEmptySubsequences: true)
-        guard self.method ~= request.method.rawValue else {
+        guard self.method ~= request.method else {
             return false
         }
         guard nodes.count >= self.path.count else {

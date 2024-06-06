@@ -29,7 +29,9 @@
 //  SOFTWARE.
 //
 
-public struct HTTPMethod: Sendable, RawRepresentable, Hashable {
+public struct HTTPMethod: Sendable, RawRepresentable, Hashable, ExpressibleByStringLiteral {
+    public typealias StringLiteralType = String
+
     public var rawValue: String
 
     public init(rawValue: String) {
@@ -39,16 +41,35 @@ public struct HTTPMethod: Sendable, RawRepresentable, Hashable {
     public init(_ rawValue: String) {
         self.init(rawValue: rawValue)
     }
+
+    public init(stringLiteral value: String) {
+        self.init(rawValue: value.uppercased())
+    }
 }
 
 public extension HTTPMethod {
-    static let GET     = HTTPMethod("GET")
-    static let POST    = HTTPMethod("POST")
-    static let PUT     = HTTPMethod("PUT")
-    static let DELETE  = HTTPMethod("DELETE")
-    static let PATCH   = HTTPMethod("PATCH")
-    static let HEAD    = HTTPMethod("HEAD")
-    static let OPTIONS = HTTPMethod("OPTIONS")
-    static let CONNECT = HTTPMethod("CONNECT")
-    static let TRACE   = HTTPMethod("TRACE")
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        return lhs.rawValue.uppercased() == rhs.rawValue.uppercased()
+    }
+
+    static func ~= (lhs: Self, rhs: Self) -> Bool {
+        if lhs == .ANY || rhs == .ANY {
+            return true
+        }
+
+        return lhs == rhs
+    }
+}
+
+public extension HTTPMethod {
+    internal static let ANY  = HTTPMethod("*")
+    static let GET           = HTTPMethod("GET")
+    static let POST          = HTTPMethod("POST")
+    static let PUT           = HTTPMethod("PUT")
+    static let DELETE        = HTTPMethod("DELETE")
+    static let PATCH         = HTTPMethod("PATCH")
+    static let HEAD          = HTTPMethod("HEAD")
+    static let OPTIONS       = HTTPMethod("OPTIONS")
+    static let CONNECT       = HTTPMethod("CONNECT")
+    static let TRACE         = HTTPMethod("TRACE")
 }
