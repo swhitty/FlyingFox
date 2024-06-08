@@ -38,6 +38,8 @@ public struct _HTTPClient {
         let socket = try await AsyncSocket.connected(to: address)
         try await socket.writeRequest(request)
         let response = try await socket.readResponse()
+        // if streaming very large responses then you shouldn't close here
+        // maybe better to close in deinit instead
         try? socket.close()
         return response
     }
