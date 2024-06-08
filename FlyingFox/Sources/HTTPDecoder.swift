@@ -34,7 +34,7 @@ import Foundation
 
 struct HTTPDecoder {
 
-    static func decodeRequest<S>(from bytes: S) async throws -> HTTPRequest where S: AsyncChunkedSequence, S.Element == UInt8 {
+    static func decodeRequest(from bytes: some AsyncChunkedSequence<UInt8>) async throws -> HTTPRequest {
         let status = try await bytes.lines.takeNext()
         let comps = status
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -60,7 +60,7 @@ struct HTTPDecoder {
         )
     }
 
-    static func decodeResponse<S>(from bytes: S) async throws -> HTTPResponse where S: AsyncChunkedSequence, S.Element == UInt8 {
+    static func decodeResponse(from bytes: some AsyncChunkedSequence<UInt8>) async throws -> HTTPResponse {
         let comps = try await bytes.lines.takeNext()
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .split(separator: " ", maxSplits: 2, omittingEmptySubsequences: true)
