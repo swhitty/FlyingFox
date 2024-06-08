@@ -63,22 +63,6 @@ extension AsyncSocket {
         try await write(string.data(using: .utf8)!)
     }
 
-    func writeRequest(_ request: HTTPRequest) async throws {
-        try await write(HTTPEncoder.encodeRequest(request))
-    }
-
-    func writeFrame(_ frame: WSFrame) async throws {
-        try await write(WSFrameEncoder.encodeFrame(frame))
-    }
-
-    func readResponse() async throws -> HTTPResponse {
-        try await HTTPDecoder.decodeResponse(from: bytes)
-    }
-
-    func readFrame() async throws -> WSFrame {
-        try await WSFrameEncoder.decodeFrame(from: bytes)
-    }
-
     func readString(length: Int) async throws -> String {
         let bytes = try await read(bytes: length)
         guard let string = String(data: Data(bytes), encoding: .utf8) else {
