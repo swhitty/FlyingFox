@@ -93,12 +93,14 @@ private extension HTTPRoute {
 
 private extension HTTPRoute.Component {
 
-    var stringValue: String {
+    var stringValue: String? {
         switch self {
         case .wildcard:
             return "*"
         case let .caseInsensitive(pattern):
             return pattern
+        case let .parameter(name):
+            return ":" + name
         }
     }
 }
