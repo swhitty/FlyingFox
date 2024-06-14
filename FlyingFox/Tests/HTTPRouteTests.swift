@@ -443,4 +443,25 @@ final class HTTPRouteTests: XCTestCase {
         XCTAssertEqual(HTTPRoute("PUT /fish/*").method, .caseInsensitive("PUT"))
         XCTAssertEqual(HTTPRoute("GET,PUT /fish/*").method, .caseInsensitive("GET"))
     }
+
+    func testPathParameters() async {
+        let route = HTTPRoute("GET /mock/:id")
+        let parameters = route.pathParameters
+        XCTAssertEqual(parameters.count, 1)
+        XCTAssertEqual(parameters["id"], 1) // Position 1 in the components array
+
+        let route2 = HTTPRoute("GET /mock/:id/:bloop/hello/guys/:zonk")
+        let parameters2 = route2.pathParameters
+        XCTAssertEqual(parameters2.count, 3)
+        XCTAssertEqual(parameters2["id"], 1)
+        XCTAssertEqual(parameters2["bloop"], 2)
+        XCTAssertEqual(parameters2["zonk"], 5)
+
+        let route3 = HTTPRoute("GET /mock/:id/not:bloop/hello/guys/:zonk")
+        let parameters3 = route3.pathParameters
+        XCTAssertEqual(parameters3.count, 2)
+        XCTAssertEqual(parameters3["id"], 1)
+        XCTAssertNil(parameters3["bloop"])
+        XCTAssertEqual(parameters2["zonk"], 5)
+    }
 }
