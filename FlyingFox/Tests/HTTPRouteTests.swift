@@ -101,9 +101,17 @@ final class HTTPRouteTests: XCTestCase {
             HTTPMethod.allMethods
         )
 
+        XCTAssertTrue(
+            HTTPRoute("GET hello").methods.contains(.GET)
+        )
+
         XCTAssertEqual(
-            HTTPRoute("GET hello").methods,
-            [.GET]
+            HTTPRoute("GET,POST hello").methods,
+            [.GET, .POST]
+        )
+
+        XCTAssertFalse(
+            HTTPRoute("GET,POST hello").methods.contains(.PUT)
         )
     }
 
