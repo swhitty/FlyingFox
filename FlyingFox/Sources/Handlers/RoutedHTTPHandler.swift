@@ -72,6 +72,46 @@ public struct RoutedHTTPHandler: HTTPHandler, Sendable {
     }
 }
 
+public extension RoutedHTTPHandler {
+    mutating func appendRoute(
+        _ path: String,
+        for methods: some Sequence<HTTPMethod>,
+        to handler: some HTTPHandler
+    ) {
+        let route = HTTPRoute(methods: methods, path: path)
+        appendRoute(route, to: handler)
+    }
+
+    mutating func appendRoute(
+        _ path: String,
+        for methods: some Sequence<HTTPMethod>,
+        handler: @Sendable @escaping (HTTPRequest) async throws -> HTTPResponse
+    ) {
+        let route = HTTPRoute(methods: methods, path: path)
+        appendRoute(route, handler: handler)
+    }
+
+    mutating func insertRoute(
+        _ path: String,
+        for methods: some Sequence<HTTPMethod>,
+        at index: Index,
+        to handler: some HTTPHandler
+    ) {
+        let route = HTTPRoute(methods: methods, path: path)
+        insertRoute(route, at: index, to: handler)
+    }
+
+    mutating func insertRoute(
+        _ path: String,
+        for methods: some Sequence<HTTPMethod>,
+        at index: Index,
+        handler: @Sendable @escaping (HTTPRequest) async throws -> HTTPResponse
+    ) {
+        let route = HTTPRoute(methods: methods, path: path)
+        insertRoute(route, at: index, handler: handler)
+    }
+}
+
 extension RoutedHTTPHandler: RangeReplaceableCollection {
     public typealias Index = Array<Element>.Index
     public typealias Element = (route: HTTPRoute, handler: any HTTPHandler)

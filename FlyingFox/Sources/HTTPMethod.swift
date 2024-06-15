@@ -29,7 +29,7 @@
 //  SOFTWARE.
 //
 
-public struct HTTPMethod: Sendable, RawRepresentable, Hashable {
+public struct HTTPMethod: Sendable, RawRepresentable, Hashable, ExpressibleByStringLiteral {
     public var rawValue: String
 
     public init(rawValue: String) {
@@ -37,11 +37,39 @@ public struct HTTPMethod: Sendable, RawRepresentable, Hashable {
     }
 
     public init(_ rawValue: String) {
-        self.init(rawValue: rawValue)
+        self.init(rawValue: rawValue.uppercased())
+    }
+
+    public init(stringLiteral value: String) {
+        self.init(rawValue: value.uppercased())
     }
 }
 
 public extension HTTPMethod {
+    func hash(into hasher: inout Hasher) {
+        rawValue.uppercased().hash(into: &hasher)
+    }
+
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        return lhs.rawValue.uppercased() == rhs.rawValue.uppercased()
+    }
+}
+
+public extension HTTPMethod {
+    internal static let sortedMethods = [
+        HTTPMethod.GET,
+        .POST,
+        .PUT,
+        .DELETE,
+        .PATCH,
+        .HEAD,
+        .OPTIONS,
+        .CONNECT,
+        .TRACE
+    ]
+
+    internal static let allMethods = Set(HTTPMethod.sortedMethods)
+
     static let GET     = HTTPMethod("GET")
     static let POST    = HTTPMethod("POST")
     static let PUT     = HTTPMethod("PUT")

@@ -277,6 +277,27 @@ public extension HTTPServer {
     }
 }
 
+public extension HTTPServer {
+
+    func appendRoute(
+        _ path: String,
+        for methods: some Sequence<HTTPMethod>,
+        to handler: some HTTPHandler
+    ) {
+        let route = HTTPRoute(methods: methods, path: path)
+        handlers.appendRoute(route, to: handler)
+    }
+
+    func appendRoute(
+        _ path: String,
+        for methods: some Sequence<HTTPMethod>,
+        handler: @Sendable @escaping (HTTPRequest) async throws -> HTTPResponse
+    ) {
+        let route = HTTPRoute(methods: methods, path: path)
+        handlers.appendRoute(route, handler: handler)
+    }
+}
+
 extension Logging {
 
     func logOpenConnection(_ connection: HTTPConnection) {

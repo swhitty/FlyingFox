@@ -32,23 +32,33 @@
 import Foundation
 
 public struct HTTPRoute: Sendable {
-    public var method: Component
+    public var methods: Set<HTTPMethod>
     public var path: [Component]
     public var query: [QueryItem]
     public var headers: [HTTPHeader: Component]
     public var body: (any HTTPBodyPattern)?
 
-    public init(_ string: String, headers: [HTTPHeader: String] = [:], body: (any HTTPBodyPattern)? = nil) {
-        let comps = Self.components(for: string)
-        self.init(method: comps.method, path: comps.path, headers: headers, body: body)
+    public init(
+        methods: Set<HTTPMethod>,
+        path: String,
+        headers: [HTTPHeader: String] = [:],
+        body: (any HTTPBodyPattern)? = nil
+    ) {
+        self.methods = methods
+
+        let comps = HTTPRoute.readComponents(from: path)
+        self.path = comps.path
+            .split(separator: "/", omittingEmptySubsequences: true)
+            .map { Component(String($0)) }
+        self.query = comps.query.map {
+            QueryItem(name: $0.name, value: Component($0.value))
+        }
+        self.headers = headers.mapValues(Component.init)
+        self.body = body
     }
 
-    public init(method: HTTPMethod, path: String, headers: [HTTPHeader: String] = [:], body: (any HTTPBodyPattern)? = nil) {
-        self.init(method: method.rawValue, path: path, headers: headers, body: body)
-    }
-
-    init(method: String, path: String, headers: [HTTPHeader: String], body: (any HTTPBodyPattern)?) {
-        self.method = Component(method)
+    init(methods: String, path: String, headers: [HTTPHeader: String], body: (any HTTPBodyPattern)?) {
+        self.methods = Self.methods(for: methods)
 
         let comps = HTTPRoute.readComponents(from: path)
         self.path = comps.path
@@ -75,6 +85,50 @@ public struct HTTPRoute: Sendable {
         }
     }
 
+    // MARK: Convenience Initializers
+
+    public init(
+        methods: some Sequence<HTTPMethod>,
+        path: String,
+        headers: [HTTPHeader: String] = [:],
+        body: (any HTTPBodyPattern)? = nil
+    ) {
+        self.init(
+            methods: Set(methods),
+            path: path,
+            headers: headers,
+            body: body
+        )
+    }
+
+    public init(
+        method: HTTPMethod,
+        path: String,
+        headers: [HTTPHeader: String] = [:],
+        body: (any HTTPBodyPattern)? = nil
+    ) {
+        self.init(
+            methods: [method],
+            path: path,
+            headers: headers,
+            body: body
+        )
+    }
+
+    public init(
+        _ string: String,
+        headers: [HTTPHeader: String] = [:],
+        body: (any HTTPBodyPattern)? = nil
+    ) {
+        let comps = Self.components(for: string)
+        self.init(
+            methods: comps.methods,
+            path: comps.path,
+            headers: headers,
+            body: body
+        )
+    }
+
     public struct QueryItem: Sendable, Equatable {
         public var name: String
         public var value: Component
@@ -87,6 +141,11 @@ public struct HTTPRoute: Sendable {
         public static func ~= (item: QueryItem, requestItem: HTTPRequest.QueryItem) -> Bool {
             item.name == requestItem.name && item.value ~= requestItem.value
         }
+    }
+
+    @available(*, deprecated, renamed: "methods", message: "Use ``methods`` instead")
+    public var method: String {
+        fatalError("Use ``methods`` instead.")
     }
 }
 
@@ -124,7 +183,7 @@ public extension HTTPRoute {
               patternMatch(body: request.bodySequence) else { return false }
 
         let nodes = request.path.split(separator: "/", omittingEmptySubsequences: true)
-        guard self.method ~= request.method.rawValue else {
+        guard self.methods.contains(request.method) else {
             return false
         }
         guard nodes.count >= self.path.count else {
@@ -167,12 +226,39 @@ public extension HTTPRoute {
         }
     }
 
-    private static func components(for target: String) -> (method: String, path: String) {
+    private static func components(for target: String) -> (
+        methods: Set<HTTPMethod>,
+        path: String
+    ) {
         let comps = target.split(separator: " ", maxSplits: 1, omittingEmptySubsequences: true)
         guard comps.count > 1 && !comps[0].hasPrefix("/") else {
-            return (method: "*", path: target)
+            return (methods: HTTPMethod.allMethods, path: target)
         }
-        return (method: String(comps[0]), path: String(comps[1]))
+        
+        let methods = methods(for: comps[0])
+        return (methods: methods, path: String(comps[1]))
+    }
+
+    private static func methods(for target: any StringProtocol) -> Set<HTTPMethod> {
+        // The following formats of the method component are valid:
+        // "" (empty)
+        // "GET" (a single method)
+        // "GET,POST" (comma-delimited list)
+        var methods: Set<HTTPMethod> = target.split(
+            separator: ",",
+            omittingEmptySubsequences: true
+        )
+            .map { HTTPMethod(stringLiteral: String($0)) }
+            .reduce(into: []) { partialResult, method in
+                partialResult.insert(method)
+            }
+
+        // If there are no methods, ensure that we support all methods.
+        if methods.isEmpty {
+            methods.formUnion(HTTPMethod.allMethods)
+        }
+
+        return methods
     }
 
     @available(*, unavailable, message: "renamed: ~= async")

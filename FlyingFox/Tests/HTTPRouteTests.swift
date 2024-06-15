@@ -38,7 +38,7 @@ final class HTTPRouteTests: XCTestCase {
         let route = HTTPRoute(method: .PUT, path: "/quick/brown/fox?eats=chips")
 
         XCTAssertEqual(
-            route.method, .caseInsensitive("PUT")
+            route.methods, [.PUT]
         )
         XCTAssertEqual(
             route.path,
@@ -97,13 +97,21 @@ final class HTTPRouteTests: XCTestCase {
 
     func testMethod() {
         XCTAssertEqual(
-            HTTPRoute("hello/world").method,
-            .wildcard
+            HTTPRoute("hello/world").methods,
+            HTTPMethod.allMethods
+        )
+
+        XCTAssertTrue(
+            HTTPRoute("GET hello").methods.contains(.GET)
         )
 
         XCTAssertEqual(
-            HTTPRoute("GET hello").method,
-            .caseInsensitive("GET")
+            HTTPRoute("GET,POST hello").methods,
+            [.GET, .POST]
+        )
+
+        XCTAssertFalse(
+            HTTPRoute("GET,POST hello").methods.contains(.PUT)
         )
     }
 
@@ -134,6 +142,14 @@ final class HTTPRouteTests: XCTestCase {
             await route ~= HTTPRequest.make(method: .init(rawValue: "post"), path: "/fish/chips/")
         )
 
+        await AsyncAssertTrue(
+            await route ~= HTTPRequest.make(method: "post", path: "/fish/chips/")
+        )
+
+        await AsyncAssertTrue(
+            await route ~= HTTPRequest.make(method: "POST", path: "/fish/chips/")
+        )
+
         await AsyncAssertFalse(
             await route ~= HTTPRequest.make(method: .GET, path: "/fish/chips")
         )
@@ -151,7 +167,7 @@ final class HTTPRouteTests: XCTestCase {
         )
 
         await AsyncAssertTrue(
-            await route ~= HTTPRequest.make(method: .init("ANY"), path: "/fish/chips")
+            await route ~= HTTPRequest.make(method: .init("GET"), path: "/fish/chips")
         )
 
         await AsyncAssertFalse(
