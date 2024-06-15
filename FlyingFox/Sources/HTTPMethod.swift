@@ -46,6 +46,10 @@ public struct HTTPMethod: Sendable, RawRepresentable, Hashable, ExpressibleByStr
 }
 
 public extension HTTPMethod {
+    func hash(into hasher: inout Hasher) {
+        rawValue.uppercased().hash(into: &hasher)
+    }
+
     static func == (lhs: Self, rhs: Self) -> Bool {
         return lhs.rawValue.uppercased() == rhs.rawValue.uppercased()
     }
