@@ -93,7 +93,7 @@ private extension HTTPRoute {
 
 private extension HTTPRoute.Component {
 
-    var stringValue: String? {
+    var stringValue: String {
         switch self {
         case .wildcard:
             return "*"
