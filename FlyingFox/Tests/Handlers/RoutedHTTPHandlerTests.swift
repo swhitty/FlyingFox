@@ -86,7 +86,7 @@ private extension HTTPRoute {
 
     var stringValue: String {
         let methods = methods.map(\.rawValue).sorted().joined(separator: ",")
-        let path = path.compactMap(\.stringValue).joined(separator: "/")
+        let path = path.map(\.stringValue).joined(separator: "/")
         return methods + " /" + path
     }
 }
