@@ -142,6 +142,11 @@ public struct HTTPRoute: Sendable {
             item.name == requestItem.name && item.value ~= requestItem.value
         }
     }
+
+    @available(*, deprecated, renamed: "methods", message: "Use ``methods`` instead")
+    public var method: String {
+        fatalError("Use ``methods`` instead.")
+    }
 }
 
 public extension HTTPRoute.Component {
