@@ -87,14 +87,12 @@ public struct HTTPRoute: Sendable {
 
     // MARK: Convenience Initializers
 
-    public init<HTTPMethods: Collection>(
-        methods: HTTPMethods,
+    public init(
+        methods: some Sequence<HTTPMethod>,
         path: String,
         headers: [HTTPHeader: String] = [:],
-        body: (
-            any HTTPBodyPattern
-        )? = nil
-    ) where HTTPMethods.Element == HTTPMethod {
+        body: (any HTTPBodyPattern)? = nil
+    ) {
         self.init(
             methods: Set(methods),
             path: path,
