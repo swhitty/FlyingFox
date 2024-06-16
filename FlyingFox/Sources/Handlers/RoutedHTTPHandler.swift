@@ -44,6 +44,17 @@ public struct RoutedHTTPHandler: HTTPHandler, Sendable {
         append((route, ClosureHTTPHandler(handler)))
     }
 
+    public mutating func appendRoute<each P: HTTPRequestParameter>(
+        _ route: HTTPRoute,
+        handler: @Sendable @escaping (repeat each P) async throws -> HTTPResponse
+    ) {
+        let closure = ClosureHTTPHandler { request in
+            let params = try request.extractParameters(for: route, type: (repeat each P).self)
+            return try await handler(repeat each params)
+        }
+        append((route, closure))
+    }
+
     public mutating func insertRoute(_ route: HTTPRoute, 
                                      at index: Index,
                                      to handler: some HTTPHandler) {
@@ -130,5 +141,58 @@ extension RoutedHTTPHandler: RangeReplaceableCollection {
 
     public mutating func replaceSubrange(_ subrange: Range<Index>, with newElements: some Collection<Element>) {
         handlers.replaceSubrange(subrange, with: newElements)
+    }
+}
+
+public protocol HTTPRequestParameter {
+    init?(parameter: some StringProtocol)
+}
+
+extension String: HTTPRequestParameter {
+    public init?(parameter: some StringProtocol) {
+        self.init(parameter)
+    }
+}
+
+extension Int: HTTPRequestParameter {
+    public init?(parameter: some StringProtocol) {
+        self.init(parameter)
+    }
+}
+
+extension HTTPRequest {
+
+    func extractParameters<each P: HTTPRequestParameter>(
+        for route: HTTPRoute,
+        type: (repeat each P).Type = (repeat each P).self
+    ) throws -> (repeat each P) {
+
+        let indices = route.path.enumerated().compactMap { idx, comp in
+            switch comp {
+            case .parameter:
+                return idx
+            case .wildcard, .caseInsensitive:
+                return nil
+            }
+        }
+
+        var idx = 0
+        return try (repeat getParameter(at: &idx, parameterIndices: indices, type: (each P).self))
+    }
+
+    private func getParameter<P: HTTPRequestParameter>(at index: inout Int, parameterIndices: [Int], type: P.Type) throws -> P {
+        defer { index += 1 }
+
+        guard parameterIndices.indices.contains(index) else {
+            throw CancellationError()
+        }
+
+        let idx = parameterIndices[index]
+        let nodes = path.split(separator: "/", omittingEmptySubsequences: true)
+        guard nodes.indices.contains(idx),
+              let param = P(parameter: nodes[idx]) else {
+            throw CancellationError()
+        }
+        return param
     }
 }
