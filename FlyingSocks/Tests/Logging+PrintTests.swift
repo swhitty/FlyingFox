@@ -31,20 +31,19 @@
 
 @testable import FlyingSocks
 import Foundation
-import XCTest
+import Testing
 
-final class LoggingTests: XCTestCase {
+struct LoggingTests {
 
-    func testPrintLogger_SetsCategory() {
+    @Test func testPrintLogger_SetsCategory() {
         let logger = PrintLogger.print(category: "Fish")
 
-        XCTAssertEqual(
-            logger.category,
-            "Fish"
+        #expect(
+            logger.category == "Fish"
         )
     }
     
-    func testPrintLogger_output() {
+    @Test func testPrintLogger_output() {
         // NOTE: For now this test is only used to verify the output by manual confirmation
         // until Swift.print can be unit-tested or we are able to inject a mock.
         let logger = PrintLogger.print(category: "Fox")

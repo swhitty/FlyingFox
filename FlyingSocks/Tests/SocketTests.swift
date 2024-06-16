@@ -30,234 +30,237 @@
 //
 
 @testable import FlyingSocks
-import XCTest
+import Foundation
+import Testing
 
-final class SocketTests: XCTestCase {
+struct SocketTests {
 
-    func testSocketEvents() {
+    @Test func testSocketEvents() {
         let events: Set<Socket.Event> = [.read, .write]
 
-        XCTAssertTrue(
+        #expect(
             "\(events)".contains("read")
         )
-        XCTAssertTrue(
+        #expect(
             "\(events)".contains("write")
         )
     }
 
-    func testSocketReads_DataThatIsSent() throws {
+    @Test func testSocketReads_DataThatIsSent() throws {
         let (s1, s2) = try Socket.makeNonBlockingPair()
 
         let data = Data([10, 20])
         _ = try s1.write(data, from: data.startIndex)
 
-        XCTAssertEqual(try s2.read(), 10)
-        XCTAssertEqual(try s2.read(), 20)
+        #expect(try s2.read() == 10)
+        #expect(try s2.read() == 20)
     }
 
-    func testSocketRead_ThrowsBlocked_WhenNoDataIsAvailable() throws {
+    @Test func testSocketRead_ThrowsBlocked_WhenNoDataIsAvailable() throws {
         let (s1, s2) = try Socket.makeNonBlockingPair()
 
-        XCTAssertThrowsError(try s1.read(), of: SocketError.self) {
-            XCTAssertEqual($0, .blocked)
+        #expect(throws: SocketError.blocked) {
+            try s1.read()
         }
 
         try s1.close()
         try s2.close()
     }
 
-    func testSocketRead_ThrowsDisconnected_WhenSocketIsClosed() throws {
+    @Test func testSocketRead_ThrowsDisconnected_WhenSocketIsClosed() throws {
         let (s1, s2) = try Socket.makeNonBlockingPair()
         try s1.close()
         try s2.close()
 
-        XCTAssertThrowsError(try s1.read(), of: SocketError.self) {
-            XCTAssertEqual($0, .disconnected)
+        #expect(throws: SocketError.disconnected) {
+            try s1.read()
         }
     }
 
-    func testSocketWrite_ThrowsBlocked_WhenBufferIsFull() throws {
+    @Test func testSocketWrite_ThrowsBlocked_WhenBufferIsFull() throws {
         let (s1, s2) = try Socket.makeNonBlockingPair()
         try s1.setValue(1024, for: .sendBufferSize)
         let data = Data(repeating: 0x01, count: 8192)
         let sent = try s1.write(data, from: data.startIndex)
-        XCTAssertThrowsError(try s1.write(data, from: sent), of: SocketError.self) {
-            XCTAssertEqual($0, .blocked)
+
+        #expect(throws: SocketError.blocked) {
+            try s1.write(data, from: sent)
         }
 
         try s1.close()
         try s2.close()
     }
 
-    func testSocketWrite_Throws_WhenSocketIsNotConnected() async throws {
+    @Test func testSocketWrite_Throws_WhenSocketIsNotConnected() async throws {
         let s1 = try Socket(domain: AF_UNIX, type: Socket.stream)
         let data = Data(repeating: 0x01, count: 100)
-        XCTAssertThrowsError(try s1.write(data, from: data.startIndex))
+        #expect(throws: SocketError.self) {
+            try s1.write(data, from: data.startIndex)
+        }
         try s1.close()
     }
 
-    func testSocket_Sets_And_Gets_ReceiveBufferSize() throws {
+    @Test func testSocket_Sets_And_Gets_ReceiveBufferSize() throws {
         let socket = try Socket(domain: AF_UNIX, type: Socket.stream)
 
         try socket.setValue(2048, for: .receiveBufferSize)
 #if canImport(Darwin)
-        XCTAssertEqual(try socket.getValue(for: .receiveBufferSize), Int32(2048))
+        #expect(try socket.getValue(for: .receiveBufferSize) == Int32(2048))
 #else
         // Linux kernel doubles this value (to allow space for bookkeeping overhead)
-        XCTAssertGreaterThanOrEqual(try socket.getValue(for: .receiveBufferSize), Int32(4096))
+        #expect(try socket.getValue(for: .receiveBufferSize) >= Int32(4096))
 #endif
     }
 
-    func testSocket_Sets_And_Gets_SendBufferSizeOption() throws {
+    @Test func testSocket_Sets_And_Gets_SendBufferSizeOption() throws {
         let socket = try Socket(domain: AF_UNIX, type: Socket.stream)
 
         try socket.setValue(2048, for: .sendBufferSize)
 #if canImport(Darwin)
-        XCTAssertEqual(try socket.getValue(for: .sendBufferSize), Int32(2048))
+        #expect(try socket.getValue(for: .sendBufferSize) == Int32(2048))
 #else
         // Linux kernel doubles this value (to allow space for bookkeeping overhead)
-        XCTAssertGreaterThanOrEqual(try socket.getValue(for: .sendBufferSize), Int32(4096))
+        #expect(try socket.getValue(for: .sendBufferSize) >= Int32(4096))
 #endif
     }
 
-    func testSocket_Sets_And_Gets_BoolOption() throws {
+    @Test func testSocket_Sets_And_Gets_BoolOption() throws {
         let socket = try Socket(domain: AF_UNIX, type: Socket.stream)
 
         try socket.setValue(true, for: .localAddressReuse)
-        XCTAssertEqual(try socket.getValue(for: .localAddressReuse), true)
+        #expect(try socket.getValue(for: .localAddressReuse))
 
         try socket.setValue(false, for: .localAddressReuse)
-        XCTAssertEqual(try socket.getValue(for: .localAddressReuse), false)
+        #expect(try socket.getValue(for: .localAddressReuse) == false)
     }
 
-    func testSocket_Sets_And_Gets_Flags() throws {
+    @Test func testSocket_Sets_And_Gets_Flags() throws {
         let socket = try Socket(domain: AF_UNIX, type: Socket.stream)
-        XCTAssertFalse(try socket.flags.contains(.append))
+        #expect(try socket.flags.contains(.append) == false)
 
         try socket.setFlags(.append)
-        XCTAssertTrue(try socket.flags.contains(.append))
+        #expect(try socket.flags.contains(.append))
     }
 
-    func testSocketInit_ThrowsError_WhenInvalid() {
-        XCTAssertThrowsError(
+    @Test func testSocketInit_ThrowsError_WhenInvalid() {
+        #expect(throws: SocketError.self) {
             _ = try Socket(domain: -1, type: -1)
-        )
+        }
     }
 
-    func testSocketAccept_ThrowsError_WhenInvalid() {
+    @Test func testSocketAccept_ThrowsError_WhenInvalid() {
         let socket = Socket(file: -1)
-        XCTAssertThrowsError(
+        #expect(throws: SocketError.self) {
             try socket.accept()
-        )
+        }
     }
 
-    func testSocketConnect_ThrowsError_WhenInvalid() {
+    @Test func testSocketConnect_ThrowsError_WhenInvalid() {
         let socket = Socket(file: -1)
-        XCTAssertThrowsError(
+        #expect(throws: SocketError.self) {
             try socket.connect(to: .unix(path: "test"))
-        )
+        }
     }
 
-    func testSocketClose_ThrowsError_WhenInvalid() {
+    @Test func testSocketClose_ThrowsError_WhenInvalid() {
         let socket = Socket(file: -1)
-        XCTAssertThrowsError(
+        #expect(throws: SocketError.self) {
             try socket.close()
-        )
+        }
     }
 
-    func testSocketListen_ThrowsError_WhenInvalid() {
+    @Test func testSocketListen_ThrowsError_WhenInvalid() {
         let socket = Socket(file: -1)
-        XCTAssertThrowsError(
+        #expect(throws: SocketError.self) {
             try socket.listen()
-        )
+        }
     }
 
-    func testSocketBind_ToINET() throws {
+    @Test func testSocketBind_ToINET() throws {
         let socket = try Socket(domain: AF_INET, type: Socket.stream)
         try socket.setValue(true, for: .localAddressReuse)
         let address = Socket.makeAddressINET(port:5050).makeStorage()
-        XCTAssertNoThrow(
+        #expect(throws: Never.self) {
             try socket.bind(to: address)
-        )
+        }
 
         try? socket.close()
     }
 
-    func testSocketBind_ToINET6_ThrowsError_WhenInvalid() {
+    @Test func testSocketBind_ToINET6_ThrowsError_WhenInvalid() {
         let socket = Socket(file: -1)
         let address = Socket.makeAddressINET6(port: 8080)
-        XCTAssertThrowsError(
+        #expect(throws: SocketError.self) {
             try socket.bind(to: address)
-        )
-    }
-
-    func testSocketBind_ToInvalidStorage_ThrowsUnsupported() {
-        let socket = Socket(file: -1)
-        var addr = Socket.makeAddressUnix(path: "/var/fox/xyz").makeStorage()
-        addr.ss_family = sa_family_t(AF_IPX)
-        XCTAssertThrowsError(
-            try socket.bind(to: addr),
-            of: SocketError.self
-        ) {
-            XCTAssertEqual($0, .unsupportedAddress)
         }
     }
 
-    func testSocketBind_ToStorage_ThrowsError_WhenInvalid() {
+    @Test func testSocketBind_ToInvalidStorage_ThrowsUnsupported() {
+        let socket = Socket(file: -1)
+        var addr = Socket.makeAddressUnix(path: "/var/fox/xyz").makeStorage()
+        addr.ss_family = sa_family_t(AF_IPX)
+        #expect(throws: SocketError.unsupportedAddress) {
+            try socket.bind(to: addr)
+        }
+    }
+
+    @Test func testSocketBind_ToStorage_ThrowsError_WhenInvalid() {
         let socket = Socket(file: -1)
         let address = Socket.makeAddressINET6(port: 8080).makeStorage()
-        XCTAssertThrowsError(
+        #expect(throws: SocketError.self) {
             try socket.bind(to: address)
-        )
+        }
     }
 
-    func testSocketGetOption_ThrowsError_WhenInvalid() {
+    @Test func testSocketGetOption_ThrowsError_WhenInvalid() {
         let socket = Socket(file: -1)
-        XCTAssertThrowsError(
+        #expect(throws: SocketError.self) {
             _ = try socket.getValue(for: .localAddressReuse)
-        )
+        }
     }
 
-    func testSocketSetOption_ThrowsError_WhenInvalid() {
+    @Test func testSocketSetOption_ThrowsError_WhenInvalid() {
         let socket = Socket(file: -1)
-        XCTAssertThrowsError(
+        #expect(throws: SocketError.self) {
             try socket.setValue(true, for: .localAddressReuse)
-        )
+        }
     }
 
-    func testSocketGetFlags_ThrowsError_WhenInvalid() {
+    @Test func testSocketGetFlags_ThrowsError_WhenInvalid() {
         let socket = Socket(file: -1)
-        XCTAssertThrowsError(
+        #expect(throws: SocketError.self) {
             _ = try socket.flags
-        )
+        }
     }
 
-    func testSocketSetFlags_ThrowsError_WhenInvalid() {
+    @Test func testSocketSetFlags_ThrowsError_WhenInvalid() {
         let socket = Socket(file: -1)
-        XCTAssertThrowsError(
+        #expect(throws: SocketError.self) {
             try socket.setFlags(.nonBlocking)
-        )
+        }
     }
 
-    func testSocketRemotePeer_ThrowsError_WhenInvalid() {
+    @Test func testSocketRemotePeer_ThrowsError_WhenInvalid() {
         let socket = Socket(file: -1)
-        XCTAssertThrowsError(
+        #expect(throws: SocketError.self) {
             try socket.remotePeer()
-        )
+        }
     }
 
-    func testSocket_sockname_ThrowsError_WhenInvalid() {
+    @Test func testSocket_sockname_ThrowsError_WhenInvalid() {
         let socket = Socket(file: -1)
-        XCTAssertThrowsError(
+        #expect(throws: SocketError.self) {
             try socket.sockname()
-        )
+        }
     }
 
-    func test_ntop_ThrowsError_WhenBufferIsTooSmall() {
+    @Test func test_ntop_ThrowsError_WhenBufferIsTooSmall() {
         var addr = Socket.makeAddressINET6(port: 8080)
         let maxLength = socklen_t(1)
         let buffer = UnsafeMutablePointer<CChar>.allocate(capacity: Int(maxLength))
-        XCTAssertThrowsError(try Socket.inet_ntop(AF_INET6, &addr.sin6_addr, buffer, maxLength))
+        #expect(throws: SocketError.self) {
+            try Socket.inet_ntop(AF_INET6, &addr.sin6_addr, buffer, maxLength)
+        }
     }
 }
 

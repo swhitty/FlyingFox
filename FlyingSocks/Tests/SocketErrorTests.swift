@@ -30,35 +30,35 @@
 //
 
 @testable import FlyingSocks
-import XCTest
+import Foundation
+import Testing
 
-final class SocketErrorTests: XCTestCase {
+struct SocketErrorTests {
 
-    func testSocketError_errorDescription() {
-        
+    @Test func testSocketError_errorDescription() {
+
         let failedType = "failed"
         let failedErrno: Int32 = 42
         let failedMessage = "failure is an option"
-        XCTAssertEqual(
-            SocketError.failed(type: failedType, errno: failedErrno, message: failedMessage).errorDescription,
-            "SocketError. \(failedType)(\(failedErrno)): \(failedMessage)"
+        #expect(
+            SocketError.failed(type: failedType, errno: failedErrno, message: failedMessage).errorDescription == "SocketError. \(failedType)(\(failedErrno)): \(failedMessage)"
         )
         
-        XCTAssertEqual(SocketError.blocked.errorDescription, "SocketError. Blocked")
-        XCTAssertEqual(SocketError.disconnected.errorDescription, "SocketError. Disconnected")
-        XCTAssertEqual(SocketError.unsupportedAddress.errorDescription, "SocketError. UnsupportedAddress")
+        #expect(SocketError.blocked.errorDescription == "SocketError. Blocked")
+        #expect(SocketError.disconnected.errorDescription == "SocketError. Disconnected")
+        #expect(SocketError.unsupportedAddress.errorDescription == "SocketError. UnsupportedAddress")
     }
 
-    func testSocketError_makeFailed() {
+    @Test func testSocketError_makeFailed() {
         errno = EIO
         let socketError = SocketError.makeFailed("unit-test")
         switch socketError {
         case let .failed(type: type, errno: socketErrno, message: message):
-            XCTAssertEqual(type, "unit-test")
-            XCTAssertEqual(socketErrno, EIO)
-            XCTAssertEqual(message, "Input/output error")
+            #expect(type == "unit-test")
+            #expect(socketErrno == EIO)
+            #expect(message == "Input/output error")
         default:
-            XCTFail()
+            #expect(Bool(false))
         }
     }
 }

@@ -32,11 +32,11 @@
 @testable import FlyingSocks
 import Foundation
 import OSLog
-import XCTest
+import Testing
 
-final class LoggingOSLogTests: XCTestCase {
-    
-    func testInfo() {
+struct LoggingOSLogTests {
+
+    @Test func testInfo() {
         guard #available(macOS 11.0, iOS 14.0, tvOS 14.0, *) else { return }
         // NOTE: For now this test is only used to verify the output by manual confirmation (e.g. Console.app or log tool)
         // Run log tool in the terminal first and then run this unit-test:

@@ -31,77 +31,85 @@
 
 #if canImport(Darwin)
 @testable import FlyingSocks
-import XCTest
+import Foundation
+import Testing
 
-final class kQueueTests: XCTestCase {
+struct kQueueTests {
 
-    func testQueueCloses() throws {
+    @Test func testQueueCloses() throws {
         var queue = try kQueue.make()
-        XCTAssertNoThrow(try queue.stop())
+        #expect(throws: Never.self) {
+            try queue.stop()
+        }
     }
 
-    func testQueueThrowsError_Closes() throws {
-        XCTAssertThrowsError(try kQueue.closeQueue(file: .validMock))
+    @Test func testQueueThrowsError_Closes() throws {
+        #expect(throws: SocketError.self) {
+            try kQueue.closeQueue(file: .validMock)
+        }
     }
 
-    func testQueueThrowsError_Make() throws {
-        XCTAssertThrowsError(try kQueue.makeQueue(file: -1))
+    @Test func testQueueThrowsError_Make() throws {
+        #expect(throws: SocketError.self) {
+            try kQueue.makeQueue(file: -1)
+        }
     }
 
-    func testAddingEventToInvalidDescriptor_ThrowsError() throws {
+    @Test func testAddingEventToInvalidDescriptor_ThrowsError() throws {
         let queue = try kQueue.make()
 
-        XCTAssertThrowsError(
+        #expect(throws: SocketError.self) {
             try queue.addEvent(.read, for: .validMock)
-        )
+        }
     }
 
-    func testAddingAndRemovingEvents() throws {
+    @Test func testAddingAndRemovingEvents() throws {
         var queue = try kQueue.make()
         let (s1, _) = try Socket.makeNonBlockingPair()
 
-        XCTAssertNoThrow(try queue.addEvents(.connection, for: s1.file))
-        XCTAssertEqual(queue.existing[s1.file], .connection)
+        #expect(throws: Never.self) {
+            try queue.addEvents(.connection, for: s1.file)
+        }
+        #expect(queue.existing[s1.file] == .connection)
 
-        XCTAssertNoThrow(try queue.removeEvents(.connection, for: s1.file))
-        XCTAssertNil(queue.existing[s1.file])
+        #expect(throws: Never.self) {
+            try queue.removeEvents(.connection, for: s1.file)
+        }
+        #expect(queue.existing[s1.file] == nil)
     }
 
-    func testRemovingEventToInvalidDescriptor_ThrowsError() throws {
+    @Test func testRemovingEventToInvalidDescriptor_ThrowsError() throws {
         let queue = try kQueue.make()
 
-        XCTAssertThrowsError(
+        #expect(throws: SocketError.self) {
             try queue.removeEvent(.read, for: .validMock)
+        }
+    }
+
+    @Test func testFilterEvents() {
+        #expect(
+            Socket.Event.read.kqueueFilter == Int16(EVFILT_READ)
+        )
+        #expect(
+            Socket.Event.write.kqueueFilter == Int16(EVFILT_WRITE)
+        )
+        #expect(
+            Socket.Event.make(from: Int16(EVFILT_READ)) == .read
+        )
+        #expect(
+            Socket.Event.make(from: Int16(EVFILT_WRITE)) == .write
+        )
+        #expect(
+            Socket.Event.make(from: 10100) == nil
         )
     }
 
-    func testFilterEvents() {
-        XCTAssertEqual(
-            Socket.Event.read.kqueueFilter,
-            Int16(EVFILT_READ)
-        )
-        XCTAssertEqual(
-            Socket.Event.write.kqueueFilter,
-            Int16(EVFILT_WRITE)
-        )
-        XCTAssertEqual(
-            Socket.Event.make(from: Int16(EVFILT_READ)),
-            .read
-        )
-        XCTAssertEqual(
-            Socket.Event.make(from: Int16(EVFILT_WRITE)),
-            .write
-        )
-        XCTAssertNil(Socket.Event.make(from: 10100))
-    }
-
-    func testReadResult_CreatesNotification() {
-        XCTAssertEqual(
+    @Test func testReadResult_CreatesNotification() {
+        #expect(
             EventNotification.make(from: .make(
                 ident: 10,
                 filter: EVFILT_READ
-            )),
-            EventNotification(
+            )) == EventNotification(
                 file: .init(rawValue: 10),
                 events: .read,
                 errors: []
@@ -109,14 +117,13 @@ final class kQueueTests: XCTestCase {
         )
     }
 
-    func testReadErrors_CreatesNotification() {
-        XCTAssertEqual(
+    @Test func testReadErrors_CreatesNotification() {
+        #expect(
             EventNotification.make(from: .make(
                 ident: 10,
                 filter: EVFILT_READ,
                 flags: EV_ERROR
-            )),
-            EventNotification(
+            )) == EventNotification(
                 file: .init(rawValue: 10),
                 events: .read,
                 errors: [.error]
@@ -124,15 +131,14 @@ final class kQueueTests: XCTestCase {
         )
     }
 
-    func testErrorsIgnored_WhenReadWithDataAvailable() {
-        XCTAssertEqual(
+    @Test func testErrorsIgnored_WhenReadWithDataAvailable() {
+        #expect(
             EventNotification.make(from: .make(
                 ident: 10,
                 filter: EVFILT_READ,
                 flags: EV_ERROR,
                 data: 5
-            )),
-            EventNotification(
+            )) == EventNotification(
                 file: .init(rawValue: 10),
                 events: .read,
                 errors: []
@@ -140,13 +146,12 @@ final class kQueueTests: XCTestCase {
         )
     }
 
-    func testWriteResult_CreatesNotification() {
-        XCTAssertEqual(
+    @Test func testWriteResult_CreatesNotification() {
+        #expect(
             EventNotification.make(from: .make(
                 ident: 10,
                 filter: EVFILT_WRITE
-            )),
-            EventNotification(
+            )) == EventNotification(
                 file: .init(rawValue: 10),
                 events: .write,
                 errors: []
@@ -154,15 +159,14 @@ final class kQueueTests: XCTestCase {
         )
     }
 
-    func testWriteErrors_CreatesNotification() {
-        XCTAssertEqual(
+    @Test func testWriteErrors_CreatesNotification() {
+        #expect(
             EventNotification.make(from: .make(
                 ident: 10,
                 filter: EVFILT_WRITE,
                 flags: EV_EOF,
                 data: 10
-            )),
-            EventNotification(
+            )) == EventNotification(
                 file: .init(rawValue: 10),
                 events: .write,
                 errors: [.endOfFile]
@@ -171,14 +175,14 @@ final class kQueueTests: XCTestCase {
     }
 
     func testInvalidFilter_DoesNotCreateNotification() {
-        XCTAssertNil(
+        #expect(
             EventNotification.make(from: .make(
                 filter: 0
-            ))
+            )) == nil
         )
     }
 
-    func testQueueReturnsEvents() async throws {
+    @Test func testQueueReturnsEvents() async throws {
         var queue = try kQueue.make()
 
         let (s1, s2) = try Socket.makeNonBlockingPair()
@@ -188,19 +192,20 @@ final class kQueueTests: XCTestCase {
         let data = Data([10, 20])
         _ = try s1.write(data, from: data.startIndex)
 
-        await AsyncAssertEqual(
-            try await queue.getEvents(),
-            [.init(file: s2.file, events: [.read], errors: [])]
+        #expect(
+            try await queue.getEvents() == [.init(file: s2.file, events: [.read], errors: [])]
         )
     }
 
-    func testQueueThrowsErrorIfClosed() async throws {
+    @Test func testQueueThrowsErrorIfClosed() async throws {
         var queue = try kQueue.make()
         let (s1, _) = try Socket.makeNonBlockingPair()
         try queue.addEvents([.read], for: s1.file)
 
         try queue.stop()
-        await AsyncAssertThrowsError(try await queue.getEvents())
+        await #expect(throws: SocketError.self) {
+            try await queue.getEvents()
+        }
     }
 }
 

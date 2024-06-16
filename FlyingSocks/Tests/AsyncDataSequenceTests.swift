@@ -30,33 +30,30 @@
 //
 
 import FlyingSocks
+import Foundation
 @_spi(Private) import struct FlyingSocks.AsyncDataSequence
-import XCTest
+import Testing
 
-final class AsyncDataSequenceTests: XCTestCase {
+struct AsyncDataSequenceTests {
 
-    func testDataCount() async throws {
-        XCTAssertEqual(
-            AsyncDataSequence.make(from: []).count,
-            0
+    @Test func testDataCount() {
+        #expect(
+            AsyncDataSequence.make(from: []).count == 0
         )
-        XCTAssertEqual(
-            AsyncDataSequence.make(from: [0x0]).count,
-            1
+        #expect(
+            AsyncDataSequence.make(from: [0x0]).count == 1
         )
-        XCTAssertEqual(
-            AsyncDataSequence.make(from: [0x0, 0x1]).count,
-            2
+        #expect(
+            AsyncDataSequence.make(from: [0x0, 0x1]).count == 2
         )
-        XCTAssertEqual(
+        #expect(
             AsyncDataSequence.make(
                 from: [0x0, 0x1, 0x2, 0x3, 0x4, 0x5]
-            ).count,
-            6
+            ).count == 6
         )
     }
 
-    func testData_IsReturnedInChunks() async {
+    @Test func testData_IsReturnedInChunks() async throws {
         let sequence = AsyncDataSequence.make(
             from: [0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9],
             chunkSize: 3
@@ -64,32 +61,28 @@ final class AsyncDataSequenceTests: XCTestCase {
 
         var iterator = sequence.makeAsyncIterator()
 
-        await AsyncAssertEqual(
-            try await iterator.next(),
-            Data([0x0, 0x1, 0x2])
+        #expect(
+            try await iterator.next() == Data([0x0, 0x1, 0x2])
         )
 
-        await AsyncAssertEqual(
-            try await iterator.next(),
-            Data([0x3, 0x4, 0x5])
+        #expect(
+            try await iterator.next() == Data([0x3, 0x4, 0x5])
         )
 
-        await AsyncAssertEqual(
-            try await iterator.next(),
-            Data([0x6, 0x7, 0x8])
+        #expect(
+            try await iterator.next() == Data([0x6, 0x7, 0x8])
         )
 
-        await AsyncAssertEqual(
-            try await iterator.next(),
-            Data([0x9])
+        #expect(
+            try await iterator.next() == Data([0x9])
         )
 
-        await AsyncAssertNil(
-            try await iterator.next()
+        #expect(
+            try await iterator.next() == nil
         )
     }
 
-    func testPrematureEnd_ThrowsError() async {
+    @Test func testPrematureEnd_ThrowsError() async throws {
         let sequence = AsyncDataSequence.make(
             from: [0x0, 0x1, 0x2, 0x3],
             count: 100,
@@ -98,17 +91,16 @@ final class AsyncDataSequenceTests: XCTestCase {
 
         var iterator = sequence.makeAsyncIterator()
 
-        await AsyncAssertEqual(
-            try await iterator.next(),
-            Data([0x0, 0x1, 0x2])
+        #expect(
+            try await iterator.next() == Data([0x0, 0x1, 0x2])
         )
 
-        await AsyncAssertThrowsError(
+        await #expect(throws: (any Error).self) {
             try await iterator.next()
-        )
+        }
     }
 
-    func testMultipleIterations_ThrowsError() async {
+    @Test func testMultipleIterations_ThrowsError() async throws {
         let sequence = AsyncDataSequence.make(
             from: [0x0, 0x1],
             chunkSize: 1
@@ -117,26 +109,24 @@ final class AsyncDataSequenceTests: XCTestCase {
         var it1 = sequence.makeAsyncIterator()
         var it2 = sequence.makeAsyncIterator()
 
-        await AsyncAssertEqual(
-            try await it1.next(),
-            Data([0x0])
+        #expect(
+            try await it1.next() == Data([0x0])
         )
 
-        await AsyncAssertThrowsError(
+        await #expect(throws: (any Error).self) {
             try await it2.next()
+        }
+
+        #expect(
+            try await it1.next() == Data([0x1])
         )
 
-        await AsyncAssertEqual(
-            try await it1.next(),
-            Data([0x1])
-        )
-
-        await AsyncAssertNil(
-            try await it1.next()
+        #expect(
+            try await it1.next() == nil
         )
     }
 
-    func testIsFlushed_FromStart() async {
+    @Test func testIsFlushed_FromStart() async throws {
         // given
         let buffer = ConsumingAsyncSequence<UInt8>(
             [0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9]
@@ -144,87 +134,80 @@ final class AsyncDataSequenceTests: XCTestCase {
         let sequence = AsyncDataSequence(from: buffer, count: 10, chunkSize: 2)
 
         // then
-        XCTAssertEqual(buffer.index, 0)
+        #expect(buffer.index == 0)
 
         // when
-        await AsyncAssertNoThrow(
-            try await sequence.flushIfNeeded()
-        )
+        try await sequence.flushIfNeeded()
 
         // then
-        XCTAssertEqual(buffer.index, 10)
+        #expect(buffer.index == 10)
     }
 
-    func testIsFlushed_FromEnd() async {
+    @Test func testIsFlushed_FromEnd() async throws {
         // given
         let buffer = ConsumingAsyncSequence<UInt8>(
             [0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9]
         )
         let sequence = AsyncDataSequence(from: buffer, count: 10, chunkSize: 2)
-        await AsyncAssertNoThrow(
+        await #expect(throws: Never.self) {
             try await sequence.get()
-        )
+        }
 
         // then
-        XCTAssertEqual(buffer.index, 10)
+        #expect(buffer.index == 10)
 
         // when
-        await AsyncAssertNoThrow(
-            try await sequence.flushIfNeeded()
-        )
+        try await sequence.flushIfNeeded()
 
         // then
-        XCTAssertEqual(buffer.index, 10)
+        #expect(buffer.index == 10)
     }
 
-    func testIsFlushed_FromMiddle() async {
+    @Test func testIsFlushed_FromMiddle() async throws {
         // given
         let buffer = ConsumingAsyncSequence<UInt8>(
             [0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9]
         )
         let sequence = AsyncDataSequence(from: buffer, count: 10, chunkSize: 2)
-        await AsyncAssertNoThrow(
+        await #expect(throws: Never.self) {
             try await sequence.first()
-        )
+        }
 
         // then
-        XCTAssertEqual(buffer.index, 2)
+        #expect(buffer.index == 2)
 
         // when
-        await AsyncAssertNoThrow(
-            try await sequence.flushIfNeeded()
-        )
+        try await sequence.flushIfNeeded()
 
         // then
-        XCTAssertEqual(buffer.index, 10)
+        #expect(
+            try buffer.index == 10
+        )
     }
 
-    func testFileCount() throws {
+    @Test func testFileCount() throws {
         let sequence = try AsyncDataSequence.make(file: .jackOfHeartsRecital, chunkSize: 100)
-        XCTAssertEqual(sequence.count, 299)
+        #expect(sequence.count == 299)
     }
 
-    func testFile_IsReturnedInChunks() async throws {
+    @Test func testFile_IsReturnedInChunks() async throws {
         let sequence = try AsyncDataSequence.make(file: .jackOfHeartsRecital, chunkSize: 100)
         var iterator = sequence.makeAsyncIterator()
 
-        await AsyncAssertEqual(
-            try await iterator.next()?.count,
-            100
+        #expect(
+            try await iterator.next()?.count == 100
         )
 
-        await AsyncAssertEqual(
-            try await iterator.next()?.count,
-            100
+        #expect(
+            try await iterator.next()?.count == 100
         )
 
-        await AsyncAssertEqual(
-            try await iterator.next()?.count,
-            99
+        #expect(
+            try await iterator.next()?.count == 99
         )
 
-        await AsyncAssertNil(
-            try await iterator.next()
+        #expect(
+            try await iterator.next() == nil
         )
     }
 }

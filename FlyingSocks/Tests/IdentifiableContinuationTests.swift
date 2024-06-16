@@ -32,65 +32,66 @@
 @_spi(Private) import struct FlyingSocks.IdentifiableContinuation
 @_spi(Private) import func FlyingSocks.withIdentifiableContinuation
 @_spi(Private) import func FlyingSocks.withIdentifiableThrowingContinuation
-import XCTest
+import Foundation
+import Testing
 
-final class IdentifiableContinuationAsyncTests: XCTestCase {
+struct IdentifiableContinuationAsyncTests {
 
-    func testResumesWithValue() async {
+    @Test func testResumesWithValue() async {
         let waiter = Waiter<String?, Never>()
         let val = await waiter.identifiableContinuation {
             $0.resume(returning: "Fish")
         }
 
-        XCTAssertEqual(val, "Fish")
+        #expect(val == "Fish")
     }
 
-    func testResumesWithVoid() async {
+    @Test func testResumesWithVoid() async {
         let waiter = Waiter<Void, Never>()
         await waiter.identifiableContinuation {
             $0.resume()
         }
     }
 
-    func testResumesWithResult() async {
+    @Test func testResumesWithResult() async {
         let waiter = Waiter<String?, Never>()
         let val = await waiter.identifiableContinuation {
             $0.resume(with: .success("Chips"))
         }
 
-        XCTAssertEqual(val, "Chips")
+        #expect(val == "Chips")
     }
 
-    func testCancels_After_Created() async {
+    @Test func testCancels_After_Created() async {
         let waiter = Waiter<String?, Never>()
 
         let task = await waiter.makeTask(onCancel: nil)
         try? await Task.sleep(seconds: 0.1)
         var isEmpty = await waiter.isEmpty
-        XCTAssertFalse(isEmpty)
+        #expect(!isEmpty)
         task.cancel()
 
         let val = await task.value
-        XCTAssertNil(val)
+        #expect(val == nil)
 
         isEmpty = await waiter.isEmpty
-        XCTAssertTrue(isEmpty)
+        #expect(isEmpty)
     }
 
-    func testCancels_Before_Created() async {
+    @Test func testCancels_Before_Created() async {
         let waiter = Waiter<String?, Never>()
 
         let task = await waiter.makeTask(delay: 1.0, onCancel: nil)
         try? await Task.sleep(seconds: 0.1)
         let isEmpty = await waiter.isEmpty
-        XCTAssertTrue(isEmpty)
+        #expect(isEmpty)
         task.cancel()
 
         let val = await task.value
-        XCTAssertNil(val)
+        #expect(val == nil)
     }
 
-    func testThrowingResumesWithValue() async {
+    @Test func testThrowingResumesWithValue() async throws {
         let waiter = Waiter<String, any Error>()
         let task = Task {
             try await waiter.identifiableThrowingContinuation {
@@ -99,10 +100,10 @@ final class IdentifiableContinuationAsyncTests: XCTestCase {
         }
 
         let result = await task.result
-        XCTAssertEqual(try result.get(), "Fish")
+        #expect(try result.get() == "Fish")
     }
 
-    func testThrowingResumesWithError() async {
+    @Test func testThrowingResumesWithError() async {
         let waiter = Waiter<String?, any Error>()
         let task = Task<String, any Error> {
             try await waiter.identifiableThrowingContinuation {
@@ -111,10 +112,12 @@ final class IdentifiableContinuationAsyncTests: XCTestCase {
         }
 
         let result = await task.result
-        XCTAssertThrowsError(try result.get())
+        #expect(throws: CancellationError.self) {
+            try result.get()
+        }
     }
 
-    func testThrowingResumesWithResult() async {
+    @Test func testThrowingResumesWithResult() async throws {
         let waiter = Waiter<String?, any Error>()
         let task = Task<String, any Error> {
             try await waiter.identifiableThrowingContinuation {
@@ -123,36 +126,40 @@ final class IdentifiableContinuationAsyncTests: XCTestCase {
         }
 
         let result = await task.result
-        XCTAssertEqual(try result.get(), "Fish")
+        #expect(try result.get() == "Fish")
     }
 
-    func testThrowingCancels_After_Created() async {
+    @Test func testThrowingCancels_After_Created() async {
         let waiter = Waiter<String?, any Error>()
 
         let task = await waiter.makeTask(onCancel: .failure(CancellationError()))
         try? await Task.sleep(seconds: 0.1)
         var isEmpty = await waiter.isEmpty
-        XCTAssertFalse(isEmpty)
+        #expect(!isEmpty)
         task.cancel()
 
         let result = await task.result
-        XCTAssertThrowsError(try result.get())
+        #expect(throws: CancellationError.self) {
+            try result.get()
+        }
 
         isEmpty = await waiter.isEmpty
-        XCTAssertTrue(isEmpty)
+        #expect(isEmpty)
     }
 
-    func testThrowingCancels_Before_Created() async {
+    @Test func testThrowingCancels_Before_Created() async {
         let waiter = Waiter<String?, any Error>()
 
         let task = await waiter.makeTask(delay: 1.0, onCancel: .failure(CancellationError()))
         try? await Task.sleep(seconds: 0.1)
         let isEmpty = await waiter.isEmpty
-        XCTAssertTrue(isEmpty)
+        #expect(isEmpty)
         task.cancel()
 
         let result = await task.result
-        XCTAssertThrowsError(try result.get())
+        #expect(throws: CancellationError.self) {
+            try result.get()
+        }
     }
 }
 

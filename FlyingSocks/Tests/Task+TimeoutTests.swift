@@ -30,36 +30,34 @@
 //
 
 @testable import FlyingSocks
-import XCTest
+import Foundation
+import Testing
 
-final class TaskTimeoutTests: XCTestCase {
+struct TaskTimeoutTests {
 
-    func testTimeoutReturnsSuccess_WhenTimeoutDoesNotExpire() async throws {
+    @Test func testTimeoutReturnsSuccess_WhenTimeoutDoesNotExpire() async throws {
         // given
         let value = try await Task(timeout: 0.5) {
             "Fish"
         }.value
 
         // then
-        XCTAssertEqual(value, "Fish")
+        #expect(value == "Fish")
     }
 
-    func testTimeoutThrowsError_WhenTimeoutExpires() async {
+    @Test func testTimeoutThrowsError_WhenTimeoutExpires() async {
         // given
         let task = Task<Void, any Error>(timeout: 0.5) {
             try? await Task.sleep(seconds: 10)
         }
 
         // then
-        do {
+        await #expect(throws: TimeoutError.self) {
             _ = try await task.value
-            XCTFail("Expected TimeoutError")
-        } catch {
-            XCTAssertTrue(error is TimeoutError)
         }
     }
 
-    func testTimeoutCancels() async {
+    @Test func testTimeoutCancels() async {
         // given
         let task = Task(timeout: 0.5) {
             try await Task.sleep(seconds: 10)
@@ -69,15 +67,12 @@ final class TaskTimeoutTests: XCTestCase {
         task.cancel()
 
         // then
-        do {
+        await #expect(throws: CancellationError.self) {
             _ = try await task.value
-            XCTFail("Expected CancellationError")
-        } catch {
-            XCTAssertTrue(error is CancellationError)
         }
     }
 
-    func testTaskTimeoutParentThrowsError() async {
+    @Test func testTaskTimeoutParentThrowsError() async {
         let task = Task {
             try await Task.sleep(seconds: 10)
         }
@@ -88,58 +83,52 @@ final class TaskTimeoutTests: XCTestCase {
 
         parent.cancel()
 
-        await AsyncAssertThrowsError(
-            try await parent.value,
-            of: CancellationError.self
-        )
+        await #expect(throws: CancellationError.self) {
+            _ = try await parent.value
+        }
     }
 
-    func testTaskTimeoutZeroThrowsError() async {
+    @Test func testTaskTimeoutZeroThrowsError() async throws {
         let task = Task {
             try await Task.sleep(seconds: 10)
         }
 
-        await AsyncAssertThrowsError(
-            try await task.getValue(cancelling: .afterTimeout(seconds: 0)),
-            of: CancellationError.self
-        )
+        await #expect(throws: CancellationError.self) {
+            try await task.getValue(cancelling: .afterTimeout(seconds: 0))
+        }
     }
 
-    func testTaskTimeoutThrowsError() async {
+    @Test func testTaskTimeoutThrowsError() async throws {
         let task = Task {
             try await Task.sleep(seconds: 10)
         }
 
-        await AsyncAssertThrowsError(
-            try await task.getValue(cancelling: .afterTimeout(seconds: 0.1)),
-            of: TimeoutError.self
+        await #expect(throws: TimeoutError.self) {
+            try await task.getValue(cancelling: .afterTimeout(seconds: 0.1))
+        }
+    }
+
+    @Test func testTaskTimeoutParentReturnsSuccess() async throws {
+        let task = Task { "Fish" }
+
+        #expect(
+            try await task.getValue(cancelling: .whenParentIsCancelled) == "Fish"
         )
     }
 
-    func testTaskTimeoutParentReturnsSuccess() async {
+    @Test func testTaskTimeoutZeroReturnsSuccess() async throws {
         let task = Task { "Fish" }
 
-        await AsyncAssertEqual(
-            try await task.getValue(cancelling: .whenParentIsCancelled),
-            "Fish"
+        #expect(
+            try await task.getValue(cancelling: .afterTimeout(seconds: 0)) == "Fish"
         )
     }
 
-    func testTaskTimeoutZeroReturnsSuccess() async {
+    @Test func testTaskTimeoutReturnsSuccess() async throws {
         let task = Task { "Fish" }
 
-        await AsyncAssertEqual(
-            try await task.getValue(cancelling: .afterTimeout(seconds: 0)),
-            "Fish"
-        )
-    }
-
-    func testTaskTimeoutReturnsSuccess() async {
-        let task = Task { "Fish" }
-
-        await AsyncAssertEqual(
-            try await task.getValue(cancelling: .afterTimeout(seconds: 0.1)),
-            "Fish"
+        #expect(
+            try await task.getValue(cancelling: .afterTimeout(seconds: 0.1)) == "Fish"
         )
     }
 }

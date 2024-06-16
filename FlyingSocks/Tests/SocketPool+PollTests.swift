@@ -30,82 +30,84 @@
 //
 
 @testable import FlyingSocks
-import XCTest
+import Foundation
+import Testing
 
-final class PollTests: XCTestCase {
+struct PollTests {
 
-    func testInterval() {
-        XCTAssertEqual(
-            Poll.Interval.immediate.milliseconds,
-            0
-        )
+   @Test func testInterval() {
+       #expect(
+          Poll.Interval.immediate.milliseconds == 0
+       )
 
-        XCTAssertEqual(
-            Poll.Interval.seconds(1).milliseconds,
-            1000
-        )
+       #expect(
+          Poll.Interval.seconds(1).milliseconds == 1000
+       )
     }
 
-    func testAddingAndRemovingEvents() throws {
+    @Test func testAddingAndRemovingEvents() {
         var queue = Poll.make()
 
-        XCTAssertNoThrow(try queue.addEvents(.connection, for: .validMock))
-        XCTAssertEqual(queue.entries, [.init(file: .validMock, events: .connection)])
+        #expect(throws: Never.self) {
+            try queue.addEvents(.connection, for: .validMock)
+        }
+        #expect(queue.entries == [.init(file: .validMock, events: .connection)])
 
-        XCTAssertNoThrow(try queue.removeEvents(.connection, for: .validMock))
-        XCTAssertEqual(queue.entries, [])
+        #expect(throws: Never.self) {
+            try queue.removeEvents(.connection, for: .validMock)
+        }
+        #expect(queue.entries == [])
     }
 
-    func testAddingEventWhenNotOpen_ThrowsError() {
+    @Test func testAddingEventWhenNotOpen_ThrowsError() {
         var queue = Poll.make()
         queue.stop()
 
-        XCTAssertThrowsError(
+        #expect(throws: SocketError.self) {
             try queue.addEvents(.read, for: .validMock)
-        )
+        }
     }
 
-    func testRemovingEventWhenNotOpen_ThrowsError() {
+    @Test func testRemovingEventWhenNotOpen_ThrowsError() {
         var queue = Poll.make()
         queue.stop()
 
-        XCTAssertThrowsError(
+        #expect(throws: SocketError.self) {
             try queue.removeEvents(.read, for: .validMock)
-        )
+        }
     }
 
-    func testReadEntry_CreatesPollFD() {
+    @Test func testReadEntry_CreatesPollFD() {
         let entry = Poll.Entry(file: .init(rawValue: 10), events: .read)
 
-        XCTAssertEqual(entry.pollfd.fd, 10)
-        XCTAssertEqual(entry.pollfd.events, Int16(POLLIN))
-        XCTAssertEqual(entry.pollfd.revents, 0)
+        #expect(entry.pollfd.fd == 10)
+        #expect(entry.pollfd.events == Int16(POLLIN))
+        #expect(entry.pollfd.revents == 0)
     }
 
-    func testWriteEntry_CreatesPollFD() {
+    @Test func testWriteEntry_CreatesPollFD() {
         let entry = Poll.Entry(file: .init(rawValue: 20), events: .write)
 
-        XCTAssertEqual(entry.pollfd.fd, 20)
-        XCTAssertEqual(entry.pollfd.events, Int16(POLLOUT))
-        XCTAssertEqual(entry.pollfd.revents, 0)
+        #expect(entry.pollfd.fd == 20)
+        #expect(entry.pollfd.events == Int16(POLLOUT))
+        #expect(entry.pollfd.revents == 0)
     }
 
-    func testConnectionEntry_CreatesPollFD() {
+    @Test func testConnectionEntry_CreatesPollFD() {
         let entry = Poll.Entry(file: .init(rawValue: 30), events: .connection)
 
-        XCTAssertEqual(entry.pollfd.fd, 30)
-        XCTAssertEqual(entry.pollfd.events, Int16(POLLOUT | POLLIN))
-        XCTAssertEqual(entry.pollfd.revents, 0)
+        #expect(entry.pollfd.fd == 30)
+        #expect(entry.pollfd.events == Int16(POLLOUT | POLLIN))
+        #expect(entry.pollfd.revents == 0)
     }
 
-    func testReadResult_CreatesNotification() {
-        XCTAssertEqual(
+    @Test func testReadResult_CreatesNotification() {
+        #expect(
             EventNotification.make(from: pollfd.make(
                 fd: 10,
                 events: POLLIN,
                 revents: POLLIN
-            )),
-            EventNotification(
+            )) == EventNotification(
                 file: .init(rawValue: 10),
                 events: .read,
                 errors: []
@@ -113,14 +115,13 @@ final class PollTests: XCTestCase {
         )
     }
 
-    func testErrorsIgnored_WhenReadWithDataAvailable() {
-        XCTAssertEqual(
+    @Test  func testErrorsIgnored_WhenReadWithDataAvailable() {
+        #expect(
             EventNotification.make(from: pollfd.make(
                 fd: 10,
                 events: POLLIN,
                 revents: POLLIN | POLLHUP
-            )),
-            EventNotification(
+            )) == EventNotification(
                 file: .init(rawValue: 10),
                 events: .read,
                 errors: []
@@ -128,14 +129,13 @@ final class PollTests: XCTestCase {
         )
     }
 
-    func testWriteResult_CreatesNotification() {
-        XCTAssertEqual(
+    @Test func testWriteResult_CreatesNotification() {
+        #expect(
             EventNotification.make(from: pollfd.make(
                 fd: 10,
                 events: POLLOUT,
                 revents: POLLOUT
-            )),
-            EventNotification(
+            )) == EventNotification(
                 file: .init(rawValue: 10),
                 events: .write,
                 errors: []
@@ -143,14 +143,13 @@ final class PollTests: XCTestCase {
         )
     }
 
-    func testWriteHUP_CreatesNotification() {
-        XCTAssertEqual(
+    @Test func testWriteHUP_CreatesNotification() {
+        #expect(
             EventNotification.make(from: pollfd.make(
                 fd: 10,
                 events: POLLIN | POLLOUT,
                 revents: POLLHUP
-            )),
-            EventNotification(
+            )) == EventNotification(
                 file: .init(rawValue: 10),
                 events: .connection,
                 errors: [.endOfFile]
@@ -158,14 +157,13 @@ final class PollTests: XCTestCase {
         )
     }
 
-    func testWriteErrors_CreatesNotification() {
-        XCTAssertEqual(
+    @Test func testWriteErrors_CreatesNotification() {
+        #expect(
             EventNotification.make(from: pollfd.make(
                 fd: 10,
                 events: POLLOUT,
                 revents: POLLERR
-            )),
-            EventNotification(
+            )) == EventNotification(
                 file: .init(rawValue: 10),
                 events: .write,
                 errors: [.error]
@@ -173,28 +171,28 @@ final class PollTests: XCTestCase {
         )
     }
 
-    func testUnmatchedRevents_DoesNotCreateNotification() {
-        XCTAssertNil(
+    @Test func testUnmatchedRevents_DoesNotCreateNotification() {
+        #expect(
             EventNotification.make(from: pollfd.make(
                 events: POLLIN,
                 revents: 0
-            ))
+            )) == nil
         )
-        XCTAssertNil(
+        #expect(
             EventNotification.make(from: pollfd.make(
                 events: POLLIN,
                 revents: POLLOUT
-            ))
+            )) == nil
         )
-        XCTAssertNil(
+        #expect(
             EventNotification.make(from: pollfd.make(
                 events: POLLIN | POLLOUT,
                 revents: 0
-            ))
+            )) == nil
         )
     }
 
-    func testGetEvents_ReturnsEvents() async throws {
+    @Test func testGetEvents_ReturnsEvents() async throws {
         var queue = Poll.make()
 
         let (s1, s2) = try Socket.makeNonBlockingPair()
@@ -204,19 +202,18 @@ final class PollTests: XCTestCase {
         let data = Data([10, 20])
         _ = try s1.write(data, from: data.startIndex)
 
-        await AsyncAssertEqual(
-            try await queue.getEvents(),
-            [.init(file: s2.file, events: [.read], errors: [])]
+        #expect(
+            try await queue.getEvents() == [.init(file: s2.file, events: [.read], errors: [])]
         )
     }
 
-    func testGetEventsWhenNotReady_ThrowsError() async {
+    @Test func testGetEventsWhenNotReady_ThrowsError() async {
         var queue = Poll.make()
         queue.stop()
 
-        await AsyncAssertThrowsError(
+        await #expect(throws: SocketError.self) {
             try await queue.getEvents()
-        )
+        }
     }
 }
 

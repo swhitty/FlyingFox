@@ -30,11 +30,11 @@
 //
 
 @_spi(Private) import struct FlyingSocks.AllocatedLock
-import XCTest
+import Testing
 
-final class AllocatedLockTests: XCTestCase {
+struct AllocatedLockTests {
 
-    func testLockState_IsProtected() async {
+    @Test func testLockState_IsProtected() async {
         let state = AllocatedLock<Int>(initialState: 0)
 
         let total = await withTaskGroup(of: Void.self) { group in
@@ -47,16 +47,16 @@ final class AllocatedLockTests: XCTestCase {
             return state.withLock { $0 }
         }
 
-        XCTAssertEqual(total, 500500)
+        #expect(total == 500500)
     }
 
-    func testLock_ReturnsValue() async {
+    @Test func testLock_ReturnsValue() async {
         let lock = AllocatedLock()
         let value = lock.withLock { true }
-        XCTAssertTrue(value)
+        #expect(value)
     }
 
-    func testLock_Blocks() async {
+    @Test func testLock_Blocks() async {
         let lock = AllocatedLock()
 
         Task { @MainActor in
@@ -81,7 +81,7 @@ final class AllocatedLockTests: XCTestCase {
             let second = await group.next()!
             return [first, second]
         }
-        XCTAssertEqual(results, [true, false])
+        #expect(results == [true, false])
     }
 }
 

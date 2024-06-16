@@ -32,48 +32,51 @@
 @testable import FlyingSocks
 @_spi(Private) import struct FlyingSocks.IdentifiableContinuation
 @_spi(Private) import func FlyingSocks.withIdentifiableThrowingContinuation
-import XCTest
+import Foundation
+import Testing
 
-final class SocketPoolTests: XCTestCase {
+struct SocketPoolTests {
 
     typealias Continuation = IdentifiableContinuation<Void, any Swift.Error>
     typealias Waiting = SocketPool<MockEventQueue>.Waiting
 
 #if canImport(Darwin)
-    func testKqueuePool() {
+    @Test func testKqueuePool() {
         let pool = SocketPool.make(maxEvents: 5)
-        XCTAssertTrue(type(of: pool) == SocketPool<kQueue>.self)
+        #expect(type(of: pool) == SocketPool<kQueue>.self)
     }
 #endif
 
 #if canImport(CSystemLinux)
-    func testEPollPool() {
+    @Test func testEPollPool() {
         let pool = SocketPool.make(maxEvents: 5)
-        XCTAssertTrue(type(of: pool) == SocketPool<ePoll>.self)
+        #expect(type(of: pool) == SocketPool<ePoll>.self)
     }
 #endif
 
-    func testPoll() {
+    @Test func testPoll() {
         let pool: some AsyncSocketPool = .poll()
-        XCTAssertTrue(type(of: pool) == SocketPool<Poll>.self)
+        #expect(type(of: pool) == SocketPool<Poll>.self)
     }
 
-    func testQueuePrepare() async throws {
+    @Test func testQueuePrepare() async throws {
         let pool = SocketPool.make()
 
-        await AsyncAssertNil(await pool.state)
+        #expect(await pool.state == nil)
 
         try await pool.prepare()
-        await AsyncAssertEqual(await pool.state, .ready)
+        #expect(await pool.state == .ready)
     }
 
-    func testQueueRun_ThrowsError_WhenNotReady() async throws {
+    @Test func testQueueRun_ThrowsError_WhenNotReady() async throws {
         let pool = SocketPool.make()
 
-        await AsyncAssertThrowsError(try await pool.run(), of: (any Error).self)
+        await #expect(throws: (any Error).self) {
+            try await pool.run()
+        }
     }
 
-    func testSuspendedSockets_ThrowError_WhenCancelled() async throws {
+    @Test func testSuspendedSockets_ThrowError_WhenCancelled() async throws {
         let pool = SocketPool.make()
         try await pool.prepare()
 
@@ -84,10 +87,12 @@ final class SocketPoolTests: XCTestCase {
 
         task.cancel()
 
-        await AsyncAssertThrowsError(try await task.value, of: CancellationError.self)
+        await #expect(throws: CancellationError.self) {
+            try await task.value
+        }
     }
 
-    func testCancellingPollingPool_CancelsSuspendedSocket() async throws {
+    @Test func testCancellingPollingPool_CancelsSuspendedSocket() async throws {
         let pool = SocketPool.make()
         try await pool.prepare()
 
@@ -96,15 +101,15 @@ final class SocketPoolTests: XCTestCase {
         }
 
         let (s1, s2) = try Socket.makeNonBlockingPair()
-        await AsyncAssertThrowsError(
-            try await pool.suspendSocket(s1, untilReadyFor: .read),
-            of: CancellationError.self
-        )
+        await #expect(throws: CancellationError.self) {
+            try await pool.suspendSocket(s1, untilReadyFor: .read)
+        }
+
         try s1.close()
         try s2.close()
     }
 
-    func testCancellingPool_CancelsNewSockets() async throws {
+    @Test func testCancellingPool_CancelsNewSockets() async throws {
         let pool = SocketPool.make()
         try await pool.prepare()
 
@@ -115,12 +120,12 @@ final class SocketPoolTests: XCTestCase {
         try? await task.value
 
         let socket = try Socket(domain: AF_UNIX, type: Socket.stream)
-        await AsyncAssertThrowsError(
+        await #expect(throws: (any Error).self) {
             try await pool.suspendSocket(socket, untilReadyFor: .read)
-        )
+        }
     }
 
-    func testQueueNotification_ResumesSocket() async throws {
+    @Test func testQueueNotification_ResumesSocket() async throws {
         let pool = SocketPool.make()
         try await pool.prepare()
         let task = Task { try await pool.run() }
@@ -136,12 +141,12 @@ final class SocketPoolTests: XCTestCase {
             .init(file: socket.file, events: .read, errors: [])
         ])
 
-        await AsyncAssertNoThrow(
+        await #expect(throws: Never.self) {
             try await pool.suspendSocket(socket, untilReadyFor: .read)
-        )
+        }
     }
 
-    func testQueueNotificationError_ResumesSocket_WithError() async throws {
+    @Test func testQueueNotificationError_ResumesSocket_WithError() async throws {
         let pool = SocketPool.make()
         try await pool.prepare()
         let task = Task { try await pool.run() }
@@ -157,62 +162,54 @@ final class SocketPoolTests: XCTestCase {
             .init(file: socket.file, events: .read, errors: [.endOfFile])
         ])
 
-        await AsyncAssertThrowsError(
-            try await pool.suspendSocket(socket, untilReadyFor: .read),
-            of: SocketError.self
-        ) { XCTAssertEqual($0, .disconnected) }
+        await #expect(throws: SocketError.disconnected) {
+            try await pool.suspendSocket(socket, untilReadyFor: .read)
+        }
     }
 
-    func testWaiting_IsEmpty() async {
+    @Test func testWaiting_IsEmpty() async {
         let cn = await Continuation.make()
 
         var waiting = Waiting()
-        XCTAssertTrue(waiting.isEmpty)
+        #expect(waiting.isEmpty)
 
         _ = waiting.appendContinuation(cn, for: .validMock, events: .read)
-        XCTAssertFalse(waiting.isEmpty)
+        #expect(waiting.isEmpty == false)
 
         _ = waiting.resumeContinuation(id: cn.id, with: .success(()), for: .validMock)
-        XCTAssertTrue(waiting.isEmpty)
+        #expect(waiting.isEmpty)
     }
 
-    func testWaitingEvents() async {
+    @Test func testWaitingEvents() async {
         var waiting = Waiting()
         let cnRead = await Continuation.make()
         let cnRead1 = await Continuation.make()
         let cnWrite = await Continuation.make()
 
-        XCTAssertEqual(
-            waiting.appendContinuation(cnRead, for: .validMock, events: .read),
-            [.read]
+        #expect(
+            waiting.appendContinuation(cnRead, for: .validMock, events: .read) == [.read]
         )
-        XCTAssertEqual(
-            waiting.appendContinuation(cnRead1, for: .validMock, events: .read),
-            [.read]
+        #expect(
+            waiting.appendContinuation(cnRead1, for: .validMock, events: .read) == [.read]
         )
-        XCTAssertEqual(
-            waiting.appendContinuation(cnWrite, for: .validMock, events: .write),
-            [.read, .write]
+        #expect(
+            waiting.appendContinuation(cnWrite, for: .validMock, events: .write) == [.read, .write]
         )
-        XCTAssertEqual(
-            waiting.resumeContinuation(id: .init(), with: .success(()), for: .validMock),
-            []
+        #expect(
+            waiting.resumeContinuation(id: .init(), with: .success(()), for: .validMock) == []
         )
-        XCTAssertEqual(
-            waiting.resumeContinuation(id: cnWrite.id, with: .success(()), for: .validMock),
-            [.write]
+        #expect(
+            waiting.resumeContinuation(id: cnWrite.id, with: .success(()), for: .validMock) == [.write]
         )
-        XCTAssertEqual(
-            waiting.resumeContinuation(id: cnRead.id, with: .success(()), for: .validMock),
-            []
+        #expect(
+            waiting.resumeContinuation(id: cnRead.id, with: .success(()), for: .validMock) == []
         )
-        XCTAssertEqual(
-            waiting.resumeContinuation(id: cnRead1.id, with: .success(()), for: .validMock),
-            [.read]
+        #expect(
+            waiting.resumeContinuation(id: cnRead1.id, with: .success(()), for: .validMock) == [.read]
         )
     }
 
-    func testWaitingContinuations() async {
+    @Test func testWaitingContinuations() async {
         var waiting = Waiting()
         let cnRead = await Continuation.make()
         let cnRead1 = await Continuation.make()
@@ -222,25 +219,20 @@ final class SocketPoolTests: XCTestCase {
         _ = waiting.appendContinuation(cnRead1, for: .validMock, events: .read)
         _ = waiting.appendContinuation(cnWrite, for: .validMock, events: .write)
 
-        XCTAssertEqual(
-            Set(waiting.continuationIDs(for: .validMock, events: .read)),
-            [cnRead1.id, cnRead.id]
+        #expect(
+            Set(waiting.continuationIDs(for: .validMock, events: .read)) == [cnRead1.id, cnRead.id]
         )
-        XCTAssertEqual(
-            Set(waiting.continuationIDs(for: .validMock, events: .write)),
-            [cnWrite.id]
+        #expect(
+            Set(waiting.continuationIDs(for: .validMock, events: .write)) == [cnWrite.id]
         )
-        XCTAssertEqual(
-            Set(waiting.continuationIDs(for: .validMock, events: .connection)),
-            [cnRead1.id, cnRead.id, cnWrite.id]
+        #expect(
+            Set(waiting.continuationIDs(for: .validMock, events: .connection)) == [cnRead1.id, cnRead.id, cnWrite.id]
         )
-        XCTAssertEqual(
-            Set(waiting.continuationIDs(for: .validMock, events: [])),
-            []
+        #expect(
+            Set(waiting.continuationIDs(for: .validMock, events: [])) == []
         )
-        XCTAssertEqual(
-            Set(waiting.continuationIDs(for: .invalid, events: .connection)),
-            []
+        #expect(
+            Set(waiting.continuationIDs(for: .invalid, events: .connection)) == []
         )
     }
 }
