@@ -324,6 +324,10 @@ private struct EmptyChunkedSequence: AsyncChunkedSequence, AsyncChunkedIteratorP
         return nil
     }
 
+    mutating func nextChunk(atMost count: Int) async throws -> [Element]? {
+        return nil
+    }
+
     func makeAsyncIterator() -> EmptyChunkedSequence {
         self
     }

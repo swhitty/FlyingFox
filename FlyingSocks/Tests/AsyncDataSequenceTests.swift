@@ -283,7 +283,7 @@ private final class ConsumingAsyncSequence<Element>: AsyncChunkedSequence, Async
         iterator.next()
     }
 
-    func nextChunk(count: Int) async throws -> [Element]? {
+    func nextChunk(atMost count: Int) async throws -> [Element]? {
         var buffer = [Element]()
         while buffer.count < count,
               let element = iterator.next() {

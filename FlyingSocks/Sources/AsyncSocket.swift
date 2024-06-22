@@ -116,6 +116,7 @@ public struct AsyncSocket: Sendable {
 
         var buffer = [UInt8]()
         while buffer.count < bytes {
+            try Task.checkCancellation()
             let toRead = min(bytes - buffer.count, 4096)
             do {
                 try buffer.append(contentsOf: socket.read(atMost: toRead))
@@ -126,6 +127,27 @@ public struct AsyncSocket: Sendable {
             }
         }
         return buffer
+    }
+
+    /// Reads bytes from the socket up to by not over/
+    /// - Parameter bytes: The max number of bytes to read
+    /// - Returns: an array of the read bytes capped to the number of bytes provided.
+    public func read(atMost bytes: Int) async throws -> [UInt8] {
+        guard bytes > 0 else { return [] }
+
+        var data: [UInt8]?
+        repeat {
+            try Task.checkCancellation()
+            do {
+                data = try socket.read(atMost: min(bytes, 4096))
+            } catch SocketError.blocked {
+                try await pool.suspendSocket(socket, untilReadyFor: .read)
+            } catch {
+                throw error
+            }
+        } while data == nil
+
+        return data!
     }
 
     public func write(_ data: Data) async throws {
@@ -182,8 +204,8 @@ public struct AsyncSocketReadSequence: AsyncChunkedSequence, AsyncChunkedIterato
         return try await socket.read()
     }
 
-    public mutating func nextChunk(count: Int) async throws -> [Element]? {
-        return try await socket.read(bytes: count)
+    public mutating func nextChunk(atMost count: Int) async throws -> [Element]? {
+        try await socket.read(atMost: count)
     }
 }
 

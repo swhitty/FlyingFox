@@ -38,7 +38,47 @@ public protocol AsyncChunkedIteratorProtocol: AsyncIteratorProtocol {
 
     /// Retrieves n elements from sequence in a single array.
     /// - Returns: Array with the number of elements that was requested. Or Nil.
+    /// ** Soft Deprecated ** Implement  `nextChunk(atMost:)`
     mutating func nextChunk(count: Int) async throws -> [Element]?
+
+    /// Retrieve up to n elements from sequence in a single array.
+    /// - Parameter count: The maximum number of elements to retrieve if possible.
+    /// - Returns: Array with number of elements less than or equal to count. Or Nil if sequence has ended.
+    mutating func nextChunk(atMost count: Int) async throws -> [Element]?
+}
+
+public extension AsyncChunkedIteratorProtocol {
+
+    /// Default implementation for compatibility with existing conformance. Will be removed in a future release.
+    /// - Parameter count: The number of elements to retrieve if possible.
+    /// - Returns: Array with number of elements less than or equal to count. Or Nil if sequence has ended.
+    mutating func nextChunk(atMost count: Int) async throws -> [Element]? {
+        try await Private.$didImplementAtMost.withValue(false) {
+            try await nextChunk(count: count)
+        }
+    }
+
+    mutating func nextChunk(count: Int) async throws -> [Element]? {
+        // Default implementations are provided for both methods, but one must be implemented.
+        precondition(Private.didImplementAtMost, "requires implementation nextChunk(atMost:)")
+        guard count > 0 else { return [] }
+
+        var buffer = [Element]()
+        while buffer.count < count {
+            try Task.checkCancellation()
+            let remaining = count - buffer.count
+            if let chunk = try await nextChunk(atMost: remaining) {
+                buffer.append(contentsOf: chunk)
+            } else {
+                throw SocketError.disconnected
+            }
+        }
+        return buffer
+    }
+}
+
+private enum Private {
+    @TaskLocal static var didImplementAtMost: Bool = true
 }
 
 @available(*, unavailable, renamed: "AsyncChunkedSequence")

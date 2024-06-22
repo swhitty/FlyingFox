@@ -55,4 +55,8 @@ final class ConsumingAsyncSequence<Element>: AsyncChunkedSequence, AsyncChunkedI
         index += buffer.count
         return buffer.count == count ? buffer : nil
     }
+
+    func nextChunk(atMost count: Int) async throws -> [Element]? {
+        try await nextChunk(count: Swift.min(count, 3))
+    }
 }
