@@ -30,7 +30,7 @@
 //
 
 /// AsyncSequence that is able to also receive elements in chunks, instead of just one-at-a-time.
-public protocol AsyncChunkedSequence<Element>: AsyncSequence where AsyncIterator: AsyncChunkedIteratorProtocol {
+public protocol AsyncChunkedSequence<Element>: AsyncSequence, Sendable where AsyncIterator: AsyncChunkedIteratorProtocol {
 
 }
 
@@ -49,6 +49,10 @@ public protocol AsyncChunkedIteratorProtocol: AsyncIteratorProtocol {
 
 public extension AsyncChunkedIteratorProtocol {
 
+    mutating func next() async throws -> Element? {
+        try await nextChunk(count: 1)?.first
+    }
+
     /// Default implementation for compatibility with existing conformance. Will be removed in a future release.
     /// - Parameter count: The number of elements to retrieve if possible.
     /// - Returns: Array with number of elements less than or equal to count. Or Nil if sequence has ended.
@@ -60,6 +64,9 @@ public extension AsyncChunkedIteratorProtocol {
 
     mutating func nextChunk(count: Int) async throws -> [Element]? {
         // Default implementations are provided for both methods, but one must be implemented.
+        if !Private.didImplementAtMost {
+            print("Private.didImplementAtMost")
+        }
         precondition(Private.didImplementAtMost, "requires implementation nextChunk(atMost:)")
         guard count > 0 else { return [] }
 

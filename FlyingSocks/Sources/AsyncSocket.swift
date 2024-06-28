@@ -194,6 +194,7 @@ private extension AsyncSocketPool {
 }
 
 public struct AsyncSocketReadSequence: AsyncChunkedSequence, AsyncChunkedIteratorProtocol, Sendable {
+    
     public typealias Element = UInt8
 
     let socket: AsyncSocket

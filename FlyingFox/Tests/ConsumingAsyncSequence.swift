@@ -46,7 +46,7 @@ final class ConsumingAsyncSequence<Element>: AsyncChunkedSequence, AsyncChunkedI
         iterator.next()
     }
 
-    func nextChunk(count: Int) async throws -> [Element]? {
+    func nextChunk(count: Int) -> [Element]? {
         var buffer = [Element]()
         while buffer.count < count,
               let element = iterator.next() {
@@ -56,7 +56,7 @@ final class ConsumingAsyncSequence<Element>: AsyncChunkedSequence, AsyncChunkedI
         return buffer.count == count ? buffer : nil
     }
 
-    func nextChunk(atMost count: Int) async throws -> [Element]? {
-        try await nextChunk(count: Swift.min(count, 3))
+    func nextChunk(atMost count: Int) -> [Element]? {
+        nextChunk(count: Swift.min(count, 3))
     }
 }
