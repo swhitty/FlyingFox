@@ -268,7 +268,7 @@ extension AsyncDataSequence {
     }
 }
 
-private final class ConsumingAsyncSequence<Element>: AsyncChunkedSequence, AsyncChunkedIteratorProtocol {
+private final class ConsumingAsyncSequence<Element>: AsyncBufferedSequence, AsyncBufferedIteratorProtocol {
 
     private var iterator: AnySequence<Element>.Iterator
     private(set) var index: Int = 0
@@ -283,7 +283,7 @@ private final class ConsumingAsyncSequence<Element>: AsyncChunkedSequence, Async
         iterator.next()
     }
 
-    func nextChunk(count: Int) async throws -> [Element]? {
+    func nextBuffer(atMost count: Int) async throws -> [Element]? {
         var buffer = [Element]()
         while buffer.count < count,
               let element = iterator.next() {

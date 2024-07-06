@@ -191,8 +191,8 @@ final class HTTPDecoderTests: XCTestCase {
 
     func testBody_ThrowsError_WhenSequenceEnds() async throws {
         await AsyncAssertThrowsError(
-            _ = try await HTTPDecoder.readBody(from: EmptyChunkedSequence(), length: "100"),
-            of: HTTPDecoder.Error.self
+            _ = try await HTTPDecoder.readBody(from: EmptyBufferedSequence(), length: "100"),
+            of: SocketError.self
         )
     }
 
@@ -315,16 +315,16 @@ private extension HTTPDecoder {
     }
 }
 
-private struct EmptyChunkedSequence: AsyncChunkedSequence, AsyncChunkedIteratorProtocol {
+private struct EmptyBufferedSequence: AsyncBufferedSequence, AsyncBufferedIteratorProtocol {
     mutating func next() async throws -> UInt8? {
         return nil
     }
 
-    mutating func nextChunk(count: Int) async throws -> [Element]? {
+    func nextBuffer(atMost count: Int) async throws -> [Element]? {
         return nil
     }
 
-    func makeAsyncIterator() -> EmptyChunkedSequence {
+    func makeAsyncIterator() -> EmptyBufferedSequence {
         self
     }
 
