@@ -60,17 +60,7 @@ public struct HTTPResponse: Sendable {
 
     @available(*, unavailable, renamed: "bodyData")
     public var body: Data? {
-        switch payload {
-        case .httpBody(let body):
-            switch body.storage {
-            case .complete(let data):
-                return data
-            case .sequence:
-                return nil
-            }
-        case .webSocket:
-            return nil
-        }
+        fatalError("use bodyData")
     }
 
     public init(version: HTTPVersion = .http11,
