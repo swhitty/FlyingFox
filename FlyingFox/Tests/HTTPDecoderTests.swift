@@ -335,7 +335,7 @@ extension HTTPBodySequence.Storage {
     var isComplete: Bool {
         switch self {
         case .complete: return true
-        case .sequence: return false
+        case .dataSequence: return false
         }
     }
 }

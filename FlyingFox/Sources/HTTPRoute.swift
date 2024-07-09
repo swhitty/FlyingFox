@@ -220,7 +220,7 @@ public extension HTTPRoute {
         switch request.storage {
         case .complete(let data):
             return body.evaluate(data)
-        case .sequence:
+        case .dataSequence:
             // HTTPBodyPattern cannot be applied when the body is not completely loaded (large requests)
             return false
         }

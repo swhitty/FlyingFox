@@ -252,7 +252,7 @@ private extension HTTPBodySequence {
     var isComplete: Bool {
         switch storage {
         case .complete: return true
-        case .sequence: return false
+        case .dataSequence: return false
         }
     }
 }

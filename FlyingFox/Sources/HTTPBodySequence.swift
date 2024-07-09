@@ -47,7 +47,7 @@ public struct HTTPBodySequence: Sendable, AsyncSequence {
     }
 
     public init(from bytes: some AsyncChunkedSequence<UInt8>, count: Int) {
-        self.storage = .sequence(
+        self.storage = .dataSequence(
             AsyncDataSequence(from: bytes, count: count, chunkSize: 4096)
         )
     }
@@ -57,7 +57,7 @@ public struct HTTPBodySequence: Sendable, AsyncSequence {
     }
 
     init(from bytes: some AsyncChunkedSequence<UInt8>, count: Int, chunkSize: Int) {
-        self.storage = .sequence(
+        self.storage = .dataSequence(
             AsyncDataSequence(from: bytes, count: count, chunkSize: chunkSize)
         )
     }
@@ -67,7 +67,7 @@ public struct HTTPBodySequence: Sendable, AsyncSequence {
         if count <= maxSizeForComplete {
             self.storage = try .complete(Data(contentsOf: url))
         } else {
-            self.storage = try .sequence(
+            self.storage = try .dataSequence(
                 AsyncDataSequence(file: FileHandle(forReadingFrom: url),
                                   count: count,
                                   chunkSize: chunkSize)
@@ -81,14 +81,14 @@ public struct HTTPBodySequence: Sendable, AsyncSequence {
 
     enum Storage: @unchecked Sendable {
         case complete(Data)
-        case sequence(AsyncDataSequence)
+        case dataSequence(AsyncDataSequence)
     }
 
     public var count: Int {
         switch storage {
         case .complete(let data):
             return data.count
-        case .sequence(let sequence):
+        case .dataSequence(let sequence):
             return sequence.count
         }
     }
@@ -97,7 +97,7 @@ public struct HTTPBodySequence: Sendable, AsyncSequence {
         switch storage {
         case .complete(let data):
             return data
-        case .sequence(let sequence):
+        case .dataSequence(let sequence):
             return try await sequence.reduce(into: Data()) {
                 $0.append($1)
             }
@@ -105,7 +105,7 @@ public struct HTTPBodySequence: Sendable, AsyncSequence {
     }
 
     func flushIfNeeded() async throws {
-        guard case .sequence(let sequence) = storage else { return }
+        guard case .dataSequence(let sequence) = storage else { return }
         try await sequence.flushIfNeeded()
     }
 }
@@ -122,8 +122,8 @@ public extension HTTPBodySequence {
             switch storage {
             case .complete(let data):
                 self.storage = .complete(data)
-            case .sequence(let sequence):
-                self.storage = .iterator(sequence.makeAsyncIterator())
+            case .dataSequence(let sequence):
+                self.storage = .dataIterator(sequence.makeAsyncIterator())
             }
         }
 
@@ -133,19 +133,19 @@ public extension HTTPBodySequence {
             case let .complete(data):
                 isComplete = true
                 return data
-            case var .iterator(iterator):
+            case var .dataIterator(iterator):
                 guard let result = try await iterator.next() else {
                     isComplete = true
                     return nil
                 }
-                storage = .iterator(iterator)
+                storage = .dataIterator(iterator)
                 return result
             }
         }
 
         enum Internal: @unchecked Sendable {
             case complete(Data)
-            case iterator(AsyncDataSequence.AsyncIterator)
+            case dataIterator(AsyncDataSequence.AsyncIterator)
         }
     }
 }
