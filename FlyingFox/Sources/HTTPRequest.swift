@@ -84,23 +84,6 @@ public struct HTTPRequest: Sendable {
     }
 }
 
-@available(*, unavailable, message: "HTTPRequest will soon remove conformance to Equatable")
-extension HTTPRequest: Equatable {
-
-    public static func == (lhs: HTTPRequest, rhs: HTTPRequest) -> Bool {
-        guard case .complete(let lhsBody) = lhs.bodySequence.storage,
-              case .complete(let rhsBody) = rhs.bodySequence.storage else {
-            return false
-        }
-        return lhs.method == rhs.method &&
-               lhs.version == rhs.version &&
-               lhs.path == rhs.path &&
-               lhs.query == rhs.query &&
-               lhs.headers == rhs.headers &&
-               lhsBody == rhsBody
-    }
-}
-
 extension HTTPRequest {
     var shouldKeepAlive: Bool {
         headers[.connection]?.caseInsensitiveCompare("keep-alive") == .orderedSame
