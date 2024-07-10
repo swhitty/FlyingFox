@@ -31,7 +31,7 @@
 
 import FlyingSocks
 
-final class ConsumingAsyncSequence<Element>: AsyncChunkedSequence, AsyncChunkedIteratorProtocol {
+final class ConsumingAsyncSequence<Element>: AsyncBufferedSequence, AsyncBufferedIteratorProtocol {
 
     private var iterator: AnySequence<Element>.Iterator
     private(set) var index: Int = 0
@@ -46,13 +46,13 @@ final class ConsumingAsyncSequence<Element>: AsyncChunkedSequence, AsyncChunkedI
         iterator.next()
     }
 
-    func nextChunk(count: Int) async throws -> [Element]? {
+    func nextBuffer(atMost count: Int) async throws -> [Element]? {
         var buffer = [Element]()
         while buffer.count < count,
               let element = iterator.next() {
             buffer.append(element)
         }
         index += buffer.count
-        return buffer.count == count ? buffer : nil
+        return buffer.count > 0 ? buffer : nil
     }
 }

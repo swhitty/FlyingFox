@@ -38,11 +38,11 @@ public struct AsyncDataSequence: AsyncSequence, Sendable {
 
     private let loader: DataLoader
 
-    public init(from bytes: some AsyncChunkedSequence<UInt8>, count: Int, chunkSize: Int) {
+    public init(from bytes: some AsyncBufferedSequence<UInt8>, count: Int, chunkSize: Int) {
         self.loader = DataLoader(
             count: count,
             chunkSize: chunkSize,
-            iterator: AsyncChunkedSequenceIterator(bytes.makeAsyncIterator())
+            iterator: AsyncBufferedSequenceIterator(bytes.makeAsyncIterator())
         )
     }
 
@@ -166,7 +166,7 @@ private extension AsyncDataSequence {
         }
     }
 
-    final class AsyncChunkedSequenceIterator<I: AsyncChunkedIteratorProtocol>: AsyncDataIterator, @unchecked Sendable where I.Element == UInt8 {
+    final class AsyncBufferedSequenceIterator<I: AsyncBufferedIteratorProtocol>: AsyncDataIterator, @unchecked Sendable where I.Element == UInt8 {
         private var iterator: I
 
         init(_ iterator: I) {
@@ -174,8 +174,8 @@ private extension AsyncDataSequence {
         }
 
         func nextChunk(count: Int) async throws -> Data? {
-            guard let chunk = try await iterator.nextChunk(count: count) else { return nil }
-            return Data(chunk)
+            guard let buffer = try await iterator.nextBuffer(count: count) else { return nil }
+            return Data(buffer)
         }
     }
 

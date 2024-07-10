@@ -67,7 +67,7 @@ struct WSFrameEncoder {
         return data
     }
 
-    static func decodeFrame(from bytes: some AsyncChunkedSequence<UInt8>) async throws -> WSFrame {
+    static func decodeFrame(from bytes: some AsyncBufferedSequence<UInt8>) async throws -> WSFrame {
         var frame = try await decodeFrame(from: bytes.take())
         let (length, mask) = try await decodeLengthMask(from: bytes)
         frame.payload = try await decodePayload(from: bytes, length: length, mask: mask)
@@ -117,9 +117,9 @@ struct WSFrameEncoder {
         }
     }
 
-    static func decodePayload(from bytes: some AsyncChunkedSequence<UInt8>, length: Int, mask: WSFrame.Mask?) async throws -> Data {
+    static func decodePayload(from bytes: some AsyncBufferedSequence<UInt8>, length: Int, mask: WSFrame.Mask?) async throws -> Data {
         var iterator = bytes.makeAsyncIterator()
-        guard var payload = try await iterator.nextChunk(count: length) else {
+        guard var payload = try await iterator.nextBuffer(count: length) else {
             throw SocketError.disconnected
         }
         if let mask = mask {
@@ -130,7 +130,7 @@ struct WSFrameEncoder {
         return Data(payload)
     }
 
-    static func decodeLengthMask(from bytes: some AsyncChunkedSequence<UInt8>) async throws -> (length: Int, mask: WSFrame.Mask?) {
+    static func decodeLengthMask(from bytes: some AsyncBufferedSequence<UInt8>) async throws -> (length: Int, mask: WSFrame.Mask?) {
         let byte0 = try await bytes.take()
         let hasMask = byte0 & 0b10000000 == 0b10000000
         let length0 = byte0 & 0b01111111
@@ -158,7 +158,7 @@ struct WSFrameEncoder {
         }
     }
 
-    static func decodeMask(from bytes: some AsyncChunkedSequence<UInt8>) async throws -> WSFrame.Mask {
+    static func decodeMask(from bytes: some AsyncBufferedSequence<UInt8>) async throws -> WSFrame.Mask {
         try await WSFrame.Mask(m1: bytes.take(),
                                m2: bytes.take(),
                                m3: bytes.take(),

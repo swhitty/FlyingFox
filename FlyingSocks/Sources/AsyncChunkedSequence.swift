@@ -30,10 +30,12 @@
 //
 
 /// AsyncSequence that is able to also receive elements in chunks, instead of just one-at-a-time.
+@available(*, deprecated, renamed: "AsyncBufferedSequence")
 public protocol AsyncChunkedSequence<Element>: AsyncSequence where AsyncIterator: AsyncChunkedIteratorProtocol {
 
 }
 
+@available(*, deprecated, renamed: "AsyncBufferedIteratorProtocol")
 public protocol AsyncChunkedIteratorProtocol: AsyncIteratorProtocol {
 
     /// Retrieves n elements from sequence in a single array.
@@ -41,12 +43,12 @@ public protocol AsyncChunkedIteratorProtocol: AsyncIteratorProtocol {
     mutating func nextChunk(count: Int) async throws -> [Element]?
 }
 
-@available(*, unavailable, renamed: "AsyncChunkedSequence")
+@available(*, unavailable, renamed: "AsyncBufferedSequence")
 public protocol ChunkedAsyncSequence: AsyncSequence where AsyncIterator: ChunkedAsyncIteratorProtocol {
 
 }
 
-@available(*, unavailable, renamed: "AsyncChunkedIteratorProtocol")
+@available(*, unavailable, renamed: "AsyncBufferedIteratorProtocol")
 public protocol ChunkedAsyncIteratorProtocol: AsyncIteratorProtocol {
     mutating func nextChunk(count: Int) async throws -> [Element]?
 }
