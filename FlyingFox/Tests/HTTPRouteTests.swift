@@ -430,4 +430,11 @@ final class HTTPRouteTests: XCTestCase {
         )
     }
 #endif
+
+    func testDeprecated_Method() {
+        XCTAssertEqual(HTTPRoute("/fish/*").method, .wildcard)
+        XCTAssertEqual(HTTPRoute("GET /fish/*").method, .caseInsensitive("GET"))
+        XCTAssertEqual(HTTPRoute("PUT /fish/*").method, .caseInsensitive("PUT"))
+        XCTAssertEqual(HTTPRoute("GET,PUT /fish/*").method, .caseInsensitive("GET"))
+    }
 }
