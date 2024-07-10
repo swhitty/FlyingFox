@@ -68,7 +68,7 @@ public extension HTTPMethod {
         .TRACE
     ]
 
-    internal static let allMethods = Set(HTTPMethod.sortedMethods)
+    static let allMethods = Set(HTTPMethod.sortedMethods)
 
     static let GET     = HTTPMethod("GET")
     static let POST    = HTTPMethod("POST")
@@ -79,4 +79,17 @@ public extension HTTPMethod {
     static let OPTIONS = HTTPMethod("OPTIONS")
     static let CONNECT = HTTPMethod("CONNECT")
     static let TRACE   = HTTPMethod("TRACE")
+}
+
+public extension Set<HTTPMethod> {
+
+    /// Comma delimited string of methods, sorted to ensure default methods appear first.
+    var stringValue: String {
+        var sortedMethods = HTTPMethod
+            .sortedMethods
+            .filter { contains($0) }
+
+        sortedMethods.append(contentsOf: self.filter { !HTTPMethod.allMethods.contains($0) })
+        return sortedMethods.map(\.rawValue).joined(separator: ",")
+    }
 }
