@@ -29,7 +29,7 @@
 //  SOFTWARE.
 //
 
-import FlyingFox
+@testable import FlyingFox
 import Foundation
 
 extension HTTPResponse {
@@ -43,6 +43,22 @@ extension HTTPResponse {
                      headers: headers,
                      body: body)
     }
+
+#if compiler(>=5.9)
+    static func makeChunked(version: HTTPVersion = .http11,
+                            statusCode: HTTPStatusCode  = .ok,
+                            headers: [HTTPHeader: String] = [:],
+                            body: Data = Data(),
+                            chunkSize: Int = 5) -> Self {
+        let consuming = ConsumingAsyncSequence(body)
+        return HTTPResponse(
+            version: version,
+            statusCode: statusCode,
+            headers: headers,
+            body: HTTPBodySequence(from: consuming, bufferSize: chunkSize)
+        )
+    }
+#endif
 
     static func make(version: HTTPVersion = .http11,
                      statusCode: HTTPStatusCode  = .ok,

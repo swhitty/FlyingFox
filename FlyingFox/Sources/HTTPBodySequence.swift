@@ -53,6 +53,16 @@ public struct HTTPBodySequence: Sendable, AsyncSequence {
         )
     }
 
+#if compiler(>=5.9)
+    public init(from bytes: some AsyncBufferedSequence<UInt8>) {
+        self.init(from: bytes, bufferSize: 4096)
+    }
+
+    init(from bytes: some AsyncBufferedSequence<UInt8>, bufferSize: Int) {
+        self.storage = .sequence(.init(bytes: bytes, bufferSize: bufferSize))
+    }
+#endif
+
     public init(file url: URL) throws {
         try self.init(file: url, chunkSize: 4096)
     }
@@ -97,7 +107,7 @@ public struct HTTPBodySequence: Sendable, AsyncSequence {
 
         struct Sequence {
             var sequence: any AsyncBufferedSequence<UInt8>
-            var count: Int
+            var count: Int?
             var bufferSize: Int
             var canReplay: Bool
 
@@ -107,11 +117,17 @@ public struct HTTPBodySequence: Sendable, AsyncSequence {
                 self.bufferSize = bufferSize
                 self.canReplay = true
             }
+
+            init(bytes: some AsyncBufferedSequence<UInt8>, bufferSize: Int) {
+                self.sequence = HTTPChunkedTransferEncoder(bytes: bytes)
+                self.bufferSize = bufferSize
+                self.canReplay = false
+            }
         }
 #endif
     }
 
-    public var count: Int {
+    public var count: Int? {
         switch storage {
         case .complete(let data):
             return data.count
