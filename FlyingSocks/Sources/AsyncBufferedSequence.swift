@@ -40,7 +40,7 @@ public protocol AsyncBufferedIteratorProtocol<Element>: AsyncIteratorProtocol {
 
     /// Retrieves available elements from the buffer. Suspends if 0 elements are available.
     /// - Parameter count: The maximum number of elements to return
-    /// - Returns: Array with between 1 and the number elements that was requested. Nil is returned if the sequence has ended.
+    /// - Returns: Collection with between 1 and the number elements that was requested. Nil is returned if the sequence has ended.
     mutating func nextBuffer(atMost count: Int) async throws -> Buffer?
 }
 
