@@ -39,18 +39,32 @@ struct HTTPEncoder {
                       response.statusCode.phrase].joined(separator: " ")
 
         var httpHeaders = response.headers
-        httpHeaders[.contentLength] = String(makeContentLength(from: response.payload))
+        if let contentLength = makeContentLength(from: response.payload) {
+            httpHeaders[.contentLength] = String(contentLength)
+        } else if let encoding = makeTransferEncoding(from: response.payload) {
+            httpHeaders[.transferEncoding] = encoding
+        }
+
         let headers = httpHeaders.map { "\($0.key.rawValue): \($0.value)" }
 
         return [status] + headers + ["\r\n"]
     }
 
-    static func makeContentLength(from payload: HTTPResponse.Payload) -> Int {
+    static func makeContentLength(from payload: HTTPResponse.Payload) -> Int? {
         switch payload {
         case .httpBody(let sequence):
             return sequence.count
         case .webSocket:
-            return 0
+            return nil
+        }
+    }
+
+    static func makeTransferEncoding(from payload: HTTPResponse.Payload) -> String? {
+        switch payload {
+        case .httpBody(let sequence) where sequence.count == nil:
+            return "chunked"
+        default:
+            return nil
         }
     }
 
@@ -66,7 +80,7 @@ struct HTTPEncoder {
                       request.version.rawValue].joined(separator: " ")
 
         var httpHeaders = request.headers
-        httpHeaders[.contentLength] = String(request.bodySequence.count)
+        httpHeaders[.contentLength] = String(request.bodySequence.count ?? 0)
         let headers = httpHeaders.map { "\($0.key.rawValue): \($0.value)" }
 
         return [status] + headers + ["\r\n"]

@@ -122,6 +122,36 @@ final class HTTPEncoderTests: XCTestCase {
         )
     }
 
+#if compiler(>=5.9)
+    func testEncodesChunkedResponse() async throws {
+        let data = try await HTTPEncoder.encodeResponse(
+            .makeChunked(
+                version: .http11,
+                statusCode: .ok,
+                headers: [:],
+                body: "Hello World!".data(using: .utf8)!,
+                chunkSize: 10
+            )
+        )
+
+        XCTAssertEqual(
+            data,
+            """
+            HTTP/1.1 200 OK\r
+            Transfer-Encoding: chunked\r
+            \r
+            0A\r
+            Hello Worl\r
+            02\r
+            d!\r
+            0\r
+            \r
+
+            """.data(using: .utf8)
+        )
+    }
+#endif
+
     func testEncodesRequest() async throws {
         await AsyncAssertEqual(
             try await HTTPEncoder.encodeRequest(
@@ -163,4 +193,20 @@ final class HTTPEncoderTests: XCTestCase {
 
 private extension HTTPVersion {
     static let http2 = HTTPVersion("HTTP/2")
+}
+
+private extension HTTPEncoder {
+
+    static func encodeResponse(_ response: HTTPResponse) async throws -> Data {
+        var data = encodeResponseHeader(response)
+        switch response.payload {
+        case .httpBody(let sequence):
+            for try await chunk in sequence {
+                data.append(chunk)
+            }
+        case .webSocket:
+            ()
+        }
+        return data
+    }
 }
