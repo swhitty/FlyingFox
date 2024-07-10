@@ -1,6 +1,6 @@
 {
   "name": "FlyingSocks",
-  "version": "0.14.0",
+  "version": "0.15.0",
   "summary": "Lightweight, async sockets written in Swift using async/await",
   "homepage": "https://github.com/swhitty/FlyingFox",
   "authors": "Simon Whitty",
@@ -10,7 +10,7 @@
   },
   "source": {
     "git": "https://github.com/swhitty/FlyingFox.git",
-    "tag": "0.14.0"
+    "tag": "0.15.0"
   },
   "platforms": {
     "ios": "13.0",
