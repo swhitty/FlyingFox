@@ -196,16 +196,16 @@ final class HTTPDecoderTests: XCTestCase {
         )
     }
 
-    func testBodySequence_IsComplete_WhenSizeIsLessThanMax() async throws {
+    func testBodySequence_CanReplay_WhenSizeIsLessThanMax() async throws {
         let sequence = try await HTTPDecoder.readBodyFromString("Fish & Chips", maxSizeForComplete: 100)
         XCTAssertEqual(sequence.count, 12)
-        XCTAssertTrue(sequence.storage.isComplete)
+        XCTAssertTrue(sequence.canReplay)
     }
 
-    func testBodySequence_IsNotComplete_WhenSizeIsGreaterThanMax() async throws {
+    func testBodySequence_CanNotReplay_WhenSizeIsGreaterThanMax() async throws {
         let sequence = try await HTTPDecoder.readBodyFromString("Fish & Chips", maxSizeForComplete: 2)
         XCTAssertEqual(sequence.count, 12)
-        XCTAssertFalse(sequence.storage.isComplete)
+        XCTAssertFalse(sequence.canReplay)
     }
 
     func testInvalidPathDecodes() {
@@ -329,13 +329,4 @@ private struct EmptyBufferedSequence: AsyncBufferedSequence, AsyncBufferedIterat
     }
 
     typealias Element = UInt8
-}
-
-extension HTTPBodySequence.Storage {
-    var isComplete: Bool {
-        switch self {
-        case .complete: return true
-        case .dataSequence: return false
-        }
-    }
 }

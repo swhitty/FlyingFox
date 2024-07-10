@@ -30,6 +30,7 @@
 //
 
 @_spi(Private) import struct FlyingSocks.AsyncBufferedCollection
+import FlyingSocks
 import Foundation
 import XCTest
 
@@ -42,7 +43,7 @@ final class AsyncBufferedDataSequenceTests: XCTestCase {
         ])
 
         await AsyncAssertEqual(
-            await buffer.collectChunks(ofLength: 5),
+            await buffer.collectBuffers(ofLength: 5),
             [
                 Data([0x0, 0x1, 0x2, 0x3, 0x4]),
                 Data([0x5, 0x6, 0x7, 0x8, 0x9]),
@@ -58,13 +59,26 @@ final class AsyncBufferedDataSequenceTests: XCTestCase {
         ])
 
         await AsyncAssertEqual(
-            await buffer.collectChunks(ofLength: 5),
+            await buffer.collectBuffers(ofLength: 5),
             [Data([0x0, 0x1, 0x2])]
         )
 
         await AsyncAssertEqual(
-            await buffer.collectChunks(ofLength: 5),
+            await buffer.collectBuffers(ofLength: 5),
             [Data([0x0, 0x1, 0x2])]
         )
+    }
+}
+
+private extension AsyncBufferedSequence {
+
+    func collectBuffers(ofLength count: Int) async -> [AsyncIterator.Buffer] {
+        var collected = [AsyncIterator.Buffer]()
+        var iterator = makeAsyncIterator()
+
+        while let buffer = try? await iterator.nextBuffer(atMost: count) {
+            collected.append(buffer)
+        }
+        return collected
     }
 }

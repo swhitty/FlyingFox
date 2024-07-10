@@ -118,7 +118,8 @@ struct HTTPDecoder {
         }
 
         if length <= maxSizeForComplete {
-            return try await HTTPBodySequence(data: makeBodyData(from: bytes, length: length))
+            let data = try await makeBodyData(from: bytes, length: length)
+            return HTTPBodySequence(data: data, bufferSize: 4096)
         } else {
             return HTTPBodySequence(from: bytes, count: length, chunkSize: 4096)
         }

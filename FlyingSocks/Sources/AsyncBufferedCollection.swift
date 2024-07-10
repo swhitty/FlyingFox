@@ -81,15 +81,3 @@ public extension AsyncBufferedCollection<Data> {
     }
 }
 
-public extension AsyncBufferedCollection {
-
-    func collectChunks(ofLength count: Int) async -> [C.SubSequence] {
-        var collected = [C.SubSequence]()
-        var iterator = makeAsyncIterator()
-
-        while let buffer = await iterator.nextBuffer(atMost: count) {
-            collected.append(buffer)
-        }
-        return collected
-    }
-}

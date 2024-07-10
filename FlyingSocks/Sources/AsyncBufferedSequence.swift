@@ -34,7 +34,7 @@ public protocol AsyncBufferedSequence<Element>: AsyncSequence where AsyncIterato
 
 }
 
-public protocol AsyncBufferedIteratorProtocol: AsyncIteratorProtocol {
+public protocol AsyncBufferedIteratorProtocol<Element>: AsyncIteratorProtocol {
     // Buffered elements are returned in this collection type
     associatedtype Buffer: Collection where Buffer.Element == Element
 

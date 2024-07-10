@@ -188,6 +188,34 @@ final class HTTPBodySequenceTests: XCTestCase {
         )
     }
 
+    func testSequencePayloadA_IsFlushed() async throws {
+        // given
+        let body = HTTPBodySequence.make(
+            from: [0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9],
+            bufferSize: 3
+        )
+
+        // when then
+#if compiler(>=5.9)
+        await AsyncAssertEqual(
+            try await body.collectAll(),
+            [
+                Data([0x0, 0x1, 0x2]),
+                Data([0x3, 0x4, 0x5]),
+                Data([0x6, 0x7, 0x8]),
+                Data([0x9])
+            ]
+        )
+#else
+        await AsyncAssertEqual(
+            try await body.collectAll(),
+            [
+                Data([0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9])
+            ]
+        )
+#endif
+    }
+
     func testSequencePayload_IsFlushed() async {
         // given
         let buffer = ConsumingAsyncSequence<UInt8>(
@@ -208,20 +236,20 @@ final class HTTPBodySequenceTests: XCTestCase {
         XCTAssertEqual(buffer.index, 10)
     }
 
-    func testFilePayloadIsComplete_WhenSmallerThenMax() async throws {
+    func testFilePayloadCanReplay_WhenSmallerThenMax() async throws {
         let sequence = try HTTPBodySequence(file: .fishJSON, maxSizeForComplete: 10000, chunkSize: 1)
 
-        XCTAssertTrue(sequence.isComplete)
+        XCTAssertTrue(sequence.canReplay)
         await AsyncAssertEqual(
             try await sequence.get(),
             try Data(contentsOf: .fishJSON)
         )
     }
 
-    func testFilePayloadIsNotComplete_WhenLargerThenMax() async throws {
+    func testFilePayloadCanNotReplay_WhenLargerThenMax() async throws {
         let sequence = try HTTPBodySequence(file: .fishJSON,  maxSizeForComplete: 1, chunkSize: 1)
 
-        XCTAssertFalse(sequence.isComplete)
+        XCTAssertFalse(sequence.canReplay)
         await AsyncAssertEqual(
             try await sequence.get(),
             try Data(contentsOf: .fishJSON)
@@ -249,10 +277,10 @@ private extension HTTPBodySequence {
         )
     }
 
-    var isComplete: Bool {
-        switch storage {
-        case .complete: return true
-        case .dataSequence: return false
-        }
+    static func make(from bytes: [UInt8], bufferSize: Int) -> Self {
+        HTTPBodySequence(
+            data: Data(bytes),
+            bufferSize: bufferSize
+        )
     }
 }
