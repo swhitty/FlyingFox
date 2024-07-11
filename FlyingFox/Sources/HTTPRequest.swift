@@ -99,7 +99,7 @@ extension HTTPRequest {
         guard
             components.isEmpty == false,
             let parameterIndex = Self.matchedRoute?.pathParameters[identifier],
-            components.count < parameterIndex
+            parameterIndex < components.count
         else {
             return nil
         }

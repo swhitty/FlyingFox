@@ -70,4 +70,8 @@ final class HTTPResponseTests: XCTestCase {
             Data()
         )
     }
+
+    func testUnknownPathParameter() async {
+        XCTAssertNil(HTTPRequest.make().pathParameter(for: "unknown"))
+    }
 }
