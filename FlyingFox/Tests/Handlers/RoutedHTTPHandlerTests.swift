@@ -74,6 +74,32 @@ final class RoutedHTTPHandlerTests: XCTestCase {
             handler.isEmpty
         )
     }
+
+    func testPathParameters() async throws {
+        // given
+        var handler = RoutedHTTPHandler()
+
+        handler.appendRoute("GET /:id/hello/:food") { request in
+            let body = [request.pathParameter(for: "id"), request.pathParameter(for: "food")]
+                .compactMap { $0 }
+                .joined(separator: " ")
+            return HTTPResponse(
+                statusCode: .ok,
+                body: body.data(using: .utf8)!
+            )
+        }
+
+        // when then
+        await AsyncAssertEqual(
+            try await handler.handleRequest(.make(path: "/10/hello/fish")).bodyData,
+            "10 fish".data(using: .utf8)
+        )
+
+        await AsyncAssertEqual(
+            try await handler.handleRequest(.make(path: "/450/hello/chips")).bodyData,
+            "450 chips".data(using: .utf8)
+        )
+    }
 }
 
 private struct MockHandler: HTTPHandler {
