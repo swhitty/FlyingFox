@@ -200,7 +200,7 @@ public extension HTTPRoute {
         }
     }
 
-    private func pathComponent(for index: Int) -> Component? {
+    func pathComponent(for index: Int) -> Component? {
         if path.indices.contains(index) {
             return path[index]
         } else if path.last == .wildcard {
