@@ -435,6 +435,26 @@ final class HTTPServerTests: XCTestCase {
 
         await AsyncAssertThrowsError(try await waiting.value, of: (any Error).self)
     }
+
+#if compiler(>=5.9)
+    func testRoutes_To_ParamaterPack() async throws {
+        let server = HTTPServer.make()
+        await server.appendRoute("/fish/:id") { (id: String) in
+            HTTPResponse.make(statusCode: .ok, body: "Hello \(id)".data(using: .utf8)!)
+        }
+        let port = try await startServerWithPort(server)
+
+        let socket = try await AsyncSocket.connected(to: .inet(ip4: "127.0.0.1", port: port))
+        defer { try? socket.close() }
+
+        try await socket.writeRequest(.make(path: "/fish/chips"))
+
+        await AsyncAssertEqual(
+            try await socket.readResponse().bodyData,
+            "Hello chips".data(using: .utf8)
+        )
+    }
+#endif
 }
 
 extension HTTPServer {

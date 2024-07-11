@@ -100,6 +100,31 @@ final class RoutedHTTPHandlerTests: XCTestCase {
             "450 chips".data(using: .utf8)
         )
     }
+
+#if compiler(>=5.9)
+    func testParameterPackRoute() async throws {
+        // given
+        var handler = RoutedHTTPHandler()
+
+        handler.appendRoute("GET /:id/hello/:food") { (id: Int, food: String) -> HTTPResponse in
+            HTTPResponse(
+                statusCode: .ok,
+                body: "\(id * 2) \(food)".data(using: .utf8)!
+            )
+        }
+
+        // when then
+        await AsyncAssertEqual(
+            try await handler.handleRequest(.make(path: "/10/hello/fish")).bodyData,
+            "20 fish".data(using: .utf8)
+        )
+
+        await AsyncAssertEqual(
+            try await handler.handleRequest(.make(path: "/450/hello/shrimp")).bodyData,
+            "900 shrimp".data(using: .utf8)
+        )
+    }
+#endif
 }
 
 private struct MockHandler: HTTPHandler {

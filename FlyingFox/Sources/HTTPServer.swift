@@ -68,6 +68,15 @@ public final actor HTTPServer {
         handlers.appendRoute(route, handler: handler)
     }
 
+#if compiler(>=5.9)
+    public func appendRoute<each P: HTTPRequestParameter>(
+        _ route: HTTPRoute,
+        handler: @Sendable @escaping (repeat each P) async throws -> HTTPResponse
+    ) {
+        handlers.appendRoute(route, handler: handler)
+    }
+#endif
+
     public func start() async throws {
         guard state == nil else {
             logger.logCritical("server error: already started")
