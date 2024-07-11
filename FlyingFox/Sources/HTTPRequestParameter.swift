@@ -72,14 +72,14 @@ extension HTTPRequest {
         defer { index += 1 }
 
         guard parameterIndices.indices.contains(index) else {
-            throw CancellationError()
+            throw HTTPUnhandledError()
         }
 
         let idx = parameterIndices[index]
         let nodes = path.split(separator: "/", omittingEmptySubsequences: true)
         guard nodes.indices.contains(idx),
               let param = P(parameter: nodes[idx]) else {
-            throw CancellationError()
+            throw HTTPUnhandledError()
         }
         return param
     }
