@@ -320,7 +320,7 @@ private struct EmptyBufferedSequence: AsyncBufferedSequence, AsyncBufferedIterat
         return nil
     }
 
-    func nextBuffer(atMost count: Int) async throws -> [Element]? {
+    func nextBuffer(suggested count: Int) async throws -> [Element]? {
         return nil
     }
 

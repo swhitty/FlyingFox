@@ -46,7 +46,7 @@ final class ConsumingAsyncSequence<Element>: AsyncBufferedSequence, AsyncBuffere
         iterator.next()
     }
 
-    func nextBuffer(atMost count: Int) async throws -> [Element]? {
+    func nextBuffer(suggested count: Int) async throws -> [Element]? {
         var buffer = [Element]()
         while buffer.count < count,
               let element = iterator.next() {

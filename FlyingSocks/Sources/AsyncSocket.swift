@@ -204,7 +204,7 @@ public struct AsyncSocketReadSequence: AsyncBufferedSequence, AsyncBufferedItera
         return try await socket.read()
     }
 
-    public func nextBuffer(atMost count: Int) async throws -> [Element]? {
+    public func nextBuffer(suggested count: Int) async throws -> [Element]? {
         try await socket.read(atMost: count)
     }
 }

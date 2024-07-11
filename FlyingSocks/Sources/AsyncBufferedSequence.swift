@@ -39,9 +39,9 @@ public protocol AsyncBufferedIteratorProtocol<Element>: AsyncIteratorProtocol {
     associatedtype Buffer: Collection where Buffer.Element == Element
 
     /// Retrieves available elements from the buffer. Suspends if 0 elements are available.
-    /// - Parameter count: The maximum number of elements to return
+    /// - Parameter count: The suggested number of elements to return
     /// - Returns: Collection with between 1 and the number elements that was requested. Nil is returned if the sequence has ended.
-    mutating func nextBuffer(atMost count: Int) async throws -> Buffer?
+    mutating func nextBuffer(suggested count: Int) async throws -> Buffer?
 }
 
 public extension AsyncBufferedIteratorProtocol {
@@ -56,7 +56,7 @@ public extension AsyncBufferedIteratorProtocol {
         while buffer.count < count {
             try Task.checkCancellation()
             let remaining = count - buffer.count
-            if let chunk = try await nextBuffer(atMost: remaining) {
+            if let chunk = try await nextBuffer(suggested: remaining) {
                 buffer.append(contentsOf: chunk)
             } else {
                 throw SocketError.disconnected
