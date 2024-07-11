@@ -57,20 +57,6 @@ public struct HTTPRoute: Sendable {
         self.body = body
     }
 
-    init(methods: String, path: String, headers: [HTTPHeader: String], body: (any HTTPBodyPattern)?) {
-        self.methods = Self.methods(for: methods)
-
-        let comps = HTTPRoute.readComponents(from: path)
-        self.path = comps.path
-            .split(separator: "/", omittingEmptySubsequences: true)
-            .map { Component(String($0)) }
-        self.query = comps.query.map {
-            QueryItem(name: $0.name, value: Component($0.value))
-        }
-        self.headers = headers.mapValues(Component.init)
-        self.body = body
-    }
-
     public enum Component: Sendable, Equatable {
         case wildcard
         case caseInsensitive(String)
