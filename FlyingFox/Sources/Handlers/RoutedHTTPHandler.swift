@@ -60,7 +60,9 @@ public struct RoutedHTTPHandler: HTTPHandler, Sendable {
         for entry in handlers  {
             do {
                 if await entry.route ~= request {
-                    return try await entry.handler.handleRequest(request)
+                    return try await HTTPRequest.$matchedRoute.withValue(entry.route) {
+                        return try await entry.handler.handleRequest(request)
+                    }
                 }
             } catch is HTTPUnhandledError {
                 continue

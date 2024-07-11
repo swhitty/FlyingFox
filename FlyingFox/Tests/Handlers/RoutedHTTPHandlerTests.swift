@@ -99,6 +99,8 @@ private extension HTTPRoute.Component {
             return "*"
         case let .caseInsensitive(pattern):
             return pattern
+        case let .parameter(name):
+            return ":" + name
         }
     }
 }

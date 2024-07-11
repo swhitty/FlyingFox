@@ -74,13 +74,19 @@ public struct HTTPRoute: Sendable {
     public enum Component: Sendable, Equatable {
         case wildcard
         case caseInsensitive(String)
+        case parameter(String)
 
         public init(_ string: String) {
             switch string {
             case "*":
                 self = .wildcard
             default:
-                self = .caseInsensitive(string)
+                if string.hasPrefix(":") {
+                    let name = String(string.dropFirst())
+                    self = .parameter(name)
+                } else {
+                    self = .caseInsensitive(string)
+                }
             }
         }
     }
@@ -165,6 +171,8 @@ public extension HTTPRoute.Component {
             return true
         case .caseInsensitive(let text):
             return node.caseInsensitiveCompare(text) == .orderedSame
+        case .parameter:
+            return true
         }
     }
 
@@ -180,7 +188,19 @@ public extension HTTPRoute.Component {
 
 public extension HTTPRoute {
 
-    private func pathComponent(for index: Int) -> Component? {
+    var pathParameters: [String: Int] {
+        path.enumerated().reduce(into: [:]) { partialResult, item in
+            switch item.element {
+                case let .parameter(name):
+                    partialResult[name] = item.offset
+                case .caseInsensitive,
+                     .wildcard:
+                    break
+            }
+        }
+    }
+
+    func pathComponent(for index: Int) -> Component? {
         if path.indices.contains(index) {
             return path[index]
         } else if path.last == .wildcard {
