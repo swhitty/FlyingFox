@@ -128,7 +128,7 @@ final class HTTPEncoderTests: XCTestCase {
             .makeChunked(
                 version: .http11,
                 statusCode: .ok,
-                headers: [:],
+                headers: [.transferEncoding: "Fish"],
                 body: "Hello World!".data(using: .utf8)!,
                 chunkSize: 10
             )
@@ -138,7 +138,7 @@ final class HTTPEncoderTests: XCTestCase {
             data,
             """
             HTTP/1.1 200 OK\r
-            Transfer-Encoding: chunked\r
+            Transfer-Encoding: Fish, chunked\r
             \r
             0A\r
             Hello Worl\r

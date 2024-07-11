@@ -42,7 +42,7 @@ struct HTTPEncoder {
         if let contentLength = makeContentLength(from: response.payload) {
             httpHeaders[.contentLength] = String(contentLength)
         } else if let encoding = makeTransferEncoding(from: response.payload) {
-            httpHeaders[.transferEncoding] = encoding
+            httpHeaders.addValue(encoding, for: .transferEncoding)
         }
 
         let headers = httpHeaders.map { "\($0.key.rawValue): \($0.value)" }

@@ -339,6 +339,12 @@ final class HTTPRouteTests: XCTestCase {
         await AsyncAssertTrue(
             await route ~= HTTPRequest.make(method: .GET,
                                       path: "/mock",
+                                      headers: [.contentType: "xml, json"])
+        )
+
+        await AsyncAssertTrue(
+            await route ~= HTTPRequest.make(method: .GET,
+                                      path: "/mock",
                                       headers: [.contentEncoding: "xml",
                                                 .contentType: "json"])
         )

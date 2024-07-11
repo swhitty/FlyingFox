@@ -172,6 +172,10 @@ public extension HTTPRoute.Component {
         guard let node = node else { return false }
         return component.patternMatch(to: node)
     }
+
+    static func ~= (component: HTTPRoute.Component, nodes: [String]) -> Bool {
+        nodes.contains { component.patternMatch(to: $0) }
+    }
 }
 
 public extension HTTPRoute {
@@ -218,7 +222,7 @@ public extension HTTPRoute {
 
     private func patternMatch(headers request: [HTTPHeader: String]) -> Bool {
         return headers.allSatisfy { header, value in
-            value ~= request[header]
+            value ~= request.values(for: header)
         }
     }
 
