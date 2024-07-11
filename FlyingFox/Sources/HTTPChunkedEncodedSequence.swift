@@ -61,13 +61,13 @@ extension HTTPChunkedTransferEncoder {
         }
 
         mutating func next() async throws -> UInt8? {
-            fatalError("call nextBuffer(atMost:)")
+            fatalError("call nextBuffer(suggested:)")
         }
 
-        mutating func nextBuffer(atMost count: Int) async throws -> [UInt8]? {
+        mutating func nextBuffer(suggested count: Int) async throws -> [UInt8]? {
             guard !isComplete else { return nil }
 
-            if let buffer = try await bytes.nextBuffer(atMost: count) {
+            if let buffer = try await bytes.nextBuffer(suggested: count) {
                 var response = Array<UInt8>(String(format:"%02X", buffer.count).utf8)
                 response.append(contentsOf: Array("\r\n".utf8))
                 response.append(contentsOf: buffer)

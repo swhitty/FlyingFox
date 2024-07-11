@@ -225,7 +225,7 @@ public extension HTTPBodySequence {
         }
 
         private func getNextBuffer(_ iterator: inout some AsyncBufferedIteratorProtocol<UInt8>) async throws -> Data? {
-            guard let buffer = try await iterator.nextBuffer(atMost: bufferSize) else {
+            guard let buffer = try await iterator.nextBuffer(suggested: bufferSize) else {
                 return nil
             }
             return Data(buffer)

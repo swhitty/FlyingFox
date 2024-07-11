@@ -62,7 +62,7 @@ public struct AsyncBufferedCollection<C: Collection>: AsyncBufferedSequence {
             return element
         }
 
-        public mutating func nextBuffer(atMost count: Int) async -> C.SubSequence? {
+        public mutating func nextBuffer(suggested count: Int) async -> C.SubSequence? {
             guard index < collection.endIndex else { return nil }
             let endIndex = collection.index(index, offsetBy: count, limitedBy: collection.endIndex) ?? collection.endIndex
             let buffer = collection[index..<endIndex]

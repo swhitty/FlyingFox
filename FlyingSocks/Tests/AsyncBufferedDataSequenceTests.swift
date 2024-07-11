@@ -76,7 +76,7 @@ private extension AsyncBufferedSequence {
         var collected = [AsyncIterator.Buffer]()
         var iterator = makeAsyncIterator()
 
-        while let buffer = try? await iterator.nextBuffer(atMost: count) {
+        while let buffer = try? await iterator.nextBuffer(suggested: count) {
             collected.append(buffer)
         }
         return collected

@@ -129,7 +129,7 @@ private extension AsyncDataSequence {
             }
 
             do {
-                guard let element = try await iterator.nextChunk(count: nextCount) else {
+                guard let element = try await iterator.nextChunk(suggested: nextCount) else {
                     throw Error.unexpectedEOF
                 }
                 state = .ready(index: index + element.count)
@@ -173,8 +173,8 @@ private extension AsyncDataSequence {
             self.iterator = iterator
         }
 
-        func nextChunk(count: Int) async throws -> Data? {
-            guard let buffer = try await iterator.nextBuffer(count: count) else { return nil }
+        func nextChunk(suggested count: Int) async throws -> Data? {
+            guard let buffer = try await iterator.nextBuffer(suggested: count) else { return nil }
             return Data(buffer)
         }
     }
@@ -182,14 +182,18 @@ private extension AsyncDataSequence {
     struct AsyncFileHandleIterator: AsyncDataIterator {
         let handle: FileHandle?
 
-        func nextChunk(count: Int) throws -> Data? {
+        func nextChunk(suggested count: Int) throws -> Data? {
             guard let handle = handle else { throw SocketError.disconnected }
-            return handle.readData(ofLength: count)
+            if #available(macOS 10.15.4, iOS 13.4, tvOS 13.4, *) {
+                return try handle.read(upToCount: count)
+            } else {
+                return handle.readData(ofLength: count)
+            }
         }
     }
 }
 
 private protocol AsyncDataIterator {
-    func nextChunk(count: Int) async throws -> Data?
+    func nextChunk(suggested count: Int) async throws -> Data?
 }
 
