@@ -237,7 +237,7 @@ final class HTTPBodySequenceTests: XCTestCase {
     }
 
     func testFilePayloadCanReplay_WhenSmallerThenMax() async throws {
-        let sequence = try HTTPBodySequence(file: .fishJSON, maxSizeForComplete: 10000, chunkSize: 1)
+        let sequence = try HTTPBodySequence(file: .fishJSON, maxSizeForComplete: 10000, suggestedBufferSize: 1)
 
         XCTAssertTrue(sequence.canReplay)
         await AsyncAssertEqual(
@@ -247,7 +247,7 @@ final class HTTPBodySequenceTests: XCTestCase {
     }
 
     func testFilePayloadCanNotReplay_WhenLargerThenMax() async throws {
-        let sequence = try HTTPBodySequence(file: .fishJSON,  maxSizeForComplete: 1, chunkSize: 1)
+        let sequence = try HTTPBodySequence(file: .fishJSON,  maxSizeForComplete: 1, suggestedBufferSize: 1)
 
         XCTAssertFalse(sequence.canReplay)
         await AsyncAssertEqual(
@@ -273,14 +273,14 @@ private extension HTTPBodySequence {
         HTTPBodySequence(
             from: ConsumingAsyncSequence(bytes),
             count: count ?? bytes.count,
-            chunkSize: chunkSize
+            suggestedBufferSize: chunkSize
         )
     }
 
     static func make(from bytes: [UInt8], bufferSize: Int) -> Self {
         HTTPBodySequence(
             data: Data(bytes),
-            bufferSize: bufferSize
+            suggestedBufferSize: bufferSize
         )
     }
 }

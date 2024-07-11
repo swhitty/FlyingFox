@@ -43,45 +43,31 @@ public struct HTTPBodySequence: Sendable, AsyncSequence {
         self.storage = .complete(Data())
     }
 
-    public init(data: Data) {
-        self.init(data: data, bufferSize: 4096)
-    }
-
-    public init(from bytes: some AsyncBufferedSequence<UInt8>, count: Int) {
-        self.storage = .dataSequence(
-            AsyncDataSequence(from: bytes, count: count, chunkSize: 4096)
-        )
-    }
-
+    public init(data: Data, suggestedBufferSize: Int = 4096) {
 #if compiler(>=5.9)
-    public init(from bytes: some AsyncBufferedSequence<UInt8>) {
-        self.init(from: bytes, bufferSize: 4096)
-    }
-
-    init(from bytes: some AsyncBufferedSequence<UInt8>, bufferSize: Int) {
-        self.storage = .sequence(.init(bytes: bytes, bufferSize: bufferSize))
-    }
-#endif
-
-    public init(file url: URL) throws {
-        try self.init(file: url, chunkSize: 4096)
-    }
-
-    init(from bytes: some AsyncBufferedSequence<UInt8>, count: Int, chunkSize: Int) {
-        self.storage = .dataSequence(
-            AsyncDataSequence(from: bytes, count: count, chunkSize: chunkSize)
-        )
-    }
-
-    init(data: Data, bufferSize: Int) {
-#if compiler(>=5.9)
-        self.storage = .sequence(.init(data: data, bufferSize: bufferSize))
+        self.storage = .sequence(.init(data: data, bufferSize: suggestedBufferSize))
 #else
         self.storage = .complete(data)
 #endif
     }
 
-    init(file url: URL, maxSizeForComplete: Int = 10_485_760, chunkSize: Int) throws {
+    public init(from bytes: some AsyncBufferedSequence<UInt8>, count: Int, suggestedBufferSize: Int = 4096) {
+        self.storage = .dataSequence(
+            AsyncDataSequence(from: bytes, count: count, chunkSize: suggestedBufferSize)
+        )
+    }
+
+#if compiler(>=5.9)
+    public init(from bytes: some AsyncBufferedSequence<UInt8>, suggestedBufferSize: Int = 4096) {
+        self.storage = .sequence(.init(bytes: bytes, bufferSize: suggestedBufferSize))
+    }
+#endif
+
+    public init(file url: URL, suggestedBufferSize: Int = 4096) throws {
+        try self.init(file: url, maxSizeForComplete: 10_485_760, suggestedBufferSize: suggestedBufferSize)
+    }
+
+    init(file url: URL, maxSizeForComplete: Int, suggestedBufferSize: Int) throws {
         let count = try AsyncDataSequence.size(of: url)
         if count <= maxSizeForComplete {
             self.storage = try .complete(Data(contentsOf: url))
@@ -89,7 +75,7 @@ public struct HTTPBodySequence: Sendable, AsyncSequence {
             self.storage = try .dataSequence(
                 AsyncDataSequence(file: FileHandle(forReadingFrom: url),
                                   count: count,
-                                  chunkSize: chunkSize)
+                                  chunkSize: suggestedBufferSize)
             )
         }
     }

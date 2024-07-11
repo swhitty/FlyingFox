@@ -55,7 +55,7 @@ extension HTTPResponse {
             version: version,
             statusCode: statusCode,
             headers: headers,
-            body: HTTPBodySequence(from: consuming, bufferSize: chunkSize)
+            body: HTTPBodySequence(from: consuming, suggestedBufferSize: chunkSize)
         )
     }
 #endif

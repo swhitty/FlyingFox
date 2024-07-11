@@ -50,7 +50,7 @@ final class HTTPResponseTests: XCTestCase {
         let buffer = ConsumingAsyncSequence<UInt8>(
             [0x5, 0x6]
         )
-        let sequence = HTTPBodySequence(from: buffer, count: 2, chunkSize: 2)
+        let sequence = HTTPBodySequence(from: buffer, count: 2, suggestedBufferSize: 2)
         let response = HTTPResponse.make(body: sequence)
 
         // then
