@@ -464,4 +464,28 @@ final class HTTPRouteTests: XCTestCase {
         XCTAssertNil(parameters3["bloop"])
         XCTAssertEqual(parameters2["zonk"], 5)
     }
+
+#if compiler(>=5.9)
+    func testPathParameters() {
+        // given
+        let route = HTTPRoute("GET /mock/:id/hello/:zonk")
+        let request = HTTPRequest.make(path: "/mock/12/hello/fish")
+
+        XCTAssertTrue(
+            try request.extractParameters(for: route) == (12, "fish")
+        )
+
+        XCTAssertTrue(
+            try request.extractParameters(for: route) == (12)
+        )
+
+        XCTAssertThrowsError(
+            try request.extractParameters(for: route, type: (Int, Int).self)
+        )
+
+        XCTAssertThrowsError(
+            try request.extractParameters(for: route, type: (Int, String, String).self)
+        )
+    }
+#endif
 }
