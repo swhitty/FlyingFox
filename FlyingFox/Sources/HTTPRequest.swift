@@ -91,7 +91,7 @@ extension HTTPRequest {
         headers[.connection]?.caseInsensitiveCompare("keep-alive") == .orderedSame
     }
 
-    func pathParameter(for identifier: String) -> String? {
+    public func pathParameter(for identifier: String) -> String? {
         let components = path
             .split(separator: "/", omittingEmptySubsequences: true)
             .map { String($0) }
