@@ -39,6 +39,8 @@ public struct HTTPRequest: Sendable {
     public var headers: [HTTPHeader: String]
     public var bodySequence: HTTPBodySequence
 
+    @TaskLocal static var matchedRoute: HTTPRoute?
+
     public var bodyData: Data {
         get async throws {
             try await bodySequence.get()
