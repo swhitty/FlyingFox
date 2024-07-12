@@ -488,4 +488,19 @@ final class HTTPRouteTests: XCTestCase {
         )
     }
 #endif
+
+    func testDescription() {
+        XCTAssertEqual(
+            HTTPRoute("GET /mock/:id/hello/:zonk").description,
+            "GET /mock/:id/hello/:zonk"
+        )
+        XCTAssertEqual(
+            HTTPRoute("/mock/*").description,
+            "* /mock/*"
+        )
+        XCTAssertEqual(
+            HTTPRoute("FUZZ,TRACE,GET /mock?hello=*").description,
+            "GET,TRACE,FUZZ /mock?hello=*"
+        )
+    }
 }

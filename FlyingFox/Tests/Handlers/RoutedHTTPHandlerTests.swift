@@ -137,21 +137,7 @@ private extension HTTPRoute {
 
     var stringValue: String {
         let methods = methods.map(\.rawValue).sorted().joined(separator: ",")
-        let path = path.map(\.stringValue).joined(separator: "/")
+        let path = path.map(\.description).joined(separator: "/")
         return methods + " /" + path
-    }
-}
-
-private extension HTTPRoute.Component {
-
-    var stringValue: String {
-        switch self {
-        case .wildcard:
-            return "*"
-        case let .caseInsensitive(pattern):
-            return pattern
-        case let .parameter(name):
-            return ":" + name
-        }
     }
 }

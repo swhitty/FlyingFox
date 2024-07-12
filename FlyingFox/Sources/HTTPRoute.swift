@@ -310,3 +310,30 @@ extension HTTPRoute: ExpressibleByStringLiteral {
         self.init(value)
     }
 }
+
+extension HTTPRoute: CustomStringConvertible {
+
+    public var description: String {
+        let method = methods == HTTPMethod.allMethods ? "*" : methods.stringValue
+        let path = path.map(\.description).joined(separator: "/")
+        let query = query
+            .map { $0.name + "=" + $0.value.description }
+            .joined(separator: "&")
+        let queryComp = query.isEmpty ? "" : "?"
+        return method + " /" + path + queryComp + query
+    }
+}
+
+extension HTTPRoute.Component: CustomStringConvertible {
+
+    public var description: String {
+        switch self {
+        case .caseInsensitive(let name):
+            return name
+        case .wildcard:
+            return "*"
+        case .parameter(let name):
+            return ":\(name)"
+        }
+    }
+}
