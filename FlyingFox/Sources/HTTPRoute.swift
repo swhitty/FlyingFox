@@ -38,6 +38,8 @@ public struct HTTPRoute: Sendable {
     public var headers: [HTTPHeader: Component]
     public var body: (any HTTPBodyPattern)?
 
+    public var pathParameters: [String: Int] { path.urlParameters }
+
     public init(
         methods: Set<HTTPMethod>,
         path: String,
@@ -151,6 +153,15 @@ public struct HTTPRoute: Sendable {
 
 public extension HTTPRoute.Component {
 
+    static func ~= (component: HTTPRoute.Component, node: String?) -> Bool {
+        guard let node = node else { return false }
+        return component.patternMatch(to: node)
+    }
+
+    static func ~= (component: HTTPRoute.Component, nodes: [String]) -> Bool {
+        nodes.contains { component.patternMatch(to: $0) }
+    }
+
     private func patternMatch(to node: String) -> Bool {
         switch self {
         case .wildcard:
@@ -161,30 +172,21 @@ public extension HTTPRoute.Component {
             return true
         }
     }
-
-    static func ~= (component: HTTPRoute.Component, node: String?) -> Bool {
-        guard let node = node else { return false }
-        return component.patternMatch(to: node)
-    }
-
-    static func ~= (component: HTTPRoute.Component, nodes: [String]) -> Bool {
-        nodes.contains { component.patternMatch(to: $0) }
-    }
 }
 
 public extension HTTPRoute {
 
-    var pathParameters: [String: Int] {
-        path.enumerated().reduce(into: [:]) { partialResult, item in
-            switch item.element {
-                case let .parameter(name):
-                    partialResult[name] = item.offset
-                case .caseInsensitive,
-                     .wildcard:
-                    break
-            }
-        }
+    @available(*, unavailable, message: "renamed: ~= async")
+    static func ~= (route: HTTPRoute, request: HTTPRequest) -> Bool {
+        fatalError()
     }
+
+    static func ~= (route: HTTPRoute, request: HTTPRequest) async -> Bool {
+        await route.patternMatch(request: request)
+    }
+}
+
+private extension HTTPRoute {
 
     func pathComponent(for index: Int) -> Component? {
         if path.indices.contains(index) {
@@ -195,7 +197,7 @@ public extension HTTPRoute {
         return nil
     }
 
-    private func patternMatch(request: HTTPRequest) async -> Bool {
+    func patternMatch(request: HTTPRequest) async -> Bool {
         guard patternMatch(query: request.query),
               patternMatch(headers: request.headers),
               await patternMatch(body: request.bodySequence) else { return false }
@@ -217,7 +219,7 @@ public extension HTTPRoute {
         return true
     }
 
-    private func patternMatch(query items: [HTTPRequest.QueryItem]) -> Bool {
+    func patternMatch(query items: [HTTPRequest.QueryItem]) -> Bool {
         for routeItem in query {
             guard let _ = items.first(where: { routeItem ~= $0 }) else {
                 return false
@@ -226,13 +228,13 @@ public extension HTTPRoute {
         return true
     }
 
-    private func patternMatch(headers request: [HTTPHeader: String]) -> Bool {
+    func patternMatch(headers request: [HTTPHeader: String]) -> Bool {
         return headers.allSatisfy { header, value in
             value ~= request.values(for: header)
         }
     }
 
-    private func patternMatch(body request: HTTPBodySequence) async -> Bool {
+    func patternMatch(body request: HTTPBodySequence) async -> Bool {
         guard let body = body else { return true }
 
         guard request.canReplay else {
@@ -247,7 +249,7 @@ public extension HTTPRoute {
         }
     }
 
-    private static func components(for target: String) -> (
+    static func components(for target: String) -> (
         methods: Set<HTTPMethod>,
         path: String
     ) {
@@ -260,7 +262,7 @@ public extension HTTPRoute {
         return (methods: methods, path: String(comps[1]))
     }
 
-    private static func methods(for target: any StringProtocol) -> Set<HTTPMethod> {
+    static func methods(for target: any StringProtocol) -> Set<HTTPMethod> {
         // The following formats of the method component are valid:
         // "" (empty)
         // "GET" (a single method)
@@ -281,18 +283,6 @@ public extension HTTPRoute {
 
         return methods
     }
-
-    @available(*, unavailable, message: "renamed: ~= async")
-    static func ~= (route: HTTPRoute, request: HTTPRequest) -> Bool {
-        fatalError()
-    }
-
-    static func ~= (route: HTTPRoute, request: HTTPRequest) async -> Bool {
-        await route.patternMatch(request: request)
-    }
-}
-
-private extension HTTPRoute {
 
     static func readComponents(from path: String) -> (path: String, query: [HTTPRequest.QueryItem]) {
         guard path.removingPercentEncoding == path else {
@@ -339,5 +329,20 @@ extension HTTPRoute.QueryItem: CustomStringConvertible {
 
     public var description: String {
         name + "=" + value.description
+    }
+}
+
+private extension [HTTPRoute.Component] {
+
+    var urlParameters: [String: Int] {
+        enumerated().reduce(into: [:]) { partialResult, item in
+            switch item.element {
+                case let .parameter(name):
+                    partialResult[name] = item.offset
+                case .caseInsensitive,
+                     .wildcard:
+                    break
+            }
+        }
     }
 }
