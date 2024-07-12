@@ -32,17 +32,17 @@
 import Foundation
 
 public protocol HTTPRequestParameter {
-    init?(parameter: some StringProtocol)
+    init?(parameter: String)
 }
 
 extension String: HTTPRequestParameter {
-    public init?(parameter: some StringProtocol) {
+    public init?(parameter: String) {
         self.init(parameter)
     }
 }
 
 extension Int: HTTPRequestParameter {
-    public init?(parameter: some StringProtocol) {
+    public init?(parameter: String) {
         self.init(parameter)
     }
 }
@@ -54,18 +54,13 @@ extension HTTPRequest {
         for route: HTTPRoute,
         type: (repeat each P).Type = (repeat each P).self
     ) throws -> (repeat each P) {
-
-        let indices = route.path.enumerated().compactMap { idx, comp in
-            switch comp {
-            case .parameter:
-                return idx
-            case .wildcard, .caseInsensitive:
-                return nil
-            }
-        }
-
+        let indices = urlParameterIndices(for: route)
         var idx = 0
         return try (repeat getParameter(at: &idx, parameterIndices: indices, type: (each P).self))
+    }
+
+    private func urlParameterIndices(for route: HTTPRoute) -> [Int] {
+        route.pathParameters.values.sorted()
     }
 
     private func getParameter<P: HTTPRequestParameter>(at index: inout Int, parameterIndices: [Int], type: P.Type) throws -> P {
@@ -76,7 +71,7 @@ extension HTTPRequest {
         }
 
         let idx = parameterIndices[index]
-        let nodes = path.split(separator: "/", omittingEmptySubsequences: true)
+        let nodes = path.split(separator: "/", omittingEmptySubsequences: true).map { String($0) }
         guard nodes.indices.contains(idx),
               let param = P(parameter: nodes[idx]) else {
             throw HTTPUnhandledError()

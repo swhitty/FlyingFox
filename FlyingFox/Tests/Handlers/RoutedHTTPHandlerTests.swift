@@ -29,7 +29,7 @@
 //  SOFTWARE.
 //
 
-import FlyingFox
+@testable import FlyingFox
 import XCTest
 
 final class RoutedHTTPHandlerTests: XCTestCase {
@@ -115,13 +115,13 @@ final class RoutedHTTPHandlerTests: XCTestCase {
 
         // when then
         await AsyncAssertEqual(
-            try await handler.handleRequest(.make(path: "/10/hello/fish")).bodyData,
-            "20 fish".data(using: .utf8)
+            try await handler.handleRequest(.make("/10/hello/fish")).bodyString,
+            "20 fish"
         )
 
         await AsyncAssertEqual(
-            try await handler.handleRequest(.make(path: "/450/hello/shrimp")).bodyData,
-            "900 shrimp".data(using: .utf8)
+            try await handler.handleRequest(.make("/450/hello/shrimp")).bodyString,
+            "900 shrimp"
         )
     }
 #endif
@@ -140,4 +140,22 @@ private extension HTTPRoute {
         let path = path.map(\.description).joined(separator: "/")
         return methods + " /" + path
     }
+}
+
+private extension HTTPRequest {
+
+    static func make(_ url: String) -> Self {
+        let (path, query) = HTTPDecoder.readComponents(from: url.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!)
+        return HTTPRequest.make(path: path, query: query)
+    }
+}
+
+private extension HTTPResponse {
+
+    var bodyString: String? {
+        get async throws {
+            try await String(data: bodyData, encoding: .utf8)
+        }
+    }
+
 }
