@@ -496,7 +496,7 @@ final class HTTPRouteTests: XCTestCase {
         )
         XCTAssertEqual(
             HTTPRoute("/mock/*").description,
-            "* /mock/*"
+            "/mock/*"
         )
         XCTAssertEqual(
             HTTPRoute("FUZZ,TRACE,GET /mock?hello=*").description,

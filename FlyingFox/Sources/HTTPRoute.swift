@@ -314,13 +314,10 @@ extension HTTPRoute: ExpressibleByStringLiteral {
 extension HTTPRoute: CustomStringConvertible {
 
     public var description: String {
-        let method = methods == HTTPMethod.allMethods ? "*" : methods.stringValue
+        let method = methods == HTTPMethod.allMethods ? "/" : methods.stringValue + " /"
         let path = path.map(\.description).joined(separator: "/")
-        let query = query
-            .map { $0.name + "=" + $0.value.description }
-            .joined(separator: "&")
-        let queryComp = query.isEmpty ? "" : "?"
-        return method + " /" + path + queryComp + query
+        let query = query.isEmpty ? "" : "?" + query.map(\.description).joined(separator: "&")
+        return method + path + query
     }
 }
 
@@ -335,5 +332,12 @@ extension HTTPRoute.Component: CustomStringConvertible {
         case .parameter(let name):
             return ":\(name)"
         }
+    }
+}
+
+extension HTTPRoute.QueryItem: CustomStringConvertible {
+
+    public var description: String {
+        name + "=" + value.description
     }
 }
