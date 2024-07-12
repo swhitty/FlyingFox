@@ -65,6 +65,11 @@ extension HTTPRequest {
         for pathIdx in route.pathParameters.values.sorted() where nodes.indices.contains(pathIdx) {
             params.append(String(nodes[pathIdx]))
         }
+        for queryIdx in route.queryParameters.values.sorted() {
+            if let queryValue = query[route.query[queryIdx].name] {
+                params.append(queryValue)
+            }
+        }
         return params
     }
 

@@ -110,22 +110,22 @@ final class RoutedHTTPHandlerTests: XCTestCase {
         // given
         var handler = RoutedHTTPHandler()
 
-        handler.appendRoute("GET /:id/hello/:food") { (id: Int, food: String) -> HTTPResponse in
+        handler.appendRoute("GET /:id/hello?food=:food&qty=:qty") { (id: Int, food: String, qty: String) -> HTTPResponse in
             HTTPResponse(
                 statusCode: .ok,
-                body: "\(id * 2) \(food)".data(using: .utf8)!
+                body: "\(id * 2) \(food) \(qty)".data(using: .utf8)!
             )
         }
 
         // when then
         await AsyncAssertEqual(
-            try await handler.handleRequest(.make("/10/hello/fish")).bodyString,
-            "20 fish"
+            try await handler.handleRequest(.make("/10/hello?qty=🐟&food=fish")).bodyString,
+            "20 fish 🐟"
         )
 
         await AsyncAssertEqual(
-            try await handler.handleRequest(.make("/450/hello/shrimp")).bodyString,
-            "900 shrimp"
+            try await handler.handleRequest(.make("/450/hello?food=shrimp&qty=🍤")).bodyString,
+            "900 shrimp 🍤"
         )
     }
 #endif
