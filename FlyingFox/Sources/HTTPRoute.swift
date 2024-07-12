@@ -39,6 +39,7 @@ public struct HTTPRoute: Sendable {
     public var body: (any HTTPBodyPattern)?
 
     public var pathParameters: [String: Int] { path.urlParameters }
+    public var queryParameters: [String: Int] { query.map(\.value).urlParameters }
 
     public init(
         methods: Set<HTTPMethod>,

@@ -106,4 +106,13 @@ extension HTTPRequest {
 
         return components[parameterIndex]
     }
+
+    public func queryParameter(for identifier: String) -> String? {
+        guard let route = Self.matchedRoute,
+              let queryIdx = route.queryParameters[identifier] else {
+            return nil
+        }
+        let val = query[route.query[queryIdx].name]
+        return val
+    }
 }

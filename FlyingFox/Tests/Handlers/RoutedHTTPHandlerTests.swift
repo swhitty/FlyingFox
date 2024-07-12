@@ -79,8 +79,12 @@ final class RoutedHTTPHandlerTests: XCTestCase {
         // given
         var handler = RoutedHTTPHandler()
 
-        handler.appendRoute("GET /:id/hello/:food") { request in
-            let body = [request.pathParameter(for: "id"), request.pathParameter(for: "food")]
+        handler.appendRoute("GET /:id/hello?food=:food&qty=:qty") { request in
+            let body = [
+                request.pathParameter(for: "id"),
+                request.queryParameter(for: "food"),
+                request.queryParameter(for: "qty")
+            ]
                 .compactMap { $0 }
                 .joined(separator: " ")
             return HTTPResponse(
@@ -91,13 +95,13 @@ final class RoutedHTTPHandlerTests: XCTestCase {
 
         // when then
         await AsyncAssertEqual(
-            try await handler.handleRequest(.make(path: "/10/hello/fish")).bodyData,
-            "10 fish".data(using: .utf8)
+            try await handler.handleRequest(.make("/10/hello?food=fish&qty=🐟")).bodyString,
+            "10 fish 🐟"
         )
 
         await AsyncAssertEqual(
-            try await handler.handleRequest(.make(path: "/450/hello/chips")).bodyData,
-            "450 chips".data(using: .utf8)
+            try await handler.handleRequest(.make("/450/hello?qty=🍟&food=chips")).bodyString,
+            "450 chips 🍟"
         )
     }
 
