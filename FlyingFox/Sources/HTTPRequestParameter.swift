@@ -54,26 +54,28 @@ extension HTTPRequest {
         for route: HTTPRoute,
         type: (repeat each P).Type = (repeat each P).self
     ) throws -> (repeat each P) {
-        let indices = urlParameterIndices(for: route)
+        let parameters = urlParameters(for: route)
         var idx = 0
-        return try (repeat getParameter(at: &idx, parameterIndices: indices, type: (each P).self))
+        return try (repeat getParameter(at: &idx, parameters: parameters, type: (each P).self))
     }
 
-    private func urlParameterIndices(for route: HTTPRoute) -> [Int] {
-        route.pathParameters.values.sorted()
+    private func urlParameters(for route: HTTPRoute) -> [String] {
+        let nodes = path.split(separator: "/", omittingEmptySubsequences: true)
+        var params = [String]()
+        for pathIdx in route.pathParameters.values.sorted() where nodes.indices.contains(pathIdx) {
+            params.append(String(nodes[pathIdx]))
+        }
+        return params
     }
 
-    private func getParameter<P: HTTPRequestParameter>(at index: inout Int, parameterIndices: [Int], type: P.Type) throws -> P {
+    private func getParameter<P: HTTPRequestParameter>(at index: inout Int, parameters: [String], type: P.Type) throws -> P {
         defer { index += 1 }
 
-        guard parameterIndices.indices.contains(index) else {
+        guard parameters.indices.contains(index) else {
             throw HTTPUnhandledError()
         }
 
-        let idx = parameterIndices[index]
-        let nodes = path.split(separator: "/", omittingEmptySubsequences: true).map { String($0) }
-        guard nodes.indices.contains(idx),
-              let param = P(parameter: nodes[idx]) else {
+        guard let param = P(parameter: parameters[index]) else {
             throw HTTPUnhandledError()
         }
         return param
