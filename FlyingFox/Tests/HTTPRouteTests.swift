@@ -444,7 +444,7 @@ final class HTTPRouteTests: XCTestCase {
         XCTAssertEqual(HTTPRoute("GET,PUT /fish/*").method, .caseInsensitive("GET"))
     }
 
-    func testRouteParameters() async {
+    func testRouteParameters() {
         let route = HTTPRoute("GET /mock/:id")
         let parameters = route.parameters
         XCTAssertEqual(parameters.count, 1)
@@ -469,6 +469,35 @@ final class HTTPRouteTests: XCTestCase {
         XCTAssertEqual(parameters4.count, 2)
         XCTAssertEqual(parameters4["id"], .path(name: "id", index: 1))
         XCTAssertEqual(parameters4["fish"], .query(name: "fish", index: "food"))
+    }
+
+    func testRouteParameterValues() {
+        let route = HTTPRoute("GET /mock/:id?foo=:foo&bar=:bar")
+
+        XCTAssertEqual(
+            route.extractParameters(from: .make("/mock/15?foo=🐟&bar=🍤")),
+            [
+                .init(name: "id", value: "15"),
+                .init(name: "foo", value: "🐟"),
+                .init(name: "bar", value: "🍤")
+            ]
+        )
+
+        XCTAssertEqual(
+            route.extractParameters(from: .make("/mock/99?bar=🐠&foo=🍟")),
+            [
+                .init(name: "id", value: "99"),
+                .init(name: "foo", value: "🍟"),
+                .init(name: "bar", value: "🐠")
+            ]
+        )
+
+        XCTAssertEqual(
+            route.extractParameters(from: .make("/mock?bar=🐠")),
+            [
+                .init(name: "bar", value: "🐠")
+            ]
+        )
     }
 
 #if compiler(>=5.9)

@@ -146,14 +146,6 @@ private extension HTTPRoute {
     }
 }
 
-private extension HTTPRequest {
-
-    static func make(_ url: String) -> Self {
-        let (path, query) = HTTPDecoder.readComponents(from: url.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!)
-        return HTTPRequest.make(path: path, query: query)
-    }
-}
-
 private extension HTTPResponse {
 
     var bodyString: String? {
