@@ -478,19 +478,19 @@ final class HTTPRouteTests: XCTestCase {
         let request = HTTPRequest.make(path: "/mock/12/hello/fish")
 
         XCTAssertTrue(
-            try request.extractParameters(for: route) == (12, "fish")
+            try route.extractParameterValues(from: request) == (12, "fish")
         )
 
         XCTAssertTrue(
-            try request.extractParameters(for: route) == (12)
+            try route.extractParameterValues(from: request) == (12)
         )
 
         XCTAssertThrowsError(
-            try request.extractParameters(for: route, type: (Int, Int).self)
+            try route.extractParameterValues(of: (Int, Int).self, from: request)
         )
 
         XCTAssertThrowsError(
-            try request.extractParameters(for: route, type: (Int, String, String).self)
+            try route.extractParameterValues(of: (Int, String, String).self, from: request)
         )
     }
 #endif

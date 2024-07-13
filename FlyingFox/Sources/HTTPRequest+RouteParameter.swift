@@ -45,36 +45,7 @@ public extension HTTPRequest {
     }
 
     /// Values extracted from the matched route and request
-    var routeParameters: [RouteParameter] { routeParameters() }
-}
-
-extension HTTPRequest {
-
-    func routeParameters(for route: HTTPRoute? = matchedRoute) -> [RouteParameter] {
-        guard let route else { return [] }
-
-        let pathComponents = path
-            .split(separator: "/", omittingEmptySubsequences: true)
-
-        return route.parameters
-            .compactMap {
-                switch $0 {
-                case let .path(name: name, index: index):
-                    if pathComponents.indices.contains(index) {
-                        return RouteParameter(name: name, value: String(pathComponents[index]))
-                    } else {
-                        return nil
-                    }
-                case let .query(name: name, index: index):
-                    if let value = query[index] {
-                        return RouteParameter(name: name, value: value)
-                    } else {
-                        return nil
-                    }
-                }
-            }
-    }
-
+    var routeParameters: [RouteParameter] { Self.matchedRoute?.extractParameters(from: self) ?? [] }
 }
 
 public extension Array where Element == HTTPRequest.RouteParameter {
