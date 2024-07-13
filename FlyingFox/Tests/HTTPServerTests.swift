@@ -437,9 +437,13 @@ final class HTTPServerTests: XCTestCase {
     }
 
 #if compiler(>=5.9)
-    func testRoutes_To_ParamaterPack() async throws {
+
+    func testRoutes_To_ParamaterPackWithRequest() async throws {
         let server = HTTPServer.make()
-        await server.appendRoute("/fish/:id") { (id: String) in
+        await server.appendRoute("/fish/:id") { (request: HTTPRequest, id: String) in
+            HTTPResponse.make(statusCode: .ok, body: "Hello \(id)".data(using: .utf8)!)
+        }
+        await server.appendRoute("/chips/:id") { (id: String) in
             HTTPResponse.make(statusCode: .ok, body: "Hello \(id)".data(using: .utf8)!)
         }
         let port = try await startServerWithPort(server)
@@ -447,11 +451,18 @@ final class HTTPServerTests: XCTestCase {
         let socket = try await AsyncSocket.connected(to: .inet(ip4: "127.0.0.1", port: port))
         defer { try? socket.close() }
 
-        try await socket.writeRequest(.make(path: "/fish/chips"))
+        try await socket.writeRequest(.make("/fish/🐟", headers: [.connection: "keep-alive"]))
 
         await AsyncAssertEqual(
-            try await socket.readResponse().bodyData,
-            "Hello chips".data(using: .utf8)
+            try await socket.readResponse().bodyString,
+            "Hello 🐟"
+        )
+
+        try await socket.writeRequest(.make("/chips/🍟"))
+
+        await AsyncAssertEqual(
+            try await socket.readResponse().bodyString,
+            "Hello 🍟"
         )
     }
 #endif

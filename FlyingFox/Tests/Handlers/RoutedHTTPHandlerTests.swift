@@ -145,13 +145,3 @@ private extension HTTPRoute {
         return methods + " /" + path
     }
 }
-
-private extension HTTPResponse {
-
-    var bodyString: String? {
-        get async throws {
-            try await String(data: bodyData, encoding: .utf8)
-        }
-    }
-
-}

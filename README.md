@@ -13,6 +13,7 @@
 - [Usage](#usage)
 - [Handlers](#handlers)
 - [Routes](#routes)
+    - [Route Parameters](#route-parameters)
 - [Macros](#preview-macro-handler)
 - [WebSockets](#websockets)
 - [FlyingSocks](#flyingsocks)
@@ -213,6 +214,14 @@ route ~= HTTPRequest(method: .GET, path: "/hello/dog/world") // true
 route ~= HTTPRequest(method: .GET, path: "/hello/fish/sea") // false
 ```
 
+Routes can include [parameters](#route-parameters) that match like wildcards allowing handlers to extract the value from the request.
+
+```swift
+let route = HTTPRoute("GET /hello/:beast/world")
+
+let beast = request.routeParameters["beast"]
+```
+
 Trailing wildcards match all trailing path components:
 
 ```swift
@@ -279,6 +288,41 @@ let route = HTTPRoute("POST *", body: .json(where: "food == 'fish'"))
 ```json
 {"side": "chips", "food": "fish"}
 ```
+
+## Route Parameters
+
+Routes can include named parameters within a path or query item using the `:` prefix. Any string supplied to this parameter will match the route, handlers can access the value of the string using `request.routePamaters`.
+
+```swift
+handler.appendRoute("GET /creature/:name?type=:beast") { request in
+  let name = request.routeParameters["name"]
+  let beast = request.routeParameters["beast"]
+  return HTTPResponse(statusCode: .ok)
+}
+```
+
+When using Swift 5.9+, route parameters can be automatically extracted and mapped to closure parameters of handlers.
+
+```swift
+enum Beast: String, HTTPRouteParameterValue {
+  case fish
+  case dog
+}
+
+handler.appendRoute("GET /creature/:name?type=:beast") { (name: String, beast: Beast) -> HTTPResponse in
+  return HTTPResponse(statusCode: .ok)
+}
+```
+
+The request can be optionally included.
+
+```swift
+handler.appendRoute("GET /creature/:name?type=:beast") { (request: HTTPRequest, name: String, beast: Beast) -> HTTPResponse in
+  return HTTPResponse(statusCode: .ok)
+}
+```
+
+`String`, `Int`, `Double`, `Bool` and any type that conforms to `HTTPRouteParameterValue` can be extracted.
 
 ## WebSockets
 `HTTPResponse` can switch the connection to the [WebSocket](https://datatracker.ietf.org/doc/html/rfc6455) protocol by provding a `WSHandler` within the response payload.

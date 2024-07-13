@@ -69,6 +69,14 @@ public final actor HTTPServer {
     }
 
 #if compiler(>=5.9)
+
+    public func appendRoute<each P: HTTPRouteParameterValue>(
+        _ route: HTTPRoute,
+        handler: @Sendable @escaping (HTTPRequest, repeat each P) async throws -> HTTPResponse
+    ) {
+        handlers.appendRoute(route, handler: handler)
+    }
+
     public func appendRoute<each P: HTTPRouteParameterValue>(
         _ route: HTTPRoute,
         handler: @Sendable @escaping (repeat each P) async throws -> HTTPResponse

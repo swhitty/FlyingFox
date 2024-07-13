@@ -75,4 +75,10 @@ extension HTTPResponse {
         HTTPResponse(headers: headers,
                      webSocket: handler)
     }
+
+    var bodyString: String? {
+        get async throws {
+            try await String(data: bodyData, encoding: .utf8)
+        }
+    }
 }
