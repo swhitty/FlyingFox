@@ -42,9 +42,62 @@ extension String: HTTPRouteParameterValue {
     }
 }
 
-extension Int: HTTPRouteParameterValue {
+extension Int: HTTPRouteParameterValue { }
+extension Int64: HTTPRouteParameterValue { }
+extension Int32: HTTPRouteParameterValue { }
+extension Int16: HTTPRouteParameterValue { }
+extension Int8: HTTPRouteParameterValue { }
+extension UInt: HTTPRouteParameterValue { }
+extension UInt64: HTTPRouteParameterValue { }
+extension UInt32: HTTPRouteParameterValue { }
+extension UInt16: HTTPRouteParameterValue { }
+extension UInt8: HTTPRouteParameterValue { }
+
+public extension HTTPRouteParameterValue where Self: BinaryInteger {
+    init(parameter: String) throws {
+        guard let int64 = Int64(parameter),
+        let value = Self(exactly: int64) else {
+            throw HTTPRouteParameterInvalid()
+        }
+        self = value
+    }
+}
+
+extension Double: HTTPRouteParameterValue {
     public init(parameter: String) throws {
-        guard let value = Int(parameter)else {
+        guard let value = Self(parameter) else {
+            throw HTTPRouteParameterInvalid()
+        }
+        self = value
+    }
+}
+
+extension Float32: HTTPRouteParameterValue {
+    public init(parameter: String) throws {
+        guard let value = Self(parameter) else {
+            throw HTTPRouteParameterInvalid()
+        }
+        self = value
+    }
+}
+
+extension Bool: HTTPRouteParameterValue {
+    public init(parameter: String) throws {
+        switch parameter.lowercased() {
+        case "true":
+            self = true
+        case "false":
+            self = false
+        default:
+            throw HTTPRouteParameterInvalid()
+        }
+    }
+}
+
+public extension HTTPRouteParameterValue where Self: RawRepresentable, RawValue: HTTPRouteParameterValue {
+    init(parameter: String) throws {
+        let rawValue = try RawValue(parameter: parameter)
+        guard let value = Self(rawValue: rawValue)else {
             throw HTTPRouteParameterInvalid()
         }
         self = value
