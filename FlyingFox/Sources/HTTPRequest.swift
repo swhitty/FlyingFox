@@ -90,29 +90,4 @@ extension HTTPRequest {
     var shouldKeepAlive: Bool {
         headers[.connection]?.caseInsensitiveCompare("keep-alive") == .orderedSame
     }
-
-    public func pathParameter(for identifier: String) -> String? {
-        let components = path
-            .split(separator: "/", omittingEmptySubsequences: true)
-            .map { String($0) }
-
-        guard
-            components.isEmpty == false,
-            let parameterIndex = Self.matchedRoute?.pathParameters[identifier],
-            parameterIndex < components.count
-        else {
-            return nil
-        }
-
-        return components[parameterIndex]
-    }
-
-    public func queryParameter(for identifier: String) -> String? {
-        guard let route = Self.matchedRoute,
-              let queryIdx = route.queryParameters[identifier] else {
-            return nil
-        }
-        let val = query[route.query[queryIdx].name]
-        return val
-    }
 }

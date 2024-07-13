@@ -50,7 +50,7 @@ public struct RoutedHTTPHandler: HTTPHandler, Sendable {
         handler: @Sendable @escaping (repeat each P) async throws -> HTTPResponse
     ) {
         let closure = ClosureHTTPHandler { request in
-            let params = try request.extractParameters(for: route, type: (repeat each P).self)
+            let params = try request.extractParameters(type: (repeat each P).self)
             return try await handler(repeat each params)
         }
         append((route, closure))

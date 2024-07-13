@@ -81,9 +81,9 @@ final class RoutedHTTPHandlerTests: XCTestCase {
 
         handler.appendRoute("GET /:id/hello?food=:food&qty=:qty") { request in
             let body = [
-                request.pathParameter(for: "id"),
-                request.queryParameter(for: "food"),
-                request.queryParameter(for: "qty")
+                request.routeParameters["id"],
+                request.routeParameters["food"],
+                request.routeParameters["qty"]
             ]
                 .compactMap { $0 }
                 .joined(separator: " ")
