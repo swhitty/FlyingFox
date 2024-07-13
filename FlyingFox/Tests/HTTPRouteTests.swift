@@ -500,6 +500,26 @@ final class HTTPRouteTests: XCTestCase {
         )
     }
 
+    func testRouteParameterValuesA() {
+        let route = HTTPRoute("GET /:foo/:bar")
+        enum Beast: String, HTTPRouteParameterValue {
+            case fish
+        }
+
+        XCTAssertEqual(
+            route.extractParameters(from: .make("/10/fish"))["foo"],
+            10
+        )
+        XCTAssertEqual(
+            route.extractParameters(from: .make("/20/fish"))["bar"],
+            "fish"
+        )
+        XCTAssertEqual(
+            route.extractParameters(from: .make("/20/fish"))["bar"],
+            Beast.fish
+        )
+    }
+
 #if compiler(>=5.9)
     func testPathParameters() {
         // given

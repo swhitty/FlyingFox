@@ -55,4 +55,12 @@ public extension Array where Element == HTTPRequest.RouteParameter {
             first { $0.name == name }?.value
         }
     }
+
+    subscript<T: HTTPRouteParameterValue>(_ name: String, of type: T.Type = T.self) -> T? {
+        guard let text = first(where: { $0.name == name })?.value,
+              let value = try? T(parameter: text) else {
+            return nil
+        }
+        return value
+    }
 }
