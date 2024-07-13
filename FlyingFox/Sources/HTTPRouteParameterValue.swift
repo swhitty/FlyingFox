@@ -94,10 +94,14 @@ extension HTTPRoute {
     ) throws -> (repeat each P) {
         let parameters = extractParameters(from: request).map(\.value)
         var idx = 0
-        return try (repeat getParameter(at: &idx, parameters: parameters, type: (each P).self))
+        return try (repeat extractValue(of: (each P).self, at: &idx, from: parameters))
     }
 
-    private func getParameter<P: HTTPRouteParameterValue>(at index: inout Int, parameters: [String], type: P.Type) throws -> P {
+    private func extractValue<P: HTTPRouteParameterValue>(
+        of type: P.Type,
+        at index: inout Int,
+        from parameters: [String]
+    ) throws -> P {
         defer { index += 1 }
 
         guard parameters.indices.contains(index) else {
