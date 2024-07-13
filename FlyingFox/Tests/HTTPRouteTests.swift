@@ -444,25 +444,31 @@ final class HTTPRouteTests: XCTestCase {
         XCTAssertEqual(HTTPRoute("GET,PUT /fish/*").method, .caseInsensitive("GET"))
     }
 
-    func testPathParameters() async {
+    func testRouteParameters() async {
         let route = HTTPRoute("GET /mock/:id")
-        let parameters = route.pathParameters
+        let parameters = route.parameters
         XCTAssertEqual(parameters.count, 1)
-        XCTAssertEqual(parameters["id"], 1) // Position 1 in the components array
+        XCTAssertEqual(parameters["id"], .path(name: "id", index: 1)) // Position 1 in the components array
 
         let route2 = HTTPRoute("GET /mock/:id/:bloop/hello/guys/:zonk")
-        let parameters2 = route2.pathParameters
+        let parameters2 = route2.parameters
         XCTAssertEqual(parameters2.count, 3)
-        XCTAssertEqual(parameters2["id"], 1)
-        XCTAssertEqual(parameters2["bloop"], 2)
-        XCTAssertEqual(parameters2["zonk"], 5)
+        XCTAssertEqual(parameters2["id"], .path(name: "id", index: 1))
+        XCTAssertEqual(parameters2["bloop"], .path(name: "bloop", index: 2))
+        XCTAssertEqual(parameters2["zonk"], .path(name: "zonk", index: 5))
 
         let route3 = HTTPRoute("GET /mock/:id/not:bloop/hello/guys/:zonk")
-        let parameters3 = route3.pathParameters
+        let parameters3 = route3.parameters
         XCTAssertEqual(parameters3.count, 2)
-        XCTAssertEqual(parameters3["id"], 1)
+        XCTAssertEqual(parameters3["id"], .path(name: "id", index: 1))
         XCTAssertNil(parameters3["bloop"])
-        XCTAssertEqual(parameters2["zonk"], 5)
+        XCTAssertEqual(parameters2["zonk"], .path(name: "zonk", index: 5))
+
+        let route4 = HTTPRoute("GET /mock/:id?food=:fish")
+        let parameters4 = route4.parameters
+        XCTAssertEqual(parameters4.count, 2)
+        XCTAssertEqual(parameters4["id"], .path(name: "id", index: 1))
+        XCTAssertEqual(parameters4["fish"], .query(name: "fish", index: "food"))
     }
 
 #if compiler(>=5.9)

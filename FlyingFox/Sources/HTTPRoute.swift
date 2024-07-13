@@ -38,7 +38,7 @@ public struct HTTPRoute: Sendable {
     public var headers: [HTTPHeader: Component]
     public var body: (any HTTPBodyPattern)?
 
-    public var pathParameters: [String: Int] { path.urlParameters }
+    public var parameters: [Parameter] { pathParameters + queryParameters }
 
     public init(
         methods: Set<HTTPMethod>,
@@ -137,6 +137,19 @@ public struct HTTPRoute: Sendable {
         }
     }
 
+    public enum Parameter: Hashable {
+        case path(name: String, index: Int)
+        case query(name: String, index: String)
+
+        public var name: String {
+            switch self {
+            case .path(name: let name, index: _),
+                 .query(name: let name, index: _):
+                return name
+            }
+        }
+    }
+
     @available(*, deprecated, renamed: "methods", message: "Use ``methods`` instead")
     public var method: Component {
         if methods == HTTPMethod.allMethods {
@@ -187,6 +200,20 @@ public extension HTTPRoute {
 }
 
 private extension HTTPRoute {
+
+    var pathParameters: [Parameter] {
+        path.enumerated().compactMap { (index, component) -> Parameter? in
+            guard let name = component.parameterName else { return nil }
+            return .path(name: name, index: index)
+        }
+    }
+
+    var queryParameters: [Parameter] {
+        query.compactMap { item -> Parameter? in
+            guard let name = item.value.parameterName else { return nil }
+            return .query(name: name, index: item.name)
+        }
+    }
 
     func pathComponent(for index: Int) -> Component? {
         if path.indices.contains(index) {
@@ -332,17 +359,23 @@ extension HTTPRoute.QueryItem: CustomStringConvertible {
     }
 }
 
-private extension [HTTPRoute.Component] {
+private extension HTTPRoute.Component {
 
-    var urlParameters: [String: Int] {
-        enumerated().reduce(into: [:]) { partialResult, item in
-            switch item.element {
-                case let .parameter(name):
-                    partialResult[name] = item.offset
-                case .caseInsensitive,
-                     .wildcard:
-                    break
-            }
+    var parameterName: String? {
+        switch self {
+        case .parameter(let name):
+            return name
+        case .caseInsensitive, .wildcard:
+            return nil
+        }
+    }
+}
+
+public extension Array where Element == HTTPRoute.Parameter {
+
+    subscript(_ name: String) -> HTTPRoute.Parameter? {
+        get {
+            first { $0.name == name }
         }
     }
 }

@@ -51,31 +51,22 @@ extension Int: HTTPRequestParameter {
 extension HTTPRequest {
 
     func extractParameters<each P: HTTPRequestParameter>(
-        for route: HTTPRoute,
+        for route: HTTPRoute? = HTTPRequest.matchedRoute,
         type: (repeat each P).Type = (repeat each P).self
     ) throws -> (repeat each P) {
-        let parameters = urlParameters(for: route)
+        let parameters = routeParameters(for: route)
         var idx = 0
         return try (repeat getParameter(at: &idx, parameters: parameters, type: (each P).self))
     }
 
-    private func urlParameters(for route: HTTPRoute) -> [String] {
-        let nodes = path.split(separator: "/", omittingEmptySubsequences: true)
-        var params = [String]()
-        for pathIdx in route.pathParameters.values.sorted() where nodes.indices.contains(pathIdx) {
-            params.append(String(nodes[pathIdx]))
-        }
-        return params
-    }
-
-    private func getParameter<P: HTTPRequestParameter>(at index: inout Int, parameters: [String], type: P.Type) throws -> P {
+    private func getParameter<P: HTTPRequestParameter>(at index: inout Int, parameters: [RouteParameter], type: P.Type) throws -> P {
         defer { index += 1 }
 
         guard parameters.indices.contains(index) else {
             throw HTTPUnhandledError()
         }
 
-        guard let param = P(parameter: parameters[index]) else {
+        guard let param = P(parameter: parameters[index].value) else {
             throw HTTPUnhandledError()
         }
         return param

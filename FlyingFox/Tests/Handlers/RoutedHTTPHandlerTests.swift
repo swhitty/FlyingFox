@@ -79,8 +79,12 @@ final class RoutedHTTPHandlerTests: XCTestCase {
         // given
         var handler = RoutedHTTPHandler()
 
-        handler.appendRoute("GET /:id/hello/:food") { request in
-            let body = [request.pathParameter(for: "id"), request.pathParameter(for: "food")]
+        handler.appendRoute("GET /:id/hello?food=:food&qty=:qty") { request in
+            let body = [
+                request.routeParameters["id"],
+                request.routeParameters["food"],
+                request.routeParameters["qty"]
+            ]
                 .compactMap { $0 }
                 .joined(separator: " ")
             return HTTPResponse(
@@ -91,13 +95,13 @@ final class RoutedHTTPHandlerTests: XCTestCase {
 
         // when then
         await AsyncAssertEqual(
-            try await handler.handleRequest(.make(path: "/10/hello/fish")).bodyData,
-            "10 fish".data(using: .utf8)
+            try await handler.handleRequest(.make("/10/hello?food=fish&qty=🐟")).bodyString,
+            "10 fish 🐟"
         )
 
         await AsyncAssertEqual(
-            try await handler.handleRequest(.make(path: "/450/hello/chips")).bodyData,
-            "450 chips".data(using: .utf8)
+            try await handler.handleRequest(.make("/450/hello?qty=🍟&food=chips")).bodyString,
+            "450 chips 🍟"
         )
     }
 
@@ -106,22 +110,22 @@ final class RoutedHTTPHandlerTests: XCTestCase {
         // given
         var handler = RoutedHTTPHandler()
 
-        handler.appendRoute("GET /:id/hello/:food") { (id: Int, food: String) -> HTTPResponse in
+        handler.appendRoute("GET /:id/hello?food=:food&qty=:qty") { (id: Int, food: String, qty: String) -> HTTPResponse in
             HTTPResponse(
                 statusCode: .ok,
-                body: "\(id * 2) \(food)".data(using: .utf8)!
+                body: "\(id * 2) \(food) \(qty)".data(using: .utf8)!
             )
         }
 
         // when then
         await AsyncAssertEqual(
-            try await handler.handleRequest(.make("/10/hello/fish")).bodyString,
-            "20 fish"
+            try await handler.handleRequest(.make("/10/hello?qty=🐟&food=fish")).bodyString,
+            "20 fish 🐟"
         )
 
         await AsyncAssertEqual(
-            try await handler.handleRequest(.make("/450/hello/shrimp")).bodyString,
-            "900 shrimp"
+            try await handler.handleRequest(.make("/450/hello?food=shrimp&qty=🍤")).bodyString,
+            "900 shrimp 🍤"
         )
     }
 #endif
