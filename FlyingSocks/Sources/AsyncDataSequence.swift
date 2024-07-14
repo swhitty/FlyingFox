@@ -42,7 +42,7 @@ public struct AsyncDataSequence: AsyncSequence, Sendable {
         self.loader = DataLoader(
             count: count,
             chunkSize: chunkSize,
-            iterator: AsyncBufferedSequenceIterator(bytes.makeAsyncIterator())
+            iterator: bytes.makeAsyncIterator()
         )
     }
 
@@ -105,10 +105,10 @@ private extension AsyncDataSequence {
     actor DataLoader {
         nonisolated fileprivate let count: Int
         nonisolated fileprivate let chunkSize: Int
-        private let iterator: any AsyncDataIterator & Sendable
+        private var iterator: any AsyncBufferedIteratorProtocol<UInt8>
         private var state: State
 
-        init(count: Int, chunkSize: Int, iterator: some AsyncDataIterator & Sendable) {
+        init(count: Int, chunkSize: Int, iterator: some AsyncBufferedIteratorProtocol<UInt8> & Sendable) {
             self.count = count
             self.chunkSize = chunkSize
             self.iterator = iterator
@@ -129,7 +129,7 @@ private extension AsyncDataSequence {
             }
 
             do {
-                guard let element = try await iterator.nextChunk(suggested: nextCount) else {
+                guard let element = try await getNextBuffer(&iterator, suggested: nextCount) else {
                     throw Error.unexpectedEOF
                 }
                 state = .ready(index: index + element.count)
@@ -138,6 +138,13 @@ private extension AsyncDataSequence {
                 state = .complete
                 throw error
             }
+        }
+
+        private func getNextBuffer(_ iterator: inout some AsyncBufferedIteratorProtocol<UInt8>, suggested count: Int) async throws -> Data? {
+            guard let buffer = try await iterator.nextBuffer(suggested: count) else {
+                return nil
+            }
+            return Data(buffer)
         }
 
         public func flushIfNeeded() async throws {
@@ -166,23 +173,16 @@ private extension AsyncDataSequence {
         }
     }
 
-    final class AsyncBufferedSequenceIterator<I: AsyncBufferedIteratorProtocol>: AsyncDataIterator, @unchecked Sendable where I.Element == UInt8 {
-        private var iterator: I
+    struct AsyncFileHandleIterator: AsyncBufferedIteratorProtocol {
+        typealias Element = UInt8
 
-        init(_ iterator: I) {
-            self.iterator = iterator
-        }
-
-        func nextChunk(suggested count: Int) async throws -> Data? {
-            guard let buffer = try await iterator.nextBuffer(suggested: count) else { return nil }
-            return Data(buffer)
-        }
-    }
-
-    struct AsyncFileHandleIterator: AsyncDataIterator {
         let handle: FileHandle?
 
-        func nextChunk(suggested count: Int) throws -> Data? {
+        func next() async throws -> UInt8? {
+            fatalError()
+        }
+
+        func nextBuffer(suggested count: Int) throws -> Data? {
             guard let handle = handle else { throw SocketError.disconnected }
             if #available(macOS 10.15.4, iOS 13.4, tvOS 13.4, *) {
                 return try handle.read(upToCount: count)
@@ -191,9 +191,5 @@ private extension AsyncDataSequence {
             }
         }
     }
-}
-
-private protocol AsyncDataIterator {
-    func nextChunk(suggested count: Int) async throws -> Data?
 }
 
