@@ -105,7 +105,6 @@ final class RoutedHTTPHandlerTests: XCTestCase {
         )
     }
 
-#if compiler(>=5.9)
     func testParameterPackRoute() async throws {
         // given
         var handler = RoutedHTTPHandler()
@@ -128,7 +127,6 @@ final class RoutedHTTPHandlerTests: XCTestCase {
             "900 shrimp 🍤"
         )
     }
-#endif
 }
 
 private struct MockHandler: HTTPHandler {

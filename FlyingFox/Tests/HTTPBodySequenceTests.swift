@@ -196,7 +196,6 @@ final class HTTPBodySequenceTests: XCTestCase {
         )
 
         // when then
-#if compiler(>=5.9)
         await AsyncAssertEqual(
             try await body.collectAll(),
             [
@@ -206,14 +205,6 @@ final class HTTPBodySequenceTests: XCTestCase {
                 Data([0x9])
             ]
         )
-#else
-        await AsyncAssertEqual(
-            try await body.collectAll(),
-            [
-                Data([0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9])
-            ]
-        )
-#endif
     }
 
     func testSequencePayload_IsFlushed() async {

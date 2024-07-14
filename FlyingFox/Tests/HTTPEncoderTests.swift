@@ -122,7 +122,6 @@ final class HTTPEncoderTests: XCTestCase {
         )
     }
 
-#if compiler(>=5.9)
     func testEncodesChunkedResponse() async throws {
         let data = try await HTTPEncoder.encodeResponse(
             .makeChunked(
@@ -150,7 +149,6 @@ final class HTTPEncoderTests: XCTestCase {
             """.data(using: .utf8)
         )
     }
-#endif
 
     func testEncodesRequest() async throws {
         await AsyncAssertEqual(

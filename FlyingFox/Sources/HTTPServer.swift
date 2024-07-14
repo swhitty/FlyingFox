@@ -68,8 +68,6 @@ public final actor HTTPServer {
         handlers.appendRoute(route, handler: handler)
     }
 
-#if compiler(>=5.9)
-
     public func appendRoute<each P: HTTPRouteParameterValue>(
         _ route: HTTPRoute,
         handler: @Sendable @escaping (HTTPRequest, repeat each P) async throws -> HTTPResponse
@@ -83,7 +81,6 @@ public final actor HTTPServer {
     ) {
         handlers.appendRoute(route, handler: handler)
     }
-#endif
 
     public func start() async throws {
         guard state == nil else {
@@ -161,18 +158,13 @@ public final actor HTTPServer {
     @TaskLocal static var preferConnectionsDiscarding = true
 
     private func listenForConnections(on socket: AsyncSocket) async throws {
-#if compiler(>=5.9)
         if #available(macOS 14.0, iOS 17.0, tvOS 17.0, *), Self.preferConnectionsDiscarding {
             try await listenForConnectionsDiscarding(on: socket)
         } else {
             try await listenForConnectionsFallback(on: socket)
         }
-#else
-            try await listenForConnectionsFallback(on: socket)
-#endif
     }
 
-#if compiler(>=5.9)
     @available(macOS 14.0, iOS 17.0, tvOS 17.0, *)
     private func listenForConnectionsDiscarding(on socket: AsyncSocket) async throws {
         try await withThrowingDiscardingTaskGroup { [logger] group in
@@ -184,7 +176,6 @@ public final actor HTTPServer {
         }
         throw SocketError.disconnected
     }
-#endif
 
     @available(macOS, deprecated: 17.0, renamed: "listenForConnectionsDiscarding(on:)")
     @available(iOS, deprecated: 17.0, renamed: "listenForConnectionsDiscarding(on:)")

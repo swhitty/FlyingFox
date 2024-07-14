@@ -520,7 +520,6 @@ final class HTTPRouteTests: XCTestCase {
         )
     }
 
-#if compiler(>=5.9)
     func testPathParameters() {
         // given
         let route = HTTPRoute("GET /mock/:id/hello/:zonk")
@@ -542,7 +541,6 @@ final class HTTPRouteTests: XCTestCase {
             try route.extractParameterValues(of: (Int, String, String).self, from: request)
         )
     }
-#endif
 
     func testDescription() {
         XCTAssertEqual(

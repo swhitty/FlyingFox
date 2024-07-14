@@ -44,8 +44,6 @@ public struct RoutedHTTPHandler: HTTPHandler, Sendable {
         append((route, ClosureHTTPHandler(handler)))
     }
 
-#if compiler(>=5.9)
-
     public mutating func appendRoute<each P: HTTPRouteParameterValue>(
         _ route: HTTPRoute,
         handler: @Sendable @escaping (HTTPRequest, repeat each P) async throws -> HTTPResponse
@@ -67,7 +65,6 @@ public struct RoutedHTTPHandler: HTTPHandler, Sendable {
         }
         append((route, closure))
     }
-#endif
 
     public mutating func insertRoute(_ route: HTTPRoute, 
                                      at index: Index,

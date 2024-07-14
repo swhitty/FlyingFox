@@ -138,7 +138,6 @@ public extension HTTPRoute {
     }
 }
 
-#if compiler(>=5.9)
 extension HTTPRoute {
 
     func extractParameterValues<each P: HTTPRouteParameterValue>(
@@ -164,4 +163,3 @@ extension HTTPRoute {
         return try P(parameter: parameters[index])
     }
 }
-#endif

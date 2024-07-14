@@ -44,7 +44,6 @@ extension HTTPResponse {
                      body: body)
     }
 
-#if compiler(>=5.9)
     static func makeChunked(version: HTTPVersion = .http11,
                             statusCode: HTTPStatusCode  = .ok,
                             headers: [HTTPHeader: String] = [:],
@@ -58,7 +57,6 @@ extension HTTPResponse {
             body: HTTPBodySequence(from: consuming, suggestedBufferSize: chunkSize)
         )
     }
-#endif
 
     static func make(version: HTTPVersion = .http11,
                      statusCode: HTTPStatusCode  = .ok,

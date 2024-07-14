@@ -216,7 +216,7 @@ private actor Waiter<T, E: Error> {
     private func safeAssertIsolated() {
 #if compiler(>=5.10)
         assertIsolated()
-#elseif compiler(>=5.9)
+#else
         if #available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *) {
             assertIsolated()
         }
