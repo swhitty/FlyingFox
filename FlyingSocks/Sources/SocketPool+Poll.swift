@@ -29,6 +29,9 @@
 //  SOFTWARE.
 //
 
+#if canImport(WinSDK)
+import WinSDK.WinSock2
+#endif
 import Foundation
 
 public extension AsyncSocketPool where Self == SocketPool<Poll> {
