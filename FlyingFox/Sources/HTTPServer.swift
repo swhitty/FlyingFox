@@ -158,14 +158,14 @@ public final actor HTTPServer {
     @TaskLocal static var preferConnectionsDiscarding = true
 
     private func listenForConnections(on socket: AsyncSocket) async throws {
-        if #available(macOS 14.0, iOS 17.0, tvOS 17.0, *), Self.preferConnectionsDiscarding {
+        if #available(macOS 14.0, iOS 17.0, tvOS 17.0, watchOS 10.0, *), Self.preferConnectionsDiscarding {
             try await listenForConnectionsDiscarding(on: socket)
         } else {
             try await listenForConnectionsFallback(on: socket)
         }
     }
 
-    @available(macOS 14.0, iOS 17.0, tvOS 17.0, *)
+    @available(macOS 14.0, iOS 17.0, tvOS 17.0, watchOS 10.0, *)
     private func listenForConnectionsDiscarding(on socket: AsyncSocket) async throws {
         try await withThrowingDiscardingTaskGroup { [logger] group in
             for try await socket in socket.sockets {
