@@ -30,7 +30,7 @@
 //
 
 @testable import FlyingFox
-import struct FlyingSocks.AsyncDataSequence
+import FlyingSocks
 import XCTest
 
 final class HTTPBodySequenceTests: XCTestCase {

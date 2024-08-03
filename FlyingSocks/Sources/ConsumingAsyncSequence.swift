@@ -29,30 +29,30 @@
 //  SOFTWARE.
 //
 
-import FlyingSocks
-
-final class ConsumingAsyncSequence<Element>: AsyncBufferedSequence, AsyncBufferedIteratorProtocol {
+package final class ConsumingAsyncSequence<Element>: AsyncBufferedSequence, AsyncBufferedIteratorProtocol {
 
     private var iterator: AnySequence<Element>.Iterator
-    private(set) var index: Int = 0
+    package private(set) var index: Int = 0
 
-    init<T: Sequence>(_ sequence: T) where T.Element == Element {
+    package init<T: Sequence>(_ sequence: T) where T.Element == Element {
         self.iterator = AnySequence(sequence).makeIterator()
     }
 
-    func makeAsyncIterator() -> ConsumingAsyncSequence<Element> { self }
+    package func makeAsyncIterator() -> ConsumingAsyncSequence<Element> { self }
 
-    func next() async throws -> Element? {
+    package func next() async throws -> Element? {
         iterator.next()
     }
 
-    func nextBuffer(suggested count: Int) async throws -> [Element]? {
+    package func nextBuffer(suggested count: Int) async throws -> [Element]? {
         var buffer = [Element]()
         while buffer.count < count,
               let element = iterator.next() {
             buffer.append(element)
         }
+
         index += buffer.count
+
         return buffer.count > 0 ? buffer : nil
     }
 }

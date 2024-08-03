@@ -30,6 +30,7 @@
 //
 
 @testable import FlyingFox
+import FlyingSocks
 import XCTest
 
 final class HTTPResponseTests: XCTestCase {

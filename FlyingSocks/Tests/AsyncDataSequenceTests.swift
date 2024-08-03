@@ -102,6 +102,11 @@ final class AsyncDataSequenceTests: XCTestCase {
             Data([0x0, 0x1, 0x2])
         )
 
+        await AsyncAssertEqual(
+            try await iterator.next(),
+            Data([0x3])
+        )
+
         await AsyncAssertThrowsError(
             try await iterator.next()
         )
@@ -264,33 +269,5 @@ extension AsyncDataSequence {
             throw SocketError.disconnected
         }
         return element
-    }
-}
-
-private final class ConsumingAsyncSequence<Element>: AsyncBufferedSequence, AsyncBufferedIteratorProtocol {
-
-    private var iterator: AnySequence<Element>.Iterator
-    private(set) var index: Int = 0
-
-    init<T: Sequence>(_ sequence: T) where T.Element == Element {
-        self.iterator = AnySequence(sequence).makeIterator()
-    }
-
-    func makeAsyncIterator() -> ConsumingAsyncSequence<Element> { self }
-
-    func next() async throws -> Element? {
-        iterator.next()
-    }
-
-    func nextBuffer(suggested count: Int) async throws -> [Element]? {
-        var buffer = [Element]()
-        while buffer.count < count,
-              let element = iterator.next() {
-            buffer.append(element)
-        }
-
-        index += buffer.count
-
-        return buffer.count == count ? buffer : nil
     }
 }
