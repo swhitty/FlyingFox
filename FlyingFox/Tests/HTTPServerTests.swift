@@ -461,6 +461,24 @@ final class HTTPServerTests: XCTestCase {
             "Hello 🍟"
         )
     }
+
+    func testRequests_IncludeRemoteAddress() async throws {
+        let server = HTTPServer.make()
+
+        await server.appendRoute("/echo") { req in
+            HTTPResponse.make(statusCode: .ok, body: (req.remoteIPAddress ?? "nil").data(using: .utf8)!)
+        }
+
+        let port = try await startServerWithPort(server)
+
+        let socket = try await AsyncSocket.connected(to: .inet(ip4: "127.0.0.1", port: port))
+        defer { try? socket.close() }
+
+        try await socket.writeRequest(.make("/echo"))
+        await AsyncAssertFalse(
+            try await socket.readResponse().bodyString == "nil"
+        )
+    }
 }
 
 extension HTTPServer {
