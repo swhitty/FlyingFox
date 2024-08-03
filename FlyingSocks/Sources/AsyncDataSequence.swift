@@ -31,14 +31,13 @@
 
 import Foundation
 
-@_spi(Private)
 /// AsyncSequence that can only be iterated one-time-only. Suitable for large data sizes.
-public struct AsyncDataSequence: AsyncSequence, Sendable {
-    public typealias Element = Data
+package struct AsyncDataSequence: AsyncSequence, Sendable {
+    package typealias Element = Data
 
     private let loader: DataLoader
 
-    public init(from bytes: some AsyncBufferedSequence<UInt8>, count: Int, chunkSize: Int) {
+    package init(from bytes: some AsyncBufferedSequence<UInt8>, count: Int, chunkSize: Int) {
         self.loader = DataLoader(
             count: count,
             chunkSize: chunkSize,
@@ -46,7 +45,7 @@ public struct AsyncDataSequence: AsyncSequence, Sendable {
         )
     }
 
-    public init(file handle: FileHandle, count: Int, chunkSize: Int) {
+    package init(file handle: FileHandle, count: Int, chunkSize: Int) {
         self.loader = DataLoader(
             count: count,
             chunkSize: chunkSize,
@@ -54,14 +53,14 @@ public struct AsyncDataSequence: AsyncSequence, Sendable {
         )
     }
 
-    public var count: Int { loader.count }
+    package var count: Int { loader.count }
 
-    public func makeAsyncIterator() -> Iterator {
+    package func makeAsyncIterator() -> Iterator {
         Iterator(loader: loader)
     }
 
-    public struct Iterator: AsyncIteratorProtocol {
-        public typealias Element = Data
+    package struct Iterator: AsyncIteratorProtocol {
+        package typealias Element = Data
 
         private let loader: DataLoader
 
@@ -71,7 +70,7 @@ public struct AsyncDataSequence: AsyncSequence, Sendable {
             self.loader = loader
         }
 
-        public mutating func next() async throws -> Data? {
+        package mutating func next() async throws -> Data? {
             let data = try await loader.nextData(from: index)
             if let data = data {
                 index += data.count
@@ -80,12 +79,12 @@ public struct AsyncDataSequence: AsyncSequence, Sendable {
         }
     }
 
-    public func flushIfNeeded() async throws {
+    package func flushIfNeeded() async throws {
         try await loader.flushIfNeeded()
     }
 }
 
-public extension AsyncDataSequence {
+package extension AsyncDataSequence {
 
     static func size(of file: URL) throws -> Int {
         let att = try FileManager.default.attributesOfItem(atPath: file.path)
@@ -96,7 +95,7 @@ public extension AsyncDataSequence {
     }
 
     struct FileSizeError: LocalizedError {
-        public var errorDescription: String? = "File size not found"
+        package var errorDescription: String? = "File size not found"
     }
 }
 
@@ -147,7 +146,7 @@ private extension AsyncDataSequence {
             return Data(buffer)
         }
 
-        public func flushIfNeeded() async throws {
+        package func flushIfNeeded() async throws {
             switch state {
             case .ready(index: var index):
                 while let data = try await nextData(from: index) {

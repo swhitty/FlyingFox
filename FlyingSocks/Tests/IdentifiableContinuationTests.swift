@@ -29,9 +29,7 @@
 //  SOFTWARE.
 //
 
-@_spi(Private) import struct FlyingSocks.IdentifiableContinuation
-@_spi(Private) import func FlyingSocks.withIdentifiableContinuation
-@_spi(Private) import func FlyingSocks.withIdentifiableThrowingContinuation
+import FlyingSocks
 import XCTest
 
 final class IdentifiableContinuationAsyncTests: XCTestCase {

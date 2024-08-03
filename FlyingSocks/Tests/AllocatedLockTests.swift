@@ -29,7 +29,7 @@
 //  SOFTWARE.
 //
 
-@_spi(Private) import struct FlyingSocks.AllocatedLock
+import FlyingSocks
 import XCTest
 
 final class AllocatedLockTests: XCTestCase {

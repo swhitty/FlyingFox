@@ -31,8 +31,6 @@
 
 import Foundation
 import FlyingSocks
-@_spi(Private) import struct FlyingSocks.AsyncDataSequence
-@_spi(Private) import struct FlyingSocks.AsyncBufferedCollection
 
 public struct HTTPBodySequence: Sendable, AsyncSequence {
     public typealias Element = Data

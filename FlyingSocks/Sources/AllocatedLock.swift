@@ -31,26 +31,24 @@
 
 // Backports the Swift interface around os_unfair_lock_t available in recent Darwin platforms
 //
-@_spi(Private)
-public struct AllocatedLock<State>: @unchecked Sendable {
+package struct AllocatedLock<State>: @unchecked Sendable {
 
     @usableFromInline
     let storage: Storage
 
-    public init(initialState: State) {
+    package init(initialState: State) {
         self.storage = Storage(initialState: initialState)
     }
 
     @inlinable
-    public func withLock<R>(_ body: @Sendable (inout State) throws -> R) rethrows -> R where R: Sendable {
+    package func withLock<R>(_ body: @Sendable (inout State) throws -> R) rethrows -> R where R: Sendable {
         storage.lock()
         defer { storage.unlock() }
         return try body(&storage.state)
     }
 }
 
-@_spi(Private)
-public extension AllocatedLock where State == Void {
+package extension AllocatedLock where State == Void {
 
     init() {
         self.storage = Storage(initialState: ())

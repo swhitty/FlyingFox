@@ -31,21 +31,20 @@
 
 import Foundation
 
-@_spi(Private)
-public struct AsyncBufferedCollection<C: Collection>: AsyncBufferedSequence {
-    public typealias Element = C.Element
+package struct AsyncBufferedCollection<C: Collection>: AsyncBufferedSequence {
+    package typealias Element = C.Element
 
     private let collection: C
 
-    public init(_ collection: C) {
+    package init(_ collection: C) {
         self.collection = collection
     }
 
-    public func makeAsyncIterator() -> Iterator {
+    package func makeAsyncIterator() -> Iterator {
         Iterator(collection: collection)
     }
 
-    public struct Iterator: AsyncBufferedIteratorProtocol {
+    package struct Iterator: AsyncBufferedIteratorProtocol {
 
         private let collection: C
         private var index: C.Index
@@ -55,14 +54,14 @@ public struct AsyncBufferedCollection<C: Collection>: AsyncBufferedSequence {
             self.index = collection.startIndex
         }
 
-        public mutating func next() async throws -> C.Element? {
+        package mutating func next() async throws -> C.Element? {
             guard index < collection.endIndex else { return nil }
             let element = collection[index]
             index = collection.index(after: index)
             return element
         }
 
-        public mutating func nextBuffer(suggested count: Int) async -> C.SubSequence? {
+        package mutating func nextBuffer(suggested count: Int) async -> C.SubSequence? {
             guard index < collection.endIndex else { return nil }
             let endIndex = collection.index(index, offsetBy: count, limitedBy: collection.endIndex) ?? collection.endIndex
             let buffer = collection[index..<endIndex]
@@ -75,7 +74,7 @@ public struct AsyncBufferedCollection<C: Collection>: AsyncBufferedSequence {
 extension AsyncBufferedCollection: Sendable where C: Sendable { }
 
 
-public extension AsyncBufferedCollection<Data> {
+package extension AsyncBufferedCollection<Data> {
     init(bytes: some Sequence<UInt8>) {
         self.init(Data(bytes))
     }

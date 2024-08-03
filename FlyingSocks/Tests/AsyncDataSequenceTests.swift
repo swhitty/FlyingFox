@@ -30,7 +30,6 @@
 //
 
 import FlyingSocks
-@_spi(Private) import struct FlyingSocks.AsyncDataSequence
 import XCTest
 
 final class AsyncDataSequenceTests: XCTestCase {

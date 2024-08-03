@@ -30,7 +30,7 @@
 //
 
 import Foundation
-@_spi(Private) import struct FlyingSocks.AllocatedLock
+import FlyingSocks
 
 #if canImport(FoundationNetworking)
 import FoundationNetworking
