@@ -180,4 +180,121 @@ final class SocketAddressTests: XCTestCase {
             XCTAssertEqual($0, .unsupportedAddress)
         }
     }
+
+    func testSockaddrInToStorageConversion() throws {
+        var addrIn = sockaddr_in()
+        addrIn.sin_family = sa_family_t(AF_INET)
+        addrIn.sin_port = UInt16(8080).bigEndian
+        addrIn.sin_addr = try Socket.makeInAddr(fromIP4: "192.168.1.1")
+
+        let storage = addrIn.makeStorage()
+
+        XCTAssertEqual(storage.ss_family, sa_family_t(AF_INET))
+        withUnsafeBytes(of: addrIn) { addrInPtr in
+            let storagePtr = addrInPtr.bindMemory(to: sockaddr_storage.self)
+            XCTAssertEqual(storagePtr.baseAddress!.pointee.ss_family, sa_family_t(AF_INET))
+            let sockaddrInPtr = addrInPtr.bindMemory(to: sockaddr_in.self)
+            XCTAssertEqual(sockaddrInPtr.baseAddress!.pointee.sin_port, addrIn.sin_port)
+            XCTAssertEqual(sockaddrInPtr.baseAddress!.pointee.sin_addr.s_addr, addrIn.sin_addr.s_addr)
+        }
+    }
+
+    func testSockaddrIn6ToStorageConversion() throws {
+        var addrIn6 = sockaddr_in6()
+        addrIn6.sin6_family = sa_family_t(AF_INET6)
+        addrIn6.sin6_port = UInt16(9090).bigEndian
+        addrIn6.sin6_addr = try Socket.makeInAddr(fromIP6: "fe80::1")
+
+        let storage = addrIn6.makeStorage()
+
+        XCTAssertEqual(storage.ss_family, sa_family_t(AF_INET6))
+        XCTAssertEqual(storage.ss_family, addrIn6.sin6_family)
+
+        withUnsafeBytes(of: addrIn6) { addrIn6Ptr in
+            let storagePtr = addrIn6Ptr.bindMemory(to: sockaddr_storage.self)
+            XCTAssertEqual(storagePtr.baseAddress!.pointee.ss_family, sa_family_t(AF_INET6))
+            let sockaddrIn6Ptr = addrIn6Ptr.bindMemory(to: sockaddr_in6.self)
+            XCTAssertEqual(sockaddrIn6Ptr.baseAddress!.pointee.sin6_port, addrIn6.sin6_port)
+            let addrArray = withUnsafeBytes(of: sockaddrIn6Ptr.baseAddress!.pointee.sin6_addr) {
+                Array($0.bindMemory(to: UInt8.self))
+            }
+            let expectedArray = withUnsafeBytes(of: addrIn6.sin6_addr) {
+                Array($0.bindMemory(to: UInt8.self))
+            }
+            XCTAssertEqual(addrArray, expectedArray)
+        }
+    }
+
+    func testSockaddrUnToStorageConversion() {
+        var addrUn = sockaddr_un()
+        addrUn.sun_family = sa_family_t(AF_UNIX)
+        let path = "/tmp/socket"
+        _ = path.withCString { pathPtr in
+            memcpy(&addrUn.sun_path, pathPtr, path.count + 1)
+        }
+
+        let storage = addrUn.makeStorage()
+
+        XCTAssertEqual(storage.ss_family, sa_family_t(AF_UNIX))
+        let addrUnBytes = withUnsafeBytes(of: addrUn) { Data($0) }
+        let storageBytes = withUnsafeBytes(of: storage) { Data($0) }
+        let storageSockaddrUnBytes = storageBytes[0..<MemoryLayout<sockaddr_un>.size]
+        XCTAssertEqual(addrUnBytes, storageSockaddrUnBytes)
+    }
+
+    func testInvalidAddressFamily() {
+        var storage = sockaddr_storage()
+        storage.ss_family = sa_family_t(AF_APPLETALK) // Invalid for our purpose
+
+        XCTAssertThrowsError(try sockaddr_in.make(from: storage)) { error in
+            XCTAssertEqual(error as? SocketError, SocketError.unsupportedAddress)
+        }
+
+        XCTAssertThrowsError(try sockaddr_in6.make(from: storage)) { error in
+            XCTAssertEqual(error as? SocketError, SocketError.unsupportedAddress)
+        }
+
+        XCTAssertThrowsError(try sockaddr_un.make(from: storage)) { error in
+            XCTAssertEqual(error as? SocketError, SocketError.unsupportedAddress)
+        }
+    }
+
+    func testMaximumPathLengthForUnixDomainSocket() {
+        var addrUn = sockaddr_un()
+        addrUn.sun_family = sa_family_t(AF_UNIX)
+        let maxPathLength = MemoryLayout<sockaddr_un>.size - MemoryLayout<sa_family_t>.size - 1
+        let maxPath = String(repeating: "a", count: maxPathLength)
+        _ = maxPath.withCString { pathPtr in
+            memcpy(&addrUn.sun_path, pathPtr, maxPath.count + 1)
+        }
+
+        let storage = addrUn.makeStorage()
+
+        XCTAssertEqual(storage.ss_family, sa_family_t(AF_UNIX))
+        let addrUnBytes = withUnsafeBytes(of: addrUn) { Data($0) }
+        let storageBytes = withUnsafeBytes(of: storage) { Data($0) }
+        let storageAddrUnBytes = storageBytes.prefix(MemoryLayout<sockaddr_un>.size)
+        XCTAssertEqual(addrUnBytes, storageAddrUnBytes)
+    }
+
+    func testMemoryBoundsInMakeStorage() {
+        var addrIn = sockaddr_in()
+        addrIn.sin_family = sa_family_t(AF_INET)
+        
+        let storage = addrIn.makeStorage()
+
+        let addrSize = MemoryLayout<sockaddr_in>.size
+        let storageSize = MemoryLayout<sockaddr_storage>.size
+        XCTAssertLessThanOrEqual(addrSize, storageSize)
+
+        withUnsafeBytes(of: addrIn) { addrInPtr in
+            let addrInBytes = addrInPtr.bindMemory(to: UInt8.self).baseAddress!
+            withUnsafeBytes(of: storage) { storagePtr in
+                let storageBytes = storagePtr.bindMemory(to: UInt8.self).baseAddress!
+                for i in 0..<addrSize {
+                    XCTAssertEqual(addrInBytes[i], storageBytes[i], "Mismatch at byte \(i)")
+                }
+            }
+        }
+    }
 }
