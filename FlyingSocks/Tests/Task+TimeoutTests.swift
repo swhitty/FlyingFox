@@ -144,8 +144,6 @@ final class TaskTimeoutTests: XCTestCase {
     }
 }
 
-@_spi(Private) import func FlyingSocks.withThrowingTimeout
-
 extension Task where Success: Sendable, Failure == any Error {
 
     // Start a new Task with a timeout.

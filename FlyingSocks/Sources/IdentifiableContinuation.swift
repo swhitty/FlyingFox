@@ -45,8 +45,7 @@
 ///   - handler: Cancellation closure executed when the current Task is cancelled.  Handler is always called _after_ the body closure is compeled.
 /// - Returns: The value continuation is resumed with.
 @_unsafeInheritExecutor
-@_spi(Private)
-public func withIdentifiableContinuation<T>(
+package func withIdentifiableContinuation<T>(
   isolation: isolated some Actor,
   function: String = #function,
   body: (IdentifiableContinuation<T, Never>) -> Void,
@@ -94,8 +93,7 @@ public func withIdentifiableContinuation<T>(
 ///   - handler: Cancellation closure executed when the current Task is cancelled.  Handler is always called _after_ the body closure is compeled.
 /// - Returns: The value continuation is resumed with.
 @_unsafeInheritExecutor
-@_spi(Private)
-public func withIdentifiableThrowingContinuation<T>(
+package func withIdentifiableThrowingContinuation<T>(
   isolation: isolated some Actor,
   function: String = #function,
   body: (IdentifiableContinuation<T, any Error>) -> Void,
@@ -127,20 +125,19 @@ public func withIdentifiableThrowingContinuation<T>(
     }
 }
 
-@_spi(Private)
-public struct IdentifiableContinuation<T, E>: Sendable, Identifiable where E: Error {
+package struct IdentifiableContinuation<T, E>: Sendable, Identifiable where E: Error {
 
-    public let id: ID
+    package let id: ID
 
-    public final class ID: Hashable, Sendable {
+    package final class ID: Hashable, Sendable {
 
         init() { }
 
-        public func hash(into hasher: inout Hasher) {
+        package func hash(into hasher: inout Hasher) {
             ObjectIdentifier(self).hash(into: &hasher)
         }
 
-        public static func == (lhs: IdentifiableContinuation<T, E>.ID, rhs: IdentifiableContinuation<T, E>.ID) -> Bool {
+        package static func == (lhs: IdentifiableContinuation<T, E>.ID, rhs: IdentifiableContinuation<T, E>.ID) -> Bool {
             lhs === rhs
         }
     }
@@ -152,19 +149,19 @@ public struct IdentifiableContinuation<T, E>: Sendable, Identifiable where E: Er
 
     private let continuation: CheckedContinuation<T, E>
 
-    public func resume(returning value: T) {
+    package func resume(returning value: T) {
         continuation.resume(returning: value)
     }
 
-    public func resume(throwing error: E) {
+    package func resume(throwing error: E) {
         continuation.resume(throwing: error)
     }
 
-    public func resume(with result: Result<T, E>) {
+    package func resume(with result: Result<T, E>) {
         continuation.resume(with: result)
     }
 
-    public func resume() where T == () {
+    package func resume() where T == () {
         continuation.resume()
     }
 }

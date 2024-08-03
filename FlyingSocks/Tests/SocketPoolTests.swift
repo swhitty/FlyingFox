@@ -30,8 +30,6 @@
 //
 
 @testable import FlyingSocks
-@_spi(Private) import struct FlyingSocks.IdentifiableContinuation
-@_spi(Private) import func FlyingSocks.withIdentifiableThrowingContinuation
 import XCTest
 
 final class SocketPoolTests: XCTestCase {

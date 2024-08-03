@@ -34,6 +34,8 @@ import FlyingSocks
 @_spi(Private)
 public struct _HTTPClient {
 
+    public init() { }
+
     public func sendHTTPRequest(_ request: HTTPRequest, to address: some SocketAddress) async throws -> HTTPResponse {
         let socket = try await AsyncSocket.connected(to: address)
         try await socket.writeRequest(request)
@@ -45,8 +47,7 @@ public struct _HTTPClient {
     }
 }
 
-@_spi(Private)
-public extension AsyncSocket {
+package extension AsyncSocket {
     func writeRequest(_ request: HTTPRequest) async throws {
         try await write(HTTPEncoder.encodeRequest(request))
     }

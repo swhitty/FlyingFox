@@ -29,7 +29,6 @@
 //  SOFTWARE.
 //
 
-@_spi(Private) import struct FlyingSocks.AsyncBufferedCollection
 import FlyingSocks
 import Foundation
 import XCTest

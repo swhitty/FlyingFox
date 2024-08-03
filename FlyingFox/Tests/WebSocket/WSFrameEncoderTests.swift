@@ -29,7 +29,7 @@
 //  SOFTWARE.
 //
 
-@_spi(Private) @testable import FlyingFox
+@testable import FlyingFox
 @testable import FlyingSocks
 import Foundation
 import XCTest
