@@ -43,8 +43,10 @@ struct HTTPConnection: Sendable {
     init(socket: AsyncSocket, logger: some Logging) {
         self.socket = socket
         self.logger = logger
-        self.hostname = HTTPConnection.makeIdentifer(from: socket.socket)
-        self.requests = HTTPRequestSequence(bytes: socket.bytes)
+
+        let (peer, identifier) = HTTPConnection.makeIdentifer(from: socket.socket)
+        self.hostname = identifier
+        self.requests = HTTPRequestSequence(bytes: socket.bytes, remoteAddress: peer)
     }
 
     func complete() async {
@@ -95,12 +97,14 @@ extension HTTPConnection: Hashable {
 actor HTTPRequestSequence<S: AsyncBufferedSequence & Sendable>: AsyncSequence, AsyncIteratorProtocol, @unchecked Sendable where S.Element == UInt8 {
     typealias Element = HTTPRequest
     private let bytes: S
+    private let remoteAddress: HTTPRequest.Address?
 
     private var isComplete: Bool
     private var task: Task<Element, any Error>?
 
-    init(bytes: S) {
+    init(bytes: S, remoteAddress: Socket.Address?) {
         self.bytes = bytes
+        self.remoteAddress = remoteAddress.map(HTTPRequest.Address.make)
         self.isComplete = false
     }
 
@@ -118,7 +122,8 @@ actor HTTPRequestSequence<S: AsyncBufferedSequence & Sendable>: AsyncSequence, A
             let task = Task { try await HTTPDecoder.decodeRequest(from: bytes) }
             self.task = task
             defer { self.task = nil }
-            let request = try await task.getValue(cancelling: .whenParentIsCancelled)
+            var request = try await task.getValue(cancelling: .whenParentIsCancelled)
+            request.remoteAddress = remoteAddress
             if !request.shouldKeepAlive {
                 isComplete = true
             }
@@ -133,15 +138,15 @@ actor HTTPRequestSequence<S: AsyncBufferedSequence & Sendable>: AsyncSequence, A
 
 extension HTTPConnection {
 
-    static func makeIdentifer(from socket: Socket) -> String {
+    static func makeIdentifer(from socket: Socket) -> (address: Socket.Address?, identifier: String) {
         guard let peer = try? socket.remotePeer() else {
-            return "unknown"
+            return (nil, "unknown")
         }
 
         if case .unix = peer, let unixAddress = try? socket.sockname() {
-            return makeIdentifer(from: unixAddress)
+            return (peer, makeIdentifer(from: unixAddress))
         } else {
-            return makeIdentifer(from: peer)
+            return (peer, makeIdentifer(from: peer))
         }
     }
 

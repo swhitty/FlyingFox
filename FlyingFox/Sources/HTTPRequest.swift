@@ -38,6 +38,7 @@ public struct HTTPRequest: Sendable {
     public var query: [QueryItem]
     public var headers: [HTTPHeader: String]
     public var bodySequence: HTTPBodySequence
+    public var remoteAddress: Address?
 
     @TaskLocal static var matchedRoute: HTTPRoute?
 
@@ -62,13 +63,15 @@ public struct HTTPRequest: Sendable {
                 path: String,
                 query: [QueryItem],
                 headers: [HTTPHeader: String],
-                body: HTTPBodySequence) {
+                body: HTTPBodySequence,
+                remoteAddress: Address? = nil) {
         self.method = method
         self.version = version
         self.path = path
         self.query = query
         self.headers = headers
         self.bodySequence = body
+        self.remoteAddress = remoteAddress
     }
 
     public init(method: HTTPMethod,
@@ -83,6 +86,7 @@ public struct HTTPRequest: Sendable {
         self.query = query
         self.headers = headers
         self.bodySequence = HTTPBodySequence(data: body)
+        self.remoteAddress = nil
     }
 }
 

@@ -1,9 +1,9 @@
 //
-//  HTTPRequest+Mock.swift
+//  HTTPRequest+Adress.swift
 //  FlyingFox
 //
-//  Created by Simon Whitty on 18/02/2022.
-//  Copyright © 2022 Simon Whitty. All rights reserved.
+//  Created by Simon Whitty on 03/08/2024.
+//  Copyright © 2024 Simon Whitty. All rights reserved.
 //
 //  Distributed under the permissive MIT license
 //  Get the latest version from here:
@@ -29,33 +29,42 @@
 //  SOFTWARE.
 //
 
-@testable import FlyingFox
-import Foundation
 
-extension HTTPRequest {
-    static func make(method: HTTPMethod = .GET,
-                     version: HTTPVersion = .http11,
-                     path: String = "/",
-                     query: [QueryItem] = [],
-                     headers: [HTTPHeader: String] = [:],
-                     body: Data = Data(),
-                     remoteAddress: Address? = nil) -> Self {
-        HTTPRequest(method: method,
-                    version: version,
-                    path: path,
-                    query: query,
-                    headers: headers,
-                    body:  HTTPBodySequence(data: body),
-                    remoteAddress: remoteAddress)
+import Foundation
+import FlyingSocks
+
+public extension HTTPRequest {
+
+    enum Address: Sendable, Hashable {
+        case ip4(String, port: UInt16)
+        case ip6(String, port: UInt16)
+        case unix(String)
     }
 
-    static func make(method: HTTPMethod = .GET, _ url: String, headers: [HTTPHeader: String] = [:]) -> Self {
-        let (path, query) = HTTPDecoder.readComponents(from: url.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!)
-        return HTTPRequest.make(
-            method: method,
-            path: path,
-            query: query,
-            headers: headers
-        )
+    var remoteIPAddress: String? {
+        if let forwarded = headers[.xForwardedFor]?.split(separator: ",").first {
+            return String(forwarded)
+        }
+        switch remoteAddress {
+        case let .ip4(ip, port: _),
+             let .ip6(ip, port: _):
+            return ip
+        case .unix, .none:
+            return nil
+        }
+    }
+}
+
+public extension HTTPRequest.Address {
+
+    static func make(from address: Socket.Address) -> Self {
+        switch address {
+        case let .ip4(ip, port: port):
+            return .ip4(ip, port: port)
+        case let .ip6(ip, port: port):
+            return .ip6(ip, port: port)
+        case let .unix(path):
+            return .unix(path)
+        }
     }
 }
