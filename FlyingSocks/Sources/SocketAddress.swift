@@ -116,12 +116,20 @@ public extension SocketAddress {
     }
 
     func makeStorage() -> sockaddr_storage {
+        var storage = sockaddr_storage()
         var addr = self
-        return withUnsafePointer(to: &addr) {
-            $0.withMemoryRebound(to: sockaddr_storage.self, capacity: 1) {
-                $0.pointee
+        let addrSize = MemoryLayout<Self>.size
+        let storageSize = MemoryLayout<sockaddr_storage>.size
+
+        withUnsafePointer(to: &addr) { addrPtr in
+            let addrRawPtr = UnsafeRawPointer(addrPtr)
+            withUnsafeMutablePointer(to: &storage) { storagePtr in
+                let storageRawPtr = UnsafeMutableRawPointer(storagePtr)
+                let copySize = min(addrSize, storageSize)
+                storageRawPtr.copyMemory(from: addrRawPtr, byteCount: copySize)
             }
         }
+        return storage
     }
 }
 
