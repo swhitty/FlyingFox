@@ -109,19 +109,6 @@ public struct Socket: Sendable, Hashable {
         }
     }
 
-    public func bind(to storage: sockaddr_storage) throws {
-        switch Int32(storage.ss_family) {
-        case AF_INET:
-            try bind(to: sockaddr_in.make(from: storage))
-        case AF_INET6:
-            try bind(to: sockaddr_in6.make(from: storage))
-        case AF_UNIX:
-            try bind(to: sockaddr_un.make(from: storage))
-        default:
-            throw SocketError.unsupportedAddress
-        }
-    }
-
     public func listen(maxPendingConnection: Int32 = SOMAXCONN) throws {
         if Socket.listen(file.rawValue, maxPendingConnection) == -1 {
             let error = SocketError.makeFailed("Listen")

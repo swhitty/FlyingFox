@@ -37,21 +37,25 @@ import WinSDK.WinSock2
 
 public final actor HTTPServer {
 
-    let pool: any AsyncSocketPool
-    private let address: sockaddr_storage
-    private let timeout: TimeInterval
-    private let logger: any Logging
+    private let config: Configuration
     private var handlers: RoutedHTTPHandler
+
+    public init(config: Configuration, handler: (any HTTPHandler)) {
+        self.config = config
+        self.handlers = Self.makeRootHandler(to: handler)
+    }
 
     public init(address: some SocketAddress,
                 timeout: TimeInterval = 15,
                 pool: some AsyncSocketPool = defaultPool(),
                 logger: any Logging = defaultLogger(),
                 handler: (any HTTPHandler)? = nil) {
-        self.address = address.makeStorage()
-        self.timeout = timeout
-        self.pool = pool
-        self.logger = logger
+        self.config = Configuration(
+            address: address,
+            timeout: timeout,
+            pool: pool,
+            logger: logger
+        )
         self.handlers = Self.makeRootHandler(to: handler)
     }
 
@@ -89,7 +93,7 @@ public final actor HTTPServer {
         defer { state = nil }
         do {
             let socket = try await preparePoolAndSocket()
-            let task = Task { try await start(on: socket, pool: pool) }
+            let task = Task { try await start(on: socket, pool: config.pool) }
             state = (socket: socket, task: task)
             try await task.getValue(cancelling: .whenParentIsCancelled)
         } catch {
@@ -103,7 +107,7 @@ public final actor HTTPServer {
 
     func preparePoolAndSocket() async throws -> Socket {
         do {
-            try await pool.prepare()
+            try await config.pool.prepare()
             return try makeSocketAndListen()
         } catch {
             logger.logCritical("server error: \(error.localizedDescription)")
@@ -115,6 +119,8 @@ public final actor HTTPServer {
     private(set) var state: (socket: Socket, task: Task<Void, any Error>)? {
         didSet { isListeningDidUpdate(from: oldValue != nil ) }
     }
+
+    private var logger: any Logging { config.logger }
 
     /// Stops the server by closing the listening socket and waiting for all connections to disconnect.
     /// - Parameter timeout: Seconds to allow for connections to close before server task is cancelled.
@@ -129,12 +135,12 @@ public final actor HTTPServer {
     }
 
     func makeSocketAndListen() throws -> Socket {
-        let socket = try Socket(domain: Int32(address.ss_family))
+        let socket = try Socket(domain: Int32(type(of: config.address).family))
         try socket.setValue(true, for: .localAddressReuse)
         #if canImport(Darwin)
         try socket.setValue(true, for: .noSIGPIPE)
         #endif
-        try socket.bind(to: address)
+        try socket.bind(to: config.address)
         try socket.listen()
         logger.logListening(on: socket)
         return socket
@@ -211,7 +217,7 @@ public final actor HTTPServer {
     }
 
     func handleRequest(_ request: HTTPRequest) async -> HTTPResponse {
-        var response = await handleRequest(request, timeout: timeout)
+        var response = await handleRequest(request, timeout: config.timeout)
         if request.shouldKeepAlive {
             response.headers[.connection] = request.headers[.connection]
         }

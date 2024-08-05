@@ -83,7 +83,7 @@ public struct AsyncSocket: Sendable {
                                  pool: some AsyncSocketPool,
                                  timeout: TimeInterval = 5) async throws -> Self {
         try await withThrowingTimeout(seconds: timeout) {
-            let socket = try Socket(domain: Int32(address.makeStorage().ss_family), type: Socket.stream)
+            let socket = try Socket(domain: Int32(type(of: address).family), type: Socket.stream)
             let asyncSocket = try AsyncSocket(socket: socket, pool: pool)
             try await asyncSocket.connect(to: address)
             return asyncSocket

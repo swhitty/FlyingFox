@@ -175,7 +175,7 @@ final class SocketTests: XCTestCase {
     func testSocketBind_ToINET() throws {
         let socket = try Socket(domain: AF_INET, type: Socket.stream)
         try socket.setValue(true, for: .localAddressReuse)
-        let address = Socket.makeAddressINET(port:5050).makeStorage()
+        let address = Socket.makeAddressINET(port:5050)
         XCTAssertNoThrow(
             try socket.bind(to: address)
         )
@@ -191,21 +191,9 @@ final class SocketTests: XCTestCase {
         )
     }
 
-    func testSocketBind_ToInvalidStorage_ThrowsUnsupported() {
-        let socket = Socket(file: -1)
-        var addr = Socket.makeAddressUnix(path: "/var/fox/xyz").makeStorage()
-        addr.ss_family = sa_family_t(AF_IPX)
-        XCTAssertThrowsError(
-            try socket.bind(to: addr),
-            of: SocketError.self
-        ) {
-            XCTAssertEqual($0, .unsupportedAddress)
-        }
-    }
-
     func testSocketBind_ToStorage_ThrowsError_WhenInvalid() {
         let socket = Socket(file: -1)
-        let address = Socket.makeAddressINET6(port: 8080).makeStorage()
+        let address = Socket.makeAddressINET6(port: 8080)
         XCTAssertThrowsError(
             try socket.bind(to: address)
         )
