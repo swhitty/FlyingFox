@@ -36,16 +36,18 @@ struct HTTPConnection: Sendable {
 
     let hostname: String
     private let socket: AsyncSocket
+    private let decoder: HTTPDecoder
     private let logger: any Logging
     let requests: HTTPRequestSequence<AsyncSocketReadSequence>
 
-    init(socket: AsyncSocket, logger: some Logging) {
+    init(socket: AsyncSocket, decoder: HTTPDecoder = .init(), logger: some Logging) {
         self.socket = socket
+        self.decoder = decoder
         self.logger = logger
 
         let (peer, identifier) = HTTPConnection.makeIdentifer(from: socket.socket)
         self.hostname = identifier
-        self.requests = HTTPRequestSequence(bytes: socket.bytes, remoteAddress: peer)
+        self.requests = HTTPRequestSequence(bytes: socket.bytes, decoder: decoder, remoteAddress: peer)
     }
 
     func complete() async {
@@ -97,12 +99,14 @@ actor HTTPRequestSequence<S: AsyncBufferedSequence & Sendable>: AsyncSequence, A
     typealias Element = HTTPRequest
     private let bytes: S
     private let remoteAddress: HTTPRequest.Address?
+    private let decoder: HTTPDecoder
 
     private var isComplete: Bool
     private var task: Task<Element, any Error>?
 
-    init(bytes: S, remoteAddress: Socket.Address?) {
+    init(bytes: S, decoder: HTTPDecoder, remoteAddress: Socket.Address?) {
         self.bytes = bytes
+        self.decoder = decoder
         self.remoteAddress = remoteAddress.map(HTTPRequest.Address.make)
         self.isComplete = false
     }
@@ -118,7 +122,7 @@ actor HTTPRequestSequence<S: AsyncBufferedSequence & Sendable>: AsyncSequence, A
         guard !isComplete else { return nil }
 
         do {
-            let task = Task { try await HTTPDecoder.decodeRequest(from: bytes) }
+            let task = Task { try await decoder.decodeRequest(from: bytes) }
             self.task = task
             defer { self.task = nil }
             var request = try await task.getValue(cancelling: .whenParentIsCancelled)

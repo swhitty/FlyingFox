@@ -34,7 +34,9 @@ import Foundation
 
 struct HTTPDecoder {
 
-    static func decodeRequest(from bytes: some AsyncBufferedSequence<UInt8>) async throws -> HTTPRequest {
+    var maxSizeForComplete: Int = 10_485_760
+
+    func decodeRequest(from bytes: some AsyncBufferedSequence<UInt8>) async throws -> HTTPRequest {
         let status = try await bytes.lines.takeNext()
         let comps = status
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -45,10 +47,10 @@ struct HTTPDecoder {
 
         let method = HTTPMethod(String(comps[0]))
         let version = HTTPVersion(String(comps[2]))
-        let (path, query) = Self.readComponents(from: String(comps[1]))
+        let (path, query) = readComponents(from: String(comps[1]))
 
-        let headers = try await Self.readHeaders(from: bytes)
-        let body = try await HTTPDecoder.readBody(from: bytes, length: headers[.contentLength])
+        let headers = try await readHeaders(from: bytes)
+        let body = try await readBody(from: bytes, length: headers[.contentLength])
 
         return HTTPRequest(
             method: method,
@@ -60,7 +62,7 @@ struct HTTPDecoder {
         )
     }
 
-    static func decodeResponse(from bytes: some AsyncBufferedSequence<UInt8>) async throws -> HTTPResponse {
+    func decodeResponse(from bytes: some AsyncBufferedSequence<UInt8>) async throws -> HTTPResponse {
         let comps = try await bytes.lines.takeNext()
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .split(separator: " ", maxSplits: 2, omittingEmptySubsequences: true)
@@ -72,8 +74,8 @@ struct HTTPDecoder {
         let version = HTTPVersion(String(comps[0]))
         let statusCode = HTTPStatusCode(code, phrase: String(comps[2]))
 
-        let headers = try await Self.readHeaders(from: bytes)
-        let body = try await HTTPDecoder.readBody(from: bytes, length: headers[.contentLength])
+        let headers = try await readHeaders(from: bytes)
+        let body = try await readBody(from: bytes, length: headers[.contentLength])
 
         return HTTPResponse(
             version: version,
@@ -83,11 +85,11 @@ struct HTTPDecoder {
         )
     }
 
-    static func readComponents(from target: String) -> (path: String, query: [HTTPRequest.QueryItem]) {
+    func readComponents(from target: String) -> (path: String, query: [HTTPRequest.QueryItem]) {
         makeComponents(from: URLComponents(string: target))
     }
 
-    static func makeComponents(from comps: URLComponents?) -> (path: String, query: [HTTPRequest.QueryItem]) {
+    func makeComponents(from comps: URLComponents?) -> (path: String, query: [HTTPRequest.QueryItem]) {
         let path = (comps?.percentEncodedPath).flatMap { URL(string: $0)?.standardized.path } ?? ""
         let query = comps?.queryItems?.map {
             HTTPRequest.QueryItem(name: $0.name, value: $0.value ?? "")
@@ -96,7 +98,7 @@ struct HTTPDecoder {
     }
 
     @Sendable
-    static func readHeader(from line: String) -> (header: HTTPHeader, value: String)? {
+    func readHeader(from line: String) -> (header: HTTPHeader, value: String)? {
         let comps = line.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: true)
         guard comps.count > 1 else { return nil }
         let name = comps[0].trimmingCharacters(in: .whitespacesAndNewlines)
@@ -104,15 +106,15 @@ struct HTTPDecoder {
         return (HTTPHeader(name), value)
     }
 
-    static func readHeaders(from bytes: some AsyncBufferedSequence<UInt8>) async throws -> [HTTPHeader : String] {
+    func readHeaders(from bytes: some AsyncBufferedSequence<UInt8>) async throws -> [HTTPHeader : String] {
         try await bytes
             .lines
             .prefix { $0 != "\r" && $0 != "" }
-            .compactMap(Self.readHeader)
+            .compactMap(readHeader)
             .reduce(into: [HTTPHeader: String]()) { $0[$1.header] = $1.value }
     }
 
-    static func readBody(from bytes: some AsyncBufferedSequence<UInt8>, length: String?, maxSizeForComplete: Int = 10_485_760) async throws -> HTTPBodySequence {
+    func readBody(from bytes: some AsyncBufferedSequence<UInt8>, length: String?) async throws -> HTTPBodySequence {
         guard let length = length.flatMap(Int.init) else {
             return HTTPBodySequence(data: Data())
         }
@@ -125,7 +127,7 @@ struct HTTPDecoder {
         }
     }
 
-    static func makeBodyData(from bytes: some AsyncBufferedSequence<UInt8>, length: Int) async throws -> Data {
+    func makeBodyData(from bytes: some AsyncBufferedSequence<UInt8>, length: Int) async throws -> Data {
         var iterator = bytes.makeAsyncIterator()
         guard let buffer = try await iterator.nextBuffer(count: length) else {
             throw Error("AsyncBufferedSequence prematurely ended")
