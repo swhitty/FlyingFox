@@ -72,6 +72,13 @@ package extension AllocatedLock where State == Void {
     }
 }
 
+package extension AllocatedLock {
+
+    func copy() -> State {
+        withLock { $0 }
+    }
+}
+
 #if canImport(Darwin)
 
 import struct os.os_unfair_lock_t

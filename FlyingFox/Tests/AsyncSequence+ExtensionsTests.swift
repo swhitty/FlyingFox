@@ -39,7 +39,7 @@ final class AsyncSequenceExtensionTests: XCTestCase {
         var iterator = ConsumingAsyncSequence("fish,chips".data(using: .utf8)!)
             .collectStrings(separatedBy: ",")
             .makeAsyncIterator()
-
+//
         await AsyncAssertEqual(try await iterator.next(), "fish")
         await AsyncAssertEqual(try await iterator.next(), "chips")
         await AsyncAssertEqual(try await iterator.next(), nil)
@@ -66,8 +66,8 @@ final class AsyncSequenceExtensionTests: XCTestCase {
     }
 
     func testTakeNextThrowsError_WhenSequenceEnds() async {
-        let sequence = ConsumingAsyncSequence<Int>([])
-      
+        let sequence = ConsumingAsyncSequence(bytes: [])
+
         await AsyncAssertThrowsError(try await sequence.takeNext(), of: SequenceTerminationError.self)
     }
 }

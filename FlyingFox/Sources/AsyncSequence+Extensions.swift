@@ -33,7 +33,7 @@ import Foundation
 
 extension AsyncSequence {
     func collectUntil(buffer: @escaping ([Element]) -> Bool) -> CollectUntil<Self> {
-        CollectUntil(sequence: self, until: buffer)
+        CollectUntil(self, until: buffer)
     }
 
     func takeNext() async throws -> Element {
@@ -49,29 +49,38 @@ struct SequenceTerminationError: LocalizedError {
     var errorDescription: String? = "Sequence Terminated"
 }
 
-struct CollectUntil<S>: AsyncSequence, AsyncIteratorProtocol where S: AsyncSequence {
-    typealias Element = [S.Element]
-    let sequence: S
+struct CollectUntil<Base: AsyncSequence>: AsyncSequence {
+    typealias Element = [Base.Element]
+    typealias Predicate = ([Base.Element]) -> Bool
 
-    let until: ([S.Element]) -> Bool
+    let base: Base
+    let until: Predicate
 
-    init(sequence: S, until: @escaping ([S.Element]) -> Bool) {
-        self.sequence = sequence
+    init(_ base: Base, until: @escaping Predicate) {
+        self.base = base
         self.until = until
     }
 
-    func makeAsyncIterator() -> Self { self }
+    func makeAsyncIterator() -> AsyncIterator {
+        AsyncIterator(iterator: base.makeAsyncIterator(), until: until)
+    }
 
-    mutating func next() async throws -> [S.Element]? {
-        var buffer = [S.Element]()
+    struct AsyncIterator: AsyncIteratorProtocol {
+        var iterator: Base.AsyncIterator
+        var until: Predicate
 
-        for try await element in sequence {
-            buffer.append(element)
-            guard !until(buffer) else {
-                break
+        mutating func next() async throws -> Element? {
+            var buffer = Element()
+
+            while let element = try await iterator.next() {
+                buffer.append(element)
+                guard !until(buffer) else {
+                    break
+                }
             }
+
+            return buffer.isEmpty ? nil : buffer
         }
-        return buffer.isEmpty ? nil : buffer
     }
 }
 
