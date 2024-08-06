@@ -34,7 +34,7 @@ import Foundation
 
 struct HTTPDecoder {
 
-    var maxSizeForComplete: Int = 10_485_760
+    var sharedRequestReplaySize: Int
 
     func decodeRequest(from bytes: some AsyncBufferedSequence<UInt8>) async throws -> HTTPRequest {
         let status = try await bytes.lines.takeNext()
@@ -119,9 +119,8 @@ struct HTTPDecoder {
             return HTTPBodySequence(data: Data())
         }
 
-        if length <= maxSizeForComplete {
-            let data = try await makeBodyData(from: bytes, length: length)
-            return HTTPBodySequence(data: data, suggestedBufferSize: 4096)
+        if length <= sharedRequestReplaySize {
+            return HTTPBodySequence(shared: bytes, count: length, suggestedBufferSize: 4096)
         } else {
             return HTTPBodySequence(from: bytes, count: length, suggestedBufferSize: 4096)
         }

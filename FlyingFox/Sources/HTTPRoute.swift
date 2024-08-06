@@ -313,11 +313,11 @@ private extension HTTPRoute {
 
     static func readComponents(from path: String) -> (path: String, query: [HTTPRequest.QueryItem]) {
         guard path.removingPercentEncoding == path else {
-            return HTTPDecoder().readComponents(from: path)
+            return HTTPDecoder(sharedRequestReplaySize: 0).readComponents(from: path)
         }
 
         let escaped = path.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)
-        return HTTPDecoder().readComponents(from: escaped ?? path)
+        return HTTPDecoder(sharedRequestReplaySize: 0).readComponents(from: escaped ?? path)
     }
 }
 

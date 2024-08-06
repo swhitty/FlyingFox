@@ -172,10 +172,10 @@ public final actor HTTPServer {
 
     @available(macOS 14.0, iOS 17.0, tvOS 17.0, watchOS 10.0, *)
     private func listenForConnectionsDiscarding(on socket: AsyncSocket) async throws {
-        try await withThrowingDiscardingTaskGroup { [logger] group in
+        try await withThrowingDiscardingTaskGroup { group in
             for try await socket in socket.sockets {
                 group.addTask {
-                    await self.handleConnection(HTTPConnection(socket: socket, logger: logger))
+                    await self.handleConnection(self.makeConnection(socket: socket))
                 }
             }
         }
@@ -186,14 +186,22 @@ public final actor HTTPServer {
     @available(iOS, deprecated: 17.0, renamed: "listenForConnectionsDiscarding(on:)")
     @available(tvOS, deprecated: 17.0, renamed: "listenForConnectionsDiscarding(on:)")
     private func listenForConnectionsFallback(on socket: AsyncSocket) async throws {
-        try await withThrowingTaskGroup(of: Void.self) { [logger] group in
+        try await withThrowingTaskGroup(of: Void.self) { group in
             for try await socket in socket.sockets {
                 group.addTask {
-                    await self.handleConnection(HTTPConnection(socket: socket, logger: logger))
+                    await self.handleConnection(self.makeConnection(socket: socket))
                 }
             }
         }
         throw SocketError.disconnected
+    }
+
+    private func makeConnection(socket: AsyncSocket) -> HTTPConnection {
+        HTTPConnection(
+            socket: socket,
+            decoder: HTTPDecoder(sharedRequestReplaySize: config.sharedRequestReplaySize),
+            logger: config.logger
+        )
     }
 
     private(set) var connections: Set<HTTPConnection> = []
