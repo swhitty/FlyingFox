@@ -45,14 +45,6 @@ package struct AsyncDataSequence: AsyncSequence, Sendable {
         )
     }
 
-    package init(file handle: FileHandle, count: Int, chunkSize: Int) {
-        self.loader = DataLoader(
-            count: count,
-            chunkSize: chunkSize,
-            iterator: AsyncFileHandleIterator(handle: handle)
-        )
-    }
-
     package var count: Int { loader.count }
 
     package func makeAsyncIterator() -> Iterator {
@@ -81,21 +73,6 @@ package struct AsyncDataSequence: AsyncSequence, Sendable {
 
     package func flushIfNeeded() async throws {
         try await loader.flushIfNeeded()
-    }
-}
-
-package extension AsyncDataSequence {
-
-    static func size(of file: URL) throws -> Int {
-        let att = try FileManager.default.attributesOfItem(atPath: file.path)
-        guard let size = att[.size] as? UInt64 else {
-            throw FileSizeError()
-        }
-        return Int(size)
-    }
-
-    struct FileSizeError: LocalizedError {
-        package var errorDescription: String? = "File size not found"
     }
 }
 
@@ -169,25 +146,6 @@ private extension AsyncDataSequence {
         enum Error: Swift.Error {
             case unexpectedState
             case unexpectedEOF
-        }
-    }
-
-    struct AsyncFileHandleIterator: AsyncBufferedIteratorProtocol {
-        typealias Element = UInt8
-
-        let handle: FileHandle?
-
-        func next() async throws -> UInt8? {
-            fatalError()
-        }
-
-        func nextBuffer(suggested count: Int) throws -> Data? {
-            guard let handle = handle else { throw SocketError.disconnected }
-            if #available(macOS 10.15.4, iOS 13.4, tvOS 13.4, *) {
-                return try handle.read(upToCount: count)
-            } else {
-                return handle.readData(ofLength: count)
-            }
         }
     }
 }

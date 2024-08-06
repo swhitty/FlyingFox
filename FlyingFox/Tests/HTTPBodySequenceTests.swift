@@ -231,20 +231,10 @@ final class HTTPBodySequenceTests: XCTestCase {
         XCTAssertEqual(buffer.index, 10)
     }
 
-    func testFilePayloadCanReplay_WhenSmallerThenMax() async throws {
-        let sequence = try HTTPBodySequence(file: .fishJSON, maxSizeForComplete: 10000, suggestedBufferSize: 1)
+    func testFilePayloadCanReplay() async throws {
+        let sequence = try HTTPBodySequence(file: .fishJSON, suggestedBufferSize: 1)
 
         XCTAssertTrue(sequence.canReplay)
-        await AsyncAssertEqual(
-            try await sequence.get(),
-            try Data(contentsOf: .fishJSON)
-        )
-    }
-
-    func testFilePayloadCanNotReplay_WhenLargerThenMax() async throws {
-        let sequence = try HTTPBodySequence(file: .fishJSON,  maxSizeForComplete: 1, suggestedBufferSize: 1)
-
-        XCTAssertFalse(sequence.canReplay)
         await AsyncAssertEqual(
             try await sequence.get(),
             try Data(contentsOf: .fishJSON)
