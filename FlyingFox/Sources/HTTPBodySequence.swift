@@ -38,7 +38,7 @@ public struct HTTPBodySequence: Sendable, AsyncSequence {
     let storage: Storage
 
     public init() {
-        self.storage = .complete(Data())
+        self.storage = .sequence(.init(data: Data(), bufferSize: 4096))
     }
 
     public init(data: Data, suggestedBufferSize: Int = 4096) {
@@ -62,7 +62,7 @@ public struct HTTPBodySequence: Sendable, AsyncSequence {
     init(file url: URL, maxSizeForComplete: Int, suggestedBufferSize: Int) throws {
         let count = try AsyncDataSequence.size(of: url)
         if count <= maxSizeForComplete {
-            self.storage = try .complete(Data(contentsOf: url))
+            self.storage = try .sequence(.init(data: Data(contentsOf: url), bufferSize: suggestedBufferSize))
         } else {
             self.storage = try .dataSequence(
                 AsyncDataSequence(file: FileHandle(forReadingFrom: url),
@@ -77,7 +77,6 @@ public struct HTTPBodySequence: Sendable, AsyncSequence {
     }
 
     enum Storage: @unchecked Sendable {
-        case complete(Data)
         case dataSequence(AsyncDataSequence)
         case sequence(Sequence)
 
@@ -104,8 +103,6 @@ public struct HTTPBodySequence: Sendable, AsyncSequence {
 
     public var count: Int? {
         switch storage {
-        case .complete(let data):
-            return data.count
         case .dataSequence(let sequence):
             return sequence.count
         case .sequence(let sequence):
@@ -115,8 +112,6 @@ public struct HTTPBodySequence: Sendable, AsyncSequence {
 
     func get() async throws -> Data {
         switch storage {
-        case .complete(let data):
-            return data
         case .dataSequence(let sequence):
             return try await sequence.reduce(into: Data()) {
                 $0.append($1)
@@ -135,7 +130,6 @@ public struct HTTPBodySequence: Sendable, AsyncSequence {
 
     var canReplay: Bool {
         switch storage {
-        case .complete: return true
         case .dataSequence: return false
         case .sequence(let sequence):
             return sequence.canReplay
@@ -154,9 +148,6 @@ public extension HTTPBodySequence {
 
         fileprivate init(storage: Storage) {
             switch storage {
-            case .complete(let data):
-                self.storage = .complete(data)
-                self.bufferSize = 0
             case .dataSequence(let sequence):
                 self.storage = .dataIterator(sequence.makeAsyncIterator())
                 self.bufferSize = 0
@@ -169,9 +160,6 @@ public extension HTTPBodySequence {
         public mutating func next() async throws -> Data? {
             guard !isComplete else { return nil }
             switch storage {
-            case let .complete(data):
-                isComplete = true
-                return data
             case var .dataIterator(iterator):
                 guard let result = try await iterator.next() else {
                     isComplete = true
@@ -197,7 +185,6 @@ public extension HTTPBodySequence {
         }
 
         enum Internal: @unchecked Sendable {
-            case complete(Data)
             case dataIterator(AsyncDataSequence.AsyncIterator)
             case iterator(any AsyncBufferedIteratorProtocol<UInt8>)
         }

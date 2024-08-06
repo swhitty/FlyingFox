@@ -38,12 +38,16 @@ final class HTTPBodySequenceTests: XCTestCase {
     func testEmptyPayload_ReturnsEmptyData() async {
         let sequence = HTTPBodySequence()
 
-        var iterator = sequence.makeAsyncIterator()
-
         await AsyncAssertEqual(
-            try await iterator.next(),
+            try await sequence.get(),
             Data()
         )
+    }
+
+    func testEmptyPayload_ReturnNilBuffer() async {
+        let sequence = HTTPBodySequence()
+
+        var iterator = sequence.makeAsyncIterator()
 
         await AsyncAssertNil(
             try await iterator.next()
