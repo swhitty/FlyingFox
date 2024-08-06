@@ -48,8 +48,8 @@ final class HTTPResponseTests: XCTestCase {
 
     func testSequenceBodyData() async {
         // given
-        let buffer = ConsumingAsyncSequence<UInt8>(
-            [0x5, 0x6]
+        let buffer = ConsumingAsyncSequence(
+            bytes: [0x5, 0x6]
         )
         let sequence = HTTPBodySequence(from: buffer, count: 2, suggestedBufferSize: 2)
         let response = HTTPResponse.make(body: sequence)

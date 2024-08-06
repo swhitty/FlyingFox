@@ -213,8 +213,8 @@ final class HTTPBodySequenceTests: XCTestCase {
 
     func testSequencePayload_IsFlushed() async {
         // given
-        let buffer = ConsumingAsyncSequence<UInt8>(
-            [0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9]
+        let buffer = ConsumingAsyncSequence(
+            bytes: [0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9]
         )
 
         let sequence = HTTPBodySequence(from: buffer, count: 10)

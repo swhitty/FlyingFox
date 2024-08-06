@@ -29,30 +29,97 @@
 //  SOFTWARE.
 //
 
-package final class ConsumingAsyncSequence<Element>: AsyncBufferedSequence, AsyncBufferedIteratorProtocol {
+package struct ConsumingAsyncSequence<Base: AsyncBufferedSequence>: AsyncBufferedSequence {
+    package typealias Element = Base.Element
 
-    private var iterator: AnySequence<Element>.Iterator
-    package private(set) var index: Int = 0
+    private let buffer: SharedBuffer
 
-    package init<T: Sequence>(_ sequence: T) where T.Element == Element {
-        self.iterator = AnySequence(sequence).makeIterator()
+    package init<C: Collection>(_ collection: C) where Base == AsyncBufferedCollection<C>  {
+        self.buffer = SharedBuffer(AsyncBufferedCollection(collection))
     }
 
-    package func makeAsyncIterator() -> ConsumingAsyncSequence<Element> { self }
-
-    package func next() async throws -> Element? {
-        iterator.next()
+    package init(bytes: [UInt8]) where Base == AsyncBufferedCollection<[UInt8]>  {
+        self.init(bytes)
     }
 
-    package func nextBuffer(suggested count: Int) async throws -> [Element]? {
-        var buffer = [Element]()
-        while buffer.count < count,
-              let element = iterator.next() {
-            buffer.append(element)
+    package func makeAsyncIterator() -> AsyncIterator {
+        AsyncIterator(buffer: buffer)
+    }
+
+    package var index: Int { buffer.index ?? 0 }
+
+    package struct AsyncIterator: AsyncBufferedIteratorProtocol {
+
+        let buffer: SharedBuffer
+        var hasStarted = false
+
+        package mutating func next() async throws -> Element? {
+            return try await buffer.next()
         }
 
-        index += buffer.count
+        package mutating func nextBuffer(suggested count: Int) async throws -> Base.AsyncIterator.Buffer? {
+            return try await buffer.nextBuffer(suggested: count)
+        }
+    }
+}
 
-        return buffer.count > 0 ? buffer : nil
+extension ConsumingAsyncSequence {
+
+    final class SharedBuffer: @unchecked Sendable {
+
+        private(set) var state: AllocatedLock<State>
+
+        init(_ sequence: Base) {
+            self.state = AllocatedLock(initialState: .initial(sequence))
+        }
+
+        enum State {
+            case initial(Base)
+            case iterating(Base.AsyncIterator, index: Int)
+        }
+
+        var index: Int? {
+            switch state.copy() {
+            case .initial:
+                return nil
+            case .iterating(_, index: let index):
+                return index
+            }
+        }
+
+        func next() async throws -> Element? {
+            var (iterator, index) = try state.withLock { try $0.makeAsyncIterator() }
+            guard let element = try await iterator.next() else {
+                return nil
+            }
+            let newState = State.iterating(iterator, index: index + 1)
+            state.withLock { $0 = newState }
+            return element
+        }
+
+        func nextBuffer(suggested count: Int) async throws -> Base.AsyncIterator.Buffer? {
+            var (iterator, index) = try state.withLock { try $0.makeAsyncIterator() }
+            guard let buffer = try await iterator.nextBuffer(suggested: count) else {
+                return nil
+            }
+            let newState = State.iterating(iterator, index: index + buffer.count)
+            state.withLock { $0 = newState }
+            return buffer
+        }
+    }
+}
+
+extension ConsumingAsyncSequence.SharedBuffer.State {
+
+    mutating func makeAsyncIterator() throws -> (Base.AsyncIterator, Int) {
+        switch self {
+        case let .initial(sequence):
+            let iterator = sequence.makeAsyncIterator()
+            self = .iterating(iterator, index: 0)
+            return (iterator, 0)
+
+        case let .iterating(iterator, index):
+            return (iterator, index)
+        }
     }
 }
