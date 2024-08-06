@@ -164,34 +164,6 @@ final class HTTPBodySequenceTests: XCTestCase {
         )
     }
 
-    func testSequencePayload_CannotBeIteratedMultipleTimes() async {
-        let sequence = HTTPBodySequence.make(
-            from: [0x0, 0x1],
-            chunkSize: 1
-        )
-
-        var it1 = sequence.makeAsyncIterator()
-        var it2 = sequence.makeAsyncIterator()
-
-        await AsyncAssertEqual(
-            try await it1.next(),
-            Data([0x0])
-        )
-
-        await AsyncAssertThrowsError(
-            try await it2.next()
-        )
-
-        await AsyncAssertEqual(
-            try await it1.next(),
-            Data([0x1])
-        )
-
-        await AsyncAssertNil(
-            try await it1.next()
-        )
-    }
-
     func testSequencePayloadA_IsFlushed() async throws {
         // given
         let body = HTTPBodySequence.make(
@@ -217,7 +189,7 @@ final class HTTPBodySequenceTests: XCTestCase {
             bytes: [0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9]
         )
 
-        let sequence = HTTPBodySequence(from: buffer, count: 10)
+        let sequence = HTTPBodySequence(shared: buffer, count: 10)
 
         // then
         XCTAssertEqual(buffer.index, 0)

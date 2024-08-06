@@ -40,7 +40,7 @@ struct HTTPConnection: Sendable {
     private let logger: any Logging
     let requests: HTTPRequestSequence<AsyncSocketReadSequence>
 
-    init(socket: AsyncSocket, decoder: HTTPDecoder = .init(), logger: some Logging) {
+    init(socket: AsyncSocket, decoder: HTTPDecoder, logger: some Logging) {
         self.socket = socket
         self.decoder = decoder
         self.logger = logger

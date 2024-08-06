@@ -38,70 +38,90 @@ public struct HTTPBodySequence: Sendable, AsyncSequence {
     let storage: Storage
 
     public init() {
-        self.storage = .sequence(.init(data: Data(), bufferSize: 4096))
+        self.storage = Storage(data: Data(), bufferSize: 4096)
     }
 
     public init(data: Data, suggestedBufferSize: Int = 4096) {
-        self.storage = .sequence(.init(data: data, bufferSize: suggestedBufferSize))
+        self.storage = Storage(data: data, bufferSize: suggestedBufferSize)
     }
 
     public init(from bytes: some AsyncBufferedSequence<UInt8>, count: Int, suggestedBufferSize: Int = 4096) {
-        self.storage = .dataSequence(
-            AsyncDataSequence(from: bytes, count: count, chunkSize: suggestedBufferSize)
+        self.storage = Storage(
+            bytes: bytes,
+            count: count,
+            bufferSize: suggestedBufferSize
+        )
+    }
+
+    public init(shared bytes: some AsyncBufferedSequence<UInt8>, count: Int, suggestedBufferSize: Int = 4096) {
+        self.storage = Storage(
+            shared: bytes,
+            count: count,
+            bufferSize: suggestedBufferSize
         )
     }
 
     public init(from bytes: some AsyncBufferedSequence<UInt8>, suggestedBufferSize: Int = 4096) {
-        self.storage = .sequence(.init(bytes: bytes, bufferSize: suggestedBufferSize))
+        self.storage = Storage(
+            bytes: HTTPChunkedTransferEncoder(bytes: bytes),
+            count: nil,
+            bufferSize: suggestedBufferSize
+        )
     }
 
     public init(file url: URL, suggestedBufferSize: Int = 4096) throws {
-        self.storage = try .sequence(.init(fileURL: url, bufferSize: suggestedBufferSize))
+        self.storage = try Storage(fileURL: url, bufferSize: suggestedBufferSize)
     }
 
     public func makeAsyncIterator() -> Iterator {
         Iterator(storage: storage)
     }
 
-    enum Storage: @unchecked Sendable {
-        case dataSequence(AsyncDataSequence)
-        case sequence(Sequence)
+    struct Storage: @unchecked Sendable {
+        var sequence: any AsyncBufferedSequence<UInt8>
+        var count: Int?
+        var bufferSize: Int
+        var flusher: (any Flushable)?
+        var canReplay: Bool
 
-        struct Sequence {
-            var sequence: any AsyncBufferedSequence<UInt8>
-            var count: Int?
-            var bufferSize: Int
-            var canReplay: Bool
+        init(data: Data, bufferSize: Int) {
+            self.sequence = AsyncBufferedCollection(data)
+            self.count = data.count
+            self.bufferSize = bufferSize
+            self.canReplay = true
+        }
 
-            init(data: Data, bufferSize: Int) {
-                self.sequence = AsyncBufferedCollection(data)
-                self.count = data.count
-                self.bufferSize = bufferSize
-                self.canReplay = true
-            }
+        init(fileURL: URL, bufferSize: Int) throws {
+            self.sequence = AsyncBufferedFileSequence(contentsOf: fileURL)
+            self.count =  try AsyncBufferedFileSequence.fileSize(at: fileURL)
+            self.bufferSize = bufferSize
+            self.canReplay = true
+        }
 
-            init(fileURL: URL, bufferSize: Int) throws {
-                self.sequence = AsyncBufferedFileSequence(contentsOf: fileURL)
-                self.count =  try AsyncBufferedFileSequence.fileSize(at: fileURL)
-                self.bufferSize = bufferSize
-                self.canReplay = true
-            }
+        init(bytes: some AsyncBufferedSequence<UInt8>,
+             count: Int?,
+             bufferSize: Int,
+             canReplay: Bool = false) {
+            self.sequence = bytes
+            self.count = count
+            self.bufferSize = bufferSize
+            self.canReplay = canReplay
+        }
 
-            init(bytes: some AsyncBufferedSequence<UInt8>, bufferSize: Int) {
-                self.sequence = HTTPChunkedTransferEncoder(bytes: bytes)
-                self.bufferSize = bufferSize
-                self.canReplay = false
-            }
+        init(shared bytes: some AsyncBufferedSequence<UInt8>,
+             count: Int,
+             bufferSize: Int) {
+            let shared = AsyncSharedReplaySequence(base: bytes, count: count)
+            self.sequence = shared
+            self.count = count
+            self.flusher = shared
+            self.bufferSize = bufferSize
+            self.canReplay = true
         }
     }
 
     public var count: Int? {
-        switch storage {
-        case .dataSequence(let sequence):
-            return sequence.count
-        case .sequence(let sequence):
-            return sequence.count
-        }
+        storage.count
     }
 
     func get() async throws -> Data {
@@ -111,16 +131,11 @@ public struct HTTPBodySequence: Sendable, AsyncSequence {
     }
 
     func flushIfNeeded() async throws {
-        guard case .dataSequence(let sequence) = storage else { return }
-        try await sequence.flushIfNeeded()
+        try await storage.flusher?.flushIfNeeded()
     }
 
     var canReplay: Bool {
-        switch storage {
-        case .dataSequence: return false
-        case .sequence(let sequence):
-            return sequence.canReplay
-        }
+        storage.canReplay
     }
 }
 
@@ -129,39 +144,22 @@ public extension HTTPBodySequence {
     struct Iterator: AsyncIteratorProtocol {
         public typealias Element = Data
 
-        private var storage: Internal
+        private var iterator: any AsyncBufferedIteratorProtocol<UInt8>
         private var isComplete: Bool = false
         private var bufferSize: Int = 0
 
-        fileprivate init(storage: Storage) {
-            switch storage {
-            case .dataSequence(let sequence):
-                self.storage = .dataIterator(sequence.makeAsyncIterator())
-                self.bufferSize = 0
-            case .sequence(let sequence):
-                self.storage = .iterator(sequence.sequence.makeAsyncIterator())
-                self.bufferSize = sequence.bufferSize
-            }
+        init(storage: Storage) {
+            self.iterator = storage.sequence.makeAsyncIterator()
+            self.bufferSize = storage.bufferSize
         }
 
         public mutating func next() async throws -> Data? {
             guard !isComplete else { return nil }
-            switch storage {
-            case var .dataIterator(iterator):
-                guard let result = try await iterator.next() else {
-                    isComplete = true
-                    return nil
-                }
-                storage = .dataIterator(iterator)
-                return result
-            case var .iterator(iterator):
-                guard let result = try await getNextBuffer(&iterator) else {
-                    isComplete = true
-                    return nil
-                }
-                storage = .iterator(iterator)
-                return result
+            guard let result = try await getNextBuffer(&iterator) else {
+                isComplete = true
+                return nil
             }
+            return result
         }
 
         private func getNextBuffer(_ iterator: inout some AsyncBufferedIteratorProtocol<UInt8>) async throws -> Data? {
@@ -169,11 +167,6 @@ public extension HTTPBodySequence {
                 return nil
             }
             return Data(buffer)
-        }
-
-        enum Internal: @unchecked Sendable {
-            case dataIterator(AsyncDataSequence.AsyncIterator)
-            case iterator(any AsyncBufferedIteratorProtocol<UInt8>)
         }
     }
 }

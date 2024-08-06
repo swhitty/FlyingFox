@@ -191,19 +191,19 @@ final class HTTPDecoderTests: XCTestCase {
 
     func testBody_ThrowsError_WhenSequenceEnds() async throws {
         await AsyncAssertThrowsError(
-            _ = try await HTTPDecoder().readBody(from: AsyncBufferedEmptySequence(completeImmediately: true), length: "100"),
+            _ = try await HTTPDecoder().readBody(from: AsyncBufferedEmptySequence(completeImmediately: true), length: "100").get(),
             of: SocketError.self
         )
     }
 
     func testBodySequence_CanReplay_WhenSizeIsLessThanMax() async throws {
-        let sequence = try await HTTPDecoder(maxSizeForComplete: 100).readBodyFromString("Fish & Chips")
+        let sequence = try await HTTPDecoder(sharedRequestReplaySize: 100).readBodyFromString("Fish & Chips")
         XCTAssertEqual(sequence.count, 12)
         XCTAssertTrue(sequence.canReplay)
     }
 
     func testBodySequence_CanNotReplay_WhenSizeIsGreaterThanMax() async throws {
-        let sequence = try await HTTPDecoder(maxSizeForComplete: 2).readBodyFromString("Fish & Chips")
+        let sequence = try await HTTPDecoder(sharedRequestReplaySize: 2).readBodyFromString("Fish & Chips")
         XCTAssertEqual(sequence.count, 12)
         XCTAssertFalse(sequence.canReplay)
     }
@@ -297,6 +297,7 @@ final class HTTPDecoderTests: XCTestCase {
 }
 
 private extension HTTPDecoder {
+
     func decodeRequestFromString(_ string: String) async throws -> HTTPRequest {
         try await decodeRequest(from: ConsumingAsyncSequence(string.data(using: .utf8)!))
     }
@@ -314,37 +315,9 @@ private extension HTTPDecoder {
     }
 }
 
-@available(*, deprecated, message: "Use instance instead")
-extension HTTPDecoder {
-    static func decodeRequest(from bytes: some AsyncBufferedSequence<UInt8>) async throws -> HTTPRequest {
-        try await HTTPDecoder().decodeRequest(from: bytes)
-    }
+private extension HTTPDecoder {
 
-    static func decodeResponse(from bytes: some AsyncBufferedSequence<UInt8>) async throws -> HTTPResponse {
-        try await HTTPDecoder().decodeResponse(from: bytes)
-    }
-
-    static func readComponents(from target: String) -> (path: String, query: [HTTPRequest.QueryItem]) {
-        HTTPDecoder().readComponents(from: target)
-    }
-
-    static func makeComponents(from comps: URLComponents?) -> (path: String, query: [HTTPRequest.QueryItem]) {
-        HTTPDecoder().makeComponents(from: comps)
-    }
-
-    static func readHeader(from line: String) -> (header: HTTPHeader, value: String)? {
-        HTTPDecoder().readHeader(from: line)
-    }
-
-    static func readHeaders(from bytes: some AsyncBufferedSequence<UInt8>) async throws -> [HTTPHeader : String] {
-        try await HTTPDecoder().readHeaders(from: bytes)
-    }
-
-    static func readBody(from bytes: some AsyncBufferedSequence<UInt8>, length: String?, maxSizeForComplete: Int = 10_485_760) async throws -> HTTPBodySequence {
-        try await HTTPDecoder(maxSizeForComplete: maxSizeForComplete).readBody(from: bytes, length: length)
-    }
-
-    static func makeBodyData(from bytes: some AsyncBufferedSequence<UInt8>, length: Int) async throws -> Data {
-        try await HTTPDecoder().makeBodyData(from: bytes, length: length)
+    init() {
+        self.init(sharedRequestReplaySize: 1024)
     }
 }

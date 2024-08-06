@@ -53,7 +53,7 @@ package extension AsyncSocket {
     }
 
     func readResponse() async throws -> HTTPResponse {
-        try await HTTPDecoder().decodeResponse(from: bytes)
+        try await HTTPDecoder(sharedRequestReplaySize: 102_400).decodeResponse(from: bytes)
     }
 
     func writeFrame(_ frame: WSFrame) async throws {

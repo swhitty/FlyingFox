@@ -37,17 +37,18 @@ public extension HTTPServer {
     struct Configuration: Sendable {
         public var address: any SocketAddress
         public var timeout: TimeInterval
+        public var sharedRequestReplaySize: Int
         public var pool: any AsyncSocketPool
         public var logger: any Logging
 
-
-
         public init(address: some SocketAddress,
                     timeout: TimeInterval = 15,
+                    sharedRequestReplaySize: Int = 2_097_152,
                     pool: any AsyncSocketPool = HTTPServer.defaultPool(),
                     logger: any Logging = HTTPServer.defaultLogger()) {
             self.address = address
             self.timeout = timeout
+            self.sharedRequestReplaySize = sharedRequestReplaySize
             self.pool = pool
             self.logger = logger
         }

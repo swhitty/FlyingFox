@@ -145,7 +145,11 @@ final class HTTPConnectionTests: XCTestCase {
 
 private extension HTTPConnection {
     init(socket: AsyncSocket) {
-        self.init(socket: socket, logger: .disabled)
+        self.init(
+            socket: socket,
+            decoder: HTTPDecoder(sharedRequestReplaySize: 1024),
+            logger: .disabled
+        )
     }
 }
 
@@ -160,11 +164,14 @@ extension AsyncSequence {
 
 extension HTTPRequest: AsyncEquatable {
     static func ==(lhs: HTTPRequest, rhs: HTTPRequest) async -> Bool {
-        guard (try? await lhs.bodyData == rhs.bodyData) == true else { return false }
+        let lhsData = try? await lhs.bodyData
+        let rhsData = try? await rhs.bodyData
+        guard let lhsData, let rhsData else { return false }
         return lhs.method == rhs.method &&
                lhs.version == rhs.version &&
                lhs.path == rhs.path &&
                lhs.query == rhs.query &&
-               lhs.headers == rhs.headers
+               lhs.headers == rhs.headers &&
+               lhsData == rhsData
     }
 }
