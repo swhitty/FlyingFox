@@ -191,7 +191,7 @@ final class HTTPDecoderTests: XCTestCase {
 
     func testBody_ThrowsError_WhenSequenceEnds() async throws {
         await AsyncAssertThrowsError(
-            _ = try await HTTPDecoder().readBody(from: EmptyBufferedSequence(), length: "100"),
+            _ = try await HTTPDecoder().readBody(from: AsyncBufferedEmptySequence(completeImmediately: true), length: "100"),
             of: SocketError.self
         )
     }
@@ -312,22 +312,6 @@ private extension HTTPDecoder {
             length: "\(data.count)"
         )
     }
-}
-
-private struct EmptyBufferedSequence: AsyncBufferedSequence, AsyncBufferedIteratorProtocol {
-    mutating func next() async throws -> UInt8? {
-        return nil
-    }
-
-    func nextBuffer(suggested count: Int) async throws -> [Element]? {
-        return nil
-    }
-
-    func makeAsyncIterator() -> EmptyBufferedSequence {
-        self
-    }
-
-    typealias Element = UInt8
 }
 
 @available(*, deprecated, message: "Use instance instead")
