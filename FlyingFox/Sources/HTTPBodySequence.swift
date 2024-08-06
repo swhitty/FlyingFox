@@ -56,20 +56,7 @@ public struct HTTPBodySequence: Sendable, AsyncSequence {
     }
 
     public init(file url: URL, suggestedBufferSize: Int = 4096) throws {
-        try self.init(file: url, maxSizeForComplete: 10_485_760, suggestedBufferSize: suggestedBufferSize)
-    }
-
-    init(file url: URL, maxSizeForComplete: Int, suggestedBufferSize: Int) throws {
-        let count = try AsyncDataSequence.size(of: url)
-        if count <= maxSizeForComplete {
-            self.storage = try .sequence(.init(data: Data(contentsOf: url), bufferSize: suggestedBufferSize))
-        } else {
-            self.storage = try .dataSequence(
-                AsyncDataSequence(file: FileHandle(forReadingFrom: url),
-                                  count: count,
-                                  chunkSize: suggestedBufferSize)
-            )
-        }
+        self.storage = try .sequence(.init(fileURL: url, bufferSize: suggestedBufferSize))
     }
 
     public func makeAsyncIterator() -> Iterator {
@@ -93,6 +80,13 @@ public struct HTTPBodySequence: Sendable, AsyncSequence {
                 self.canReplay = true
             }
 
+            init(fileURL: URL, bufferSize: Int) throws {
+                self.sequence = AsyncBufferedFileSequence(contentsOf: fileURL)
+                self.count =  try AsyncBufferedFileSequence.fileSize(at: fileURL)
+                self.bufferSize = bufferSize
+                self.canReplay = true
+            }
+
             init(bytes: some AsyncBufferedSequence<UInt8>, bufferSize: Int) {
                 self.sequence = HTTPChunkedTransferEncoder(bytes: bytes)
                 self.bufferSize = bufferSize
@@ -111,15 +105,8 @@ public struct HTTPBodySequence: Sendable, AsyncSequence {
     }
 
     func get() async throws -> Data {
-        switch storage {
-        case .dataSequence(let sequence):
-            return try await sequence.reduce(into: Data()) {
-                $0.append($1)
-            }
-        case .sequence(let sequence):
-            return try await sequence.sequence.reduce(into: Data()) {
-                $0.append($1)
-            }
+        try await reduce(into: Data()) {
+            $0.append($1)
         }
     }
 

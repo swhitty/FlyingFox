@@ -1,9 +1,9 @@
 //
-//  HTTPRequest+Mock.swift
+//  AsyncBufferedSequence+Extensions.swift
 //  FlyingFox
 //
-//  Created by Simon Whitty on 18/02/2022.
-//  Copyright © 2022 Simon Whitty. All rights reserved.
+//  Created by Simon Whitty on 06/08/2024.
+//  Copyright © 2024 Simon Whitty. All rights reserved.
 //
 //  Distributed under the permissive MIT license
 //  Get the latest version from here:
@@ -29,33 +29,16 @@
 //  SOFTWARE.
 //
 
-@testable import FlyingFox
 import Foundation
 
-extension HTTPRequest {
-    static func make(method: HTTPMethod = .GET,
-                     version: HTTPVersion = .http11,
-                     path: String = "/",
-                     query: [QueryItem] = [],
-                     headers: [HTTPHeader: String] = [:],
-                     body: Data = Data(),
-                     remoteAddress: Address? = nil) -> Self {
-        HTTPRequest(method: method,
-                    version: version,
-                    path: path,
-                    query: query,
-                    headers: headers,
-                    body:  HTTPBodySequence(data: body),
-                    remoteAddress: remoteAddress)
-    }
+package extension AsyncBufferedSequence where Element == UInt8 {
 
-    static func make(method: HTTPMethod = .GET, _ url: String, headers: [HTTPHeader: String] = [:]) -> Self {
-        let (path, query) = HTTPDecoder().readComponents(from: url.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!)
-        return HTTPRequest.make(
-            method: method,
-            path: path,
-            query: query,
-            headers: headers
-        )
+    func getAllData(suggestedBuffer count: Int = 4096) async throws -> Data {
+        var data = Data()
+        var iterator = makeAsyncIterator()
+        while let buffer = try await iterator.nextBuffer(suggested: count) {
+            data.append(contentsOf: buffer)
+        }
+        return data
     }
 }
