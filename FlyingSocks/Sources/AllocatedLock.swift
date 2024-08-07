@@ -36,6 +36,18 @@ package struct AllocatedLock<State>: @unchecked Sendable {
     @usableFromInline
     let storage: Storage
 
+#if compiler(>=6.0)
+    package init(initialState: sending State) {
+        self.storage = Storage(initialState: initialState)
+    }
+
+    @inlinable
+    package func withLock<R, E>(_ body: @Sendable (inout State) throws(E) -> sending R) throws(E) -> sending R where E: Error {
+        storage.lock()
+        defer { storage.unlock() }
+        return try body(&storage.state)
+    }
+#else
     package init(initialState: State) {
         self.storage = Storage(initialState: initialState)
     }
@@ -46,6 +58,7 @@ package struct AllocatedLock<State>: @unchecked Sendable {
         defer { storage.unlock() }
         return try body(&storage.state)
     }
+#endif
 }
 
 package extension AllocatedLock where State == Void {
