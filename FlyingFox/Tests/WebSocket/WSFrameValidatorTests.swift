@@ -96,7 +96,24 @@ final class WSFrameValidatorTests: XCTestCase {
 private extension WSFrameValidator {
 
     static func validate(_ frames: [WSFrame]) async throws -> AsyncThrowingStream<WSFrame, any Swift.Error> {
-        var iterator = validateFrames(from: AsyncThrowingStream.make(frames)).makeAsyncIterator()
-        return AsyncThrowingStream { try await iterator.next() }
+        UnsafeFrames(frames: frames).makeStream()
     }
 }
+
+private final class UnsafeFrames: @unchecked Sendable {
+
+    var iterator: AsyncThrowingCompactMapSequence<AsyncThrowingStream<WSFrame, any Error>, WSFrame>.Iterator
+
+    init(frames: [WSFrame]) {
+        self.iterator = WSFrameValidator.validateFrames(from: AsyncThrowingStream.make(frames)).makeAsyncIterator()
+    }
+
+    func makeStream() -> AsyncThrowingStream<WSFrame, any Error> {
+        AsyncThrowingStream { try await self.nextFrame() }
+    }
+
+    func nextFrame() async throws -> WSFrame? {
+        try await iterator.next()
+    }
+}
+

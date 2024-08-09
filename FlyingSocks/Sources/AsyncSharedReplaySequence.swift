@@ -189,16 +189,23 @@ extension AsyncSharedReplaySequence {
 
         private func requestNextChunk(atMost count: Int) async throws -> (some Collection<Element>)? {
             do {
-                var iterator = try state.makeAsyncIterator()
-
-                let chunk = try await iterator.nextBuffer(suggested: count)
-                state = .iterating(iterator)
+                var iterator = try Transferring(state.makeAsyncIterator())
+                let chunk = try await iterator.nextBuffer(suggested: count)?.value
+                state = .iterating(iterator.value)
                 return chunk
             } catch {
                 state = .error(error)
                 throw error
             }
         }
+    }
+}
+
+private extension Transferring where Value: AsyncBufferedIteratorProtocol {
+
+    mutating func nextBuffer(suggested count: Int) async throws -> Transferring<Value.Buffer>? {
+        guard let buffer = try await value.nextBuffer(suggested: count) else { return nil }
+        return Transferring<Value.Buffer>(buffer)
     }
 }
 

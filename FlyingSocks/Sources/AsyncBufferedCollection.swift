@@ -31,7 +31,7 @@
 
 import Foundation
 
-package struct AsyncBufferedCollection<C: Collection>: AsyncBufferedSequence {
+package struct AsyncBufferedCollection<C: Collection>: AsyncBufferedSequence where C: Sendable, C.Element: Sendable {
     package typealias Element = C.Element
 
     private let collection: C

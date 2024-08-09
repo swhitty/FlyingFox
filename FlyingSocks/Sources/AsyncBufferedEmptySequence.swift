@@ -29,7 +29,7 @@
 //  SOFTWARE.
 //
 
-package struct AsyncBufferedEmptySequence<Element>: Sendable, AsyncBufferedSequence {
+package struct AsyncBufferedEmptySequence<Element: Sendable>: Sendable, AsyncBufferedSequence {
 
     private let completeImmediately: Bool
 

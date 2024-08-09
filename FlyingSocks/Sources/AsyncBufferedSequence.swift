@@ -30,7 +30,7 @@
 //
 
 /// AsyncSequence that is buffered and can optionally receive contiguous elements in chunks, instead of just one-at-a-time.
-public protocol AsyncBufferedSequence<Element>: AsyncSequence where AsyncIterator: AsyncBufferedIteratorProtocol {
+public protocol AsyncBufferedSequence<Element>: AsyncSequence, Sendable where AsyncIterator: AsyncBufferedIteratorProtocol, Element: Sendable {
 
 }
 

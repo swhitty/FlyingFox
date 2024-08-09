@@ -205,9 +205,23 @@ private extension WebSocketHTTPHandler {
 
 private struct MockHandler: WSHandler {
     func makeFrames(for client: AsyncThrowingStream<WSFrame, any Error>) async throws -> AsyncStream<WSFrame> {
-        var iterator = client.makeAsyncIterator()
-        return AsyncStream<WSFrame> {
-            try? await iterator.next()
-        }
+        UnsafeFrames(source: client).makeStream()
+    }
+}
+
+private final class UnsafeFrames: @unchecked Sendable {
+
+    private var iterator: AsyncThrowingStream<WSFrame, any Error>.Iterator
+
+    init(source: AsyncThrowingStream<WSFrame, any Error>) {
+        self.iterator = source.makeAsyncIterator()
+    }
+
+    func makeStream() -> AsyncStream<WSFrame> {
+        AsyncStream<WSFrame> { await self.nextFrame() }
+    }
+
+    func nextFrame() async -> WSFrame? {
+        try? await iterator.next()
     }
 }

@@ -53,7 +53,7 @@ package struct AllocatedLock<State>: @unchecked Sendable {
     }
 
     @inlinable
-    package func withLock<R>(_ body: @Sendable (inout State) throws -> R) rethrows -> R where R: Sendable {
+    package func withLock<R>(_ body: @Sendable (inout State) throws -> R) rethrows -> R {
         storage.lock()
         defer { storage.unlock() }
         return try body(&storage.state)

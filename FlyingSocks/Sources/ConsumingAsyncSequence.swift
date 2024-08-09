@@ -92,8 +92,7 @@ extension ConsumingAsyncSequence {
             guard let element = try await iterator.next() else {
                 return nil
             }
-            let newState = State.iterating(iterator, index: index + 1)
-            state.withLock { $0 = newState }
+            setState(.iterating(iterator, index: index + 1))
             return element
         }
 
@@ -102,9 +101,13 @@ extension ConsumingAsyncSequence {
             guard let buffer = try await iterator.nextBuffer(suggested: count) else {
                 return nil
             }
-            let newState = State.iterating(iterator, index: index + buffer.count)
-            state.withLock { $0 = newState }
+            setState(.iterating(iterator, index: index + buffer.count))
             return buffer
+        }
+
+        func setState(_ state: State) {
+            let t = Transferring(state)
+            self.state.withLock { $0 = t.value }
         }
     }
 }

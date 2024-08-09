@@ -532,7 +532,7 @@ extension HTTPServer {
 
 
 #if canImport(Darwin)
-extension URLSessionWebSocketTask.Message: Equatable {
+extension URLSessionWebSocketTask.Message {
     public static func == (lhs: URLSessionWebSocketTask.Message, rhs: URLSessionWebSocketTask.Message) -> Bool {
         switch (lhs, rhs) {
         case (.string(let lval), .string(let rval)):
@@ -544,6 +544,11 @@ extension URLSessionWebSocketTask.Message: Equatable {
         }
     }
 }
+#if compiler(>=6)
+extension URLSessionWebSocketTask.Message: @retroactive Equatable { }
+#else
+extension URLSessionWebSocketTask.Message: Equatable { }
+#endif
 #endif
 
 extension Task where Success == Never, Failure == Never {
