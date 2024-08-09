@@ -1,4 +1,4 @@
-// swift-tools-version:6.0
+// swift-tools-version:5.9
 
 import PackageDescription
 
@@ -59,8 +59,16 @@ extension Array where Element == SwiftSetting {
 
     static var upcomingFeatures: [SwiftSetting] {
         [
+            .enableUpcomingFeature("BareSlashRegexLiterals"),
+            .enableUpcomingFeature("ConciseMagicFile"),
+            .enableUpcomingFeature("DeprecateApplicationMain"),
+            .enableUpcomingFeature("DisableOutwardActorInference"),
             .enableUpcomingFeature("ExistentialAny"),
-            .swiftLanguageMode(.v6)
+            .enableUpcomingFeature("ForwardTrailingClosures"),
+            .enableUpcomingFeature("GlobalConcurrency"),
+            .enableUpcomingFeature("ImportObjcForwardDeclarations"),
+            .enableUpcomingFeature("IsolatedDefaultValues"),
+            //.enableExperimentalFeature("StrictConcurrency")
         ]
     }
 }
