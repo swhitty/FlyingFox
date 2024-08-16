@@ -73,7 +73,7 @@ extension ConsumingAsyncSequence {
             self.state = AllocatedLock(initialState: .initial(sequence))
         }
 
-        enum State {
+        enum State: @unchecked Sendable {
             case initial(Base)
             case iterating(Base.AsyncIterator, index: Int)
         }

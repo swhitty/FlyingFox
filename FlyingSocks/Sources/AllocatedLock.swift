@@ -87,7 +87,7 @@ package extension AllocatedLock where State == Void {
 
 package extension AllocatedLock {
 
-    func copy() -> State {
+    func copy() -> State where State: Sendable {
         withLock { $0 }
     }
 }
