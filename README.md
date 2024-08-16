@@ -300,7 +300,7 @@ handler.appendRoute("GET /creature/:name?type=:beast") { request in
 }
 ```
 
-When using Swift 5.9+, route parameters can be automatically extracted and mapped to closure parameters of handlers.
+Route parameters can be automatically extracted and mapped to closure parameters of handlers.
 
 ```swift
 enum Beast: String, HTTPRouteParameterValue {
