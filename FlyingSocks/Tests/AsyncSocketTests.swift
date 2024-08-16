@@ -111,14 +111,14 @@ final class AsyncSocketTests: XCTestCase {
         let s1 = try await AsyncSocket.make()
         try s1.close()
 
-        var bytes = s1.bytes
+        let bytes = s1.bytes
         await AsyncAssertThrowsError(try await bytes.nextBuffer(suggested: 1), of: SocketError.self)
     }
 
     func testSocketBytesReadChunk_Throws_WhenSocketIsNotOpen() async throws {
         let s1 = try await AsyncSocket.make()
 
-        var bytes = s1.bytes
+        let bytes = s1.bytes
         await AsyncAssertThrowsError(try await bytes.nextBuffer(suggested: 1), of: SocketError.self)
     }
 
