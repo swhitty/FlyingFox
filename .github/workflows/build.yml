@@ -6,13 +6,15 @@ on:
   workflow_dispatch:
 
 jobs:
-  xcode_15_4:
+  xcode_16:
     runs-on: macos-14
-    env:
-      DEVELOPER_DIR: /Applications/Xcode_15.4.app/Contents/Developer
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: 🔍 Xcode Select
+        run: |
+          XCODE_PATH=`mdfind "kMDItemCFBundleIdentifier == 'com.apple.dt.Xcode' && kMDItemVersion == '16.0'" -onlyin /Applications | head -1`
+          echo "DEVELOPER_DIR=$XCODE_PATH/Contents/Developer" >> $GITHUB_ENV
       - name: Version
         run: swift --version
       - name: Build
@@ -26,6 +28,20 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage_report.lcov
+
+  xcode_15_4:
+    runs-on: macos-14
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_15.4.app/Contents/Developer
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Version
+        run: swift --version
+      - name: Build
+        run: swift build --build-tests
+      - name: Test
+        run: swift test --skip-build
 
   xcode_15_2:
     runs-on: macos-14
