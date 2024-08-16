@@ -112,14 +112,14 @@ final class AsyncSocketTests: XCTestCase {
         try s1.close()
 
         var bytes = s1.bytes
-        await AsyncAssertThrowsError(try await bytes.nextChunk(count: 1), of: SocketError.self)
+        await AsyncAssertThrowsError(try await bytes.nextBuffer(suggested: 1), of: SocketError.self)
     }
 
     func testSocketBytesReadChunk_Throws_WhenSocketIsNotOpen() async throws {
         let s1 = try await AsyncSocket.make()
 
         var bytes = s1.bytes
-        await AsyncAssertThrowsError(try await bytes.nextChunk(count: 1), of: SocketError.self)
+        await AsyncAssertThrowsError(try await bytes.nextBuffer(suggested: 1), of: SocketError.self)
     }
 
     func testSocketWrite_ThrowsDisconnected_WhenSocketIsClosed() async throws {

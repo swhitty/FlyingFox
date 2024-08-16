@@ -209,13 +209,6 @@ public struct AsyncSocketReadSequence: AsyncBufferedSequence, AsyncBufferedItera
     }
 }
 
-extension AsyncSocketReadSequence: AsyncChunkedSequence, AsyncChunkedIteratorProtocol {
-
-    public mutating func nextChunk(count: Int) async throws -> [Element]? {
-        return try await socket.read(bytes: count)
-    }
-}
-
 public struct AsyncSocketSequence: AsyncSequence, AsyncIteratorProtocol, Sendable {
     public typealias Element = AsyncSocket
 

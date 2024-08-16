@@ -30,12 +30,12 @@
 //
 
 /// AsyncSequence that is able to also receive elements in chunks, instead of just one-at-a-time.
-@available(*, deprecated, renamed: "AsyncBufferedSequence")
+@available(*, unavailable, renamed: "AsyncBufferedSequence")
 public protocol AsyncChunkedSequence<Element>: AsyncSequence where AsyncIterator: AsyncChunkedIteratorProtocol {
 
 }
 
-@available(*, deprecated, renamed: "AsyncBufferedIteratorProtocol")
+@available(*, unavailable, renamed: "AsyncBufferedIteratorProtocol")
 public protocol AsyncChunkedIteratorProtocol: AsyncIteratorProtocol {
 
     /// Retrieves n elements from sequence in a single array.
