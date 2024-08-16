@@ -290,7 +290,7 @@ let route = HTTPRoute("POST *", body: .json(where: "food == 'fish'"))
 
 ## Route Parameters
 
-Routes can include named parameters within a path or query item using the `:` prefix. Any string supplied to this parameter will match the route, handlers can access the value of the string using `request.routePamaters`.
+Routes can include named parameters within a path or query item using the `:` prefix. Any string supplied to this parameter will match the route, handlers can access the value of the string using `request.routeParameters`.
 
 ```swift
 handler.appendRoute("GET /creature/:name?type=:beast") { request in
