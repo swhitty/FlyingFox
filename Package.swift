@@ -60,8 +60,7 @@ extension Array where Element == SwiftSetting {
     static var upcomingFeatures: [SwiftSetting] {
         [
             .enableUpcomingFeature("ExistentialAny"),
-            .swiftLanguageMode(.v5, .when(platforms: [.linux])),
-            .swiftLanguageMode(.v6, .when(platforms: [.macOS, .iOS, .watchOS, .tvOS]))
+            .swiftLanguageMode(.v6)
         ]
     }
 }
