@@ -38,7 +38,6 @@ public struct WSFrame: Sendable, Hashable {
     public var rsv3: Bool
     public var opcode: Opcode
     public var mask: Mask?
-    @UncheckedSendable
     public var payload: Data
 
     public init(fin: Bool,

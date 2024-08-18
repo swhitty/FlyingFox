@@ -22,6 +22,7 @@ let package = Package(
             name: "FlyingFox",
             dependencies: ["FlyingSocks"],
             path: "FlyingFox/Sources",
+            exclude: .excludeFiles,
             swiftSettings: .upcomingFeatures
         ),
         .testTarget(
@@ -54,6 +55,16 @@ let package = Package(
         )
     ]
 )
+
+extension Array where Element == String {
+    static var excludeFiles: [String] {
+        #if os(Linux)
+        ["JSONPredicatePattern.swift"]
+        #else
+        []
+        #endif
+    }
+}
 
 extension Array where Element == SwiftSetting {
 

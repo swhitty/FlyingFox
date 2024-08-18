@@ -38,7 +38,6 @@ public struct ProxyHTTPHandler: HTTPHandler, Sendable {
 
     private let base: String
 
-    @UncheckedSendable
     private var session: URLSession
 
     public init(base: String, session: URLSession = .shared) {

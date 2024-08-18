@@ -33,7 +33,6 @@ import Foundation
 
 public struct FileHTTPHandler: HTTPHandler {
 
-    @UncheckedSendable
     private(set) var path: URL?
     let contentType: String
 

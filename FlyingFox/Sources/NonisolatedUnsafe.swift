@@ -32,7 +32,7 @@
 import Foundation
 
 @propertyWrapper
-public struct UncheckedSendable<Value>: @unchecked Sendable {
+public struct NonisolatedUnsafe<Value>: @unchecked Sendable {
     public var wrappedValue: Value
 
     public init(wrappedValue: Value) {
@@ -40,6 +40,6 @@ public struct UncheckedSendable<Value>: @unchecked Sendable {
     }
 }
 
-extension UncheckedSendable: Equatable where Value: Equatable { }
+extension NonisolatedUnsafe: Equatable where Value: Equatable { }
 
-extension UncheckedSendable: Hashable where Value: Hashable { }
+extension NonisolatedUnsafe: Hashable where Value: Hashable { }

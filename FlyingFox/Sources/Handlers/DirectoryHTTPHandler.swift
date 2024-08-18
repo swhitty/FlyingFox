@@ -33,7 +33,6 @@ import Foundation
 
 public struct DirectoryHTTPHandler: HTTPHandler {
 
-    @UncheckedSendable
     private(set) var root: URL?
     let serverPath: String
 

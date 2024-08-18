@@ -29,8 +29,37 @@
 //  SOFTWARE.
 //
 
+#if canImport(Darwin)
+
 import Foundation
 
-public protocol HTTPBodyPattern: Sendable {
-    func evaluate(_ body: Data) -> Bool
+public struct JSONPredicatePattern: HTTPBodyPattern {
+
+    #if compiler(>=6)
+    nonisolated(unsafe) private var predicate: NSPredicate
+    #else
+    @NonisolatedUnsafe private var predicate: NSPredicate
+    #endif
+
+    public init(_ predicate: NSPredicate) {
+        self.predicate = predicate
+    }
+
+    public func evaluate(_ body: Data) -> Bool {
+        do {
+            let object = try JSONSerialization.jsonObject(with: body, options: [])
+            return predicate.evaluate(with: object)
+        } catch {
+            return false
+        }
+    }
 }
+
+public extension HTTPBodyPattern where Self == JSONPredicatePattern {
+
+    static func json(where condition: String) -> JSONPredicatePattern {
+        JSONPredicatePattern(NSPredicate(format: condition))
+    }
+}
+
+#endif
