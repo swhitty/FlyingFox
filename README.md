@@ -13,7 +13,7 @@
 - [Handlers](#handlers)
 - [Routes](#routes)
     - [Route Parameters](#route-parameters)
-- [Macros](#preview-macro-handler)
+- [Macros](#macros)
 - [WebSockets](#websockets)
 - [FlyingSocks](#flyingsocks)
     - [Socket](#socket)
@@ -334,11 +334,14 @@ protocol WSHandler {
 
 `WSHandler` facilitates the exchange of a pair `AsyncStream<WSFrame>` containing the raw websocket frames sent over the connection. While powerful, it is more convenient to exchange streams of messages via [`WebSocketHTTPHandler`](#websockethttphandler).
 
-## Preview Macro Handler
+## Macros
 
-The branch [`preview/macro`](https://github.com/swhitty/FlyingFox/tree/preview/macro) contains an experimental preview implementation where handlers can annotate functions with routes:
+The repo [`FlyingFoxMacros`](https://github.com/swhitty/FlyingFoxMacros) contains macros that can be annotated with `HTTPRoute` to automatically syntesise a `HTTPHandler`.
 
 ```swift
+import FlyingFox
+import FlyingFoxMacros
+
 @HTTPHandler
 struct MyHandler {
 
@@ -360,9 +363,9 @@ let server = HTTPServer(port: 80, handler: MyHandler())
 try await server.start()
 ```
 
-The annotations are implemented via [SE-0389 Attached Macros](https://github.com/apple/swift-evolution/blob/main/proposals/0389-attached-macros.md) available in Swift 5.9 and later. 
+The annotations are implemented via [SE-0389 Attached Macros](https://github.com/apple/swift-evolution/blob/main/proposals/0389-attached-macros.md).
 
-Read more [here](https://github.com/swhitty/FlyingFox/tree/preview/macro#preview-macro-handler).
+Read more [here](https://github.com/swhitty/FlyingFoxMacros).
 
 # FlyingSocks
 
