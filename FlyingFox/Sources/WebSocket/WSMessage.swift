@@ -41,6 +41,9 @@ public protocol WSMessageHandler: Sendable {
 }
 
 public struct EchoWSMessageHandler: WSMessageHandler {
+
+    public init() {}
+    
     public func makeMessages(for client: AsyncStream<WSMessage>) async throws -> AsyncStream<WSMessage> {
         client
     }
