@@ -31,7 +31,7 @@
 
 import Foundation
 
-/// AsyncSequence that can only be iterated multiple-times-concurrently.
+/// AsyncSequence that can be iterated multiple-times-concurrently.
 package struct AsyncSharedReplaySequence<Base>: AsyncBufferedSequence, Sendable where Base: AsyncBufferedSequence {
     package typealias Element = Base.Element
 
