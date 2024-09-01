@@ -1,14 +1,14 @@
 //
-//  Task+Timeout.swift
-//  FlyingFox
+//  TaskTimeout.swift
+//  TaskTimeout
 //
-//  Created by Simon Whitty on 15/02/2022.
-//  Copyright © 2022 Simon Whitty. All rights reserved.
+//  Created by Simon Whitty on 31/08/2024.
+//  Copyright 2024 Simon Whitty
 //
 //  Distributed under the permissive MIT license
 //  Get the latest version from here:
 //
-//  https://github.com/swhitty/FlyingFox
+//  https://github.com/swhitty/TaskTimeout
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
 //  of this software and associated documentation files (the "Software"), to deal
@@ -31,24 +31,83 @@
 
 import Foundation
 
-package func withThrowingTimeout<T: Sendable>(seconds: TimeInterval, body: @escaping @Sendable () async throws -> T) async throws -> T {
-    try await withThrowingTaskGroup(of: T.self) { group -> T in
+package struct TimeoutError: LocalizedError {
+    package var errorDescription: String?
+
+    package init(timeout: TimeInterval) {
+        self.errorDescription = "Task timed out before completion. Timeout: \(timeout) seconds."
+    }
+}
+
+#if compiler(>=6.0)
+package func withThrowingTimeout<T>(
+    isolation: isolated (any Actor)? = #isolation,
+    seconds: TimeInterval,
+    body: () async throws -> sending T
+) async throws -> sending T {
+    let transferringBody = { try await Transferring(body()) }
+    typealias NonSendableClosure = () async throws -> Transferring<T>
+    typealias SendableClosure = @Sendable () async throws -> Transferring<T>
+    return try await withoutActuallyEscaping(transferringBody) {
+        (_ fn: @escaping NonSendableClosure) async throws -> Transferring<T> in
+        let sendableFn = unsafeBitCast(fn, to: SendableClosure.self)
+        return try await _withThrowingTimeout(isolation: isolation, seconds: seconds, body: sendableFn)
+    }.value
+}
+
+// Sendable
+private func _withThrowingTimeout<T: Sendable>(
+    isolation: isolated (any Actor)? = #isolation,
+    seconds: TimeInterval,
+    body: @Sendable @escaping () async throws -> T
+) async throws -> T {
+    try await withThrowingTaskGroup(of: T.self) { group in
         group.addTask {
             try await body()
         }
         group.addTask {
             try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
-            throw TimeoutError()
+            throw TimeoutError(timeout: seconds)
         }
         let success = try await group.next()!
         group.cancelAll()
         return success
     }
 }
-
-package struct TimeoutError: LocalizedError {
-    package var errorDescription: String? = "Timed out before completion"
+#else
+package func withThrowingTimeout<T>(
+    seconds: TimeInterval,
+    body: () async throws -> T
+) async throws -> T {
+    let transferringBody = { try await Transferring(body()) }
+    typealias NonSendableClosure = () async throws -> Transferring<T>
+    typealias SendableClosure = @Sendable () async throws -> Transferring<T>
+    return try await withoutActuallyEscaping(transferringBody) {
+        (_ fn: @escaping NonSendableClosure) async throws -> Transferring<T> in
+        let sendableFn = unsafeBitCast(fn, to: SendableClosure.self)
+        return try await _withThrowingTimeout(seconds: seconds, body: sendableFn)
+    }.value
 }
+
+// Sendable
+private func _withThrowingTimeout<T: Sendable>(
+    seconds: TimeInterval,
+    body: @Sendable @escaping () async throws -> T
+) async throws -> T {
+    try await withThrowingTaskGroup(of: T.self) { group in
+        group.addTask {
+            try await body()
+        }
+        group.addTask {
+            try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+            throw TimeoutError(timeout: seconds)
+        }
+        let success = try await group.next()!
+        group.cancelAll()
+        return success
+    }
+}
+#endif
 
 package extension Task {
 
@@ -88,7 +147,7 @@ package extension Task {
             }
             group.addTask {
                 try await Task<Never, Never>.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
-                throw TimeoutError()
+                throw TimeoutError(timeout: seconds)
             }
             _ = try await group.next()!
             group.cancelAll()
