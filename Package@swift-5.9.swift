@@ -78,7 +78,8 @@ extension Array where Element == SwiftSetting {
             .enableUpcomingFeature("ForwardTrailingClosures"),
             .enableUpcomingFeature("GlobalConcurrency"),
             .enableUpcomingFeature("ImportObjcForwardDeclarations"),
-            .enableUpcomingFeature("IsolatedDefaultValues")
+            .enableUpcomingFeature("IsolatedDefaultValues"),
+            //.enableExperimentalFeature("StrictConcurrency")
         ]
     }
 }
