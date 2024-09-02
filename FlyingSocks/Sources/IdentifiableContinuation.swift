@@ -52,6 +52,7 @@ package func withIdentifiableContinuation<T>(
 ) async -> T {
     let id = IdentifiableContinuation<T, Never>.ID()
     let state = AllocatedLock(initialState: (isStarted: false, isCancelled: false))
+    nonisolated(unsafe) let body = body
     return await withTaskCancellationHandler {
         await withCheckedContinuation(isolation: isolation, function: function) {
             let continuation = IdentifiableContinuation(id: id, continuation: $0)
@@ -97,6 +98,7 @@ package func withIdentifiableThrowingContinuation<T>(
 ) async throws -> T {
     let id = IdentifiableContinuation<T, any Error>.ID()
     let state = AllocatedLock(initialState: (isStarted: false, isCancelled: false))
+    nonisolated(unsafe) let body = body
     return try await withTaskCancellationHandler {
         try await withCheckedThrowingContinuation(isolation: isolation, function: function) {
             let continuation = IdentifiableContinuation(id: id, continuation: $0)
