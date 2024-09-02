@@ -146,7 +146,9 @@ final class TaskTimeoutTests: XCTestCase {
     @MainActor
     func testMainActor_ReturnsValue() async throws {
         let val = try await withThrowingTimeout(seconds: 1) {
+            #if compiler(>=5.10)
             MainActor.assertIsolated()
+            #endif
             return "Fish"
         }
         XCTAssertEqual(val, "Fish")
@@ -156,7 +158,9 @@ final class TaskTimeoutTests: XCTestCase {
     func testMainActorThrowsError_WhenTimeoutExpires() async {
         do {
             try await withThrowingTimeout(seconds: 0.05) {
+                #if compiler(>=5.10)
                 MainActor.assertIsolated()
+                #endif
                 try? await Task.sleep(nanoseconds: 60_000_000_000)
             }
             XCTFail("Expected Error")
