@@ -142,6 +142,60 @@ final class TaskTimeoutTests: XCTestCase {
             "Fish"
         )
     }
+
+    @MainActor
+    func testMainActor_ReturnsValue() async throws {
+        let val = try await withThrowingTimeout(seconds: 1) {
+            MainActor.assertIsolated()
+            return "Fish"
+        }
+        XCTAssertEqual(val, "Fish")
+    }
+
+    @MainActor
+    func testMainActorThrowsError_WhenTimeoutExpires() async {
+        do {
+            try await withThrowingTimeout(seconds: 0.05) {
+                MainActor.assertIsolated()
+                try? await Task.sleep(nanoseconds: 60_000_000_000)
+            }
+            XCTFail("Expected Error")
+        } catch {
+            XCTAssertTrue(error is TimeoutError)
+        }
+    }
+
+    func testSendable_ReturnsValue() async throws {
+        let sendable = TestActor()
+        let value = try await withThrowingTimeout(seconds: 1) {
+            sendable
+        }
+        XCTAssertTrue(value === sendable)
+    }
+
+    func testNonSendable_ReturnsValue() async throws {
+        let ns = try await withThrowingTimeout(seconds: 1) {
+            NonSendable("chips")
+        }
+        XCTAssertEqual(ns.value, "chips")
+    }
+
+    func testActor_ReturnsValue() async throws {
+        let val = try await TestActor().returningString("Fish")
+        XCTAssertEqual(val, "Fish")
+    }
+
+    func testActorThrowsError_WhenTimeoutExpires() async {
+        do {
+            _ = try await TestActor().returningString(
+                after: 60,
+                timeout: 0.05
+            )
+            XCTFail("Expected Error")
+        } catch {
+            XCTAssertTrue(error is TimeoutError)
+        }
+    }
 }
 
 extension Task where Success: Sendable, Failure == any Error {
@@ -149,7 +203,9 @@ extension Task where Success: Sendable, Failure == any Error {
     // Start a new Task with a timeout.
     init(priority: TaskPriority? = nil, timeout: TimeInterval, operation: @escaping @Sendable () async throws -> Success) {
         self = Task(priority: priority) {
-            try await withThrowingTimeout(seconds: timeout, body: operation)
+            try await withThrowingTimeout(seconds: timeout) {
+                try await operation()
+            }
         }
     }
 }
@@ -157,5 +213,30 @@ extension Task where Success: Sendable, Failure == any Error {
 extension Task where Success == Never, Failure == Never {
     static func sleep(seconds: TimeInterval) async throws {
         try await sleep(nanoseconds: UInt64(1_000_000_000 * seconds))
+    }
+}
+
+public struct NonSendable<T> {
+    public var value: T
+
+    init(_ value: T) {
+        self.value = value
+    }
+}
+
+private final actor TestActor {
+
+    func returningString(_ string: String = "Fish", after sleep: TimeInterval = 0, timeout: TimeInterval = 1) async throws -> String {
+        try await returningValue(string, after: sleep, timeout: timeout)
+    }
+
+    func returningValue<T: Sendable>(_ value: T, after sleep: TimeInterval = 0, timeout: TimeInterval = 1) async throws -> T {
+        try await withThrowingTimeout(seconds: timeout) {
+            if #available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *) {
+                assertIsolated()
+            }
+            try await Task.sleep(seconds: sleep)
+            return value
+        }
     }
 }

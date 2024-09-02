@@ -61,7 +61,7 @@ private func _withThrowingTimeout<T: Sendable>(
     seconds: TimeInterval,
     body: @Sendable @escaping () async throws -> T
 ) async throws -> T {
-    try await withThrowingTaskGroup(of: T.self) { group in
+    try await withThrowingTaskGroup(of: T.self, isolation: isolation) { group in
         group.addTask {
             try await body()
         }
