@@ -165,7 +165,7 @@ extension AsyncSocket {
     }
 
     static func makeListening(pool: some AsyncSocketPool) throws -> AsyncSocket {
-        let address = sockaddr_un.unix(path: "foxsocks")
+        let address = sockaddr_un.unix(path: #function)
         try? Socket.unlink(address)
         let socket = try Socket(domain: AF_UNIX, type: Socket.stream)
         try socket.setValue(true, for: .localAddressReuse)

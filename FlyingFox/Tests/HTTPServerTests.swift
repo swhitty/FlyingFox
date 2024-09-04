@@ -282,7 +282,7 @@ final class HTTPServerTests: XCTestCase {
 #endif
 
     func testServer_StartsOnUnixSocket() async throws {
-        let address = sockaddr_un.unix(path: "foxsocks")
+        let address = sockaddr_un.unix(path: #function)
         try? Socket.unlink(address)
         let server = HTTPServer.make(address: address)
         await server.appendRoute("*") { _ in
@@ -321,7 +321,7 @@ final class HTTPServerTests: XCTestCase {
     func testServer_AllowsExistingConnectionsToDisconnect_WhenStopped() async throws {
         let server = HTTPServer.make()
         await server.appendRoute("*") { _ in
-            try await Task.sleep(seconds: 2)
+            try await Task.sleep(seconds: 0.5)
             return .make(statusCode: .ok)
         }
         let port = try await startServerWithPort(server)
@@ -330,7 +330,7 @@ final class HTTPServerTests: XCTestCase {
 
         try await socket.writeRequest(.make())
         try await Task.sleep(seconds: 0.5)
-        let taskStop = Task { await server.stop(timeout: 5) }
+        let taskStop = Task { await server.stop(timeout: 1) }
 
         await AsyncAssertEqual(
             try await socket.readResponse().statusCode,
@@ -346,10 +346,10 @@ final class HTTPServerTests: XCTestCase {
         let socket = try await AsyncSocket.connected(to: .inet(ip4: "127.0.0.1", port: port))
         defer { try? socket.close() }
 
-        try await Task.sleep(seconds: 0.5)
+        try await Task.sleep(seconds: 0.1)
         await AsyncAssertEqual(await server.connections.count, 1)
 
-        let taskStop = Task { await server.stop(timeout: 5) }
+        let taskStop = Task { await server.stop(timeout: 1) }
         try await Task.sleep(seconds: 0.5)
 
         await AsyncAssertEqual(await server.connections.count, 0)
@@ -427,7 +427,7 @@ final class HTTPServerTests: XCTestCase {
         let server = HTTPServer.make()
 
         let waiting = Task<Bool, any Error> {
-            try await server.waitUntilListening(timeout: 1)
+            try await server.waitUntilListening(timeout: 0.1)
             return true
         }
 
