@@ -329,7 +329,7 @@ final class HTTPServerTests: XCTestCase {
         defer { try? socket.close() }
 
         try await socket.writeRequest(.make())
-        try await Task.sleep(seconds: 0.5)
+        try await Task.sleep(seconds: 0.1)
         let taskStop = Task { await server.stop(timeout: 1) }
 
         await AsyncAssertEqual(
