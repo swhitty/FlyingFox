@@ -58,18 +58,18 @@ final class AllocatedLockTests: XCTestCase {
 
     func testLock_Blocks() async {
         let lock = AllocatedLock()
+        await MainActor.run {
+            lock.unsafeLock()
+        }
 
         Task { @MainActor in
-            lock.unsafeLock()
-            try? await Task.sleep(nanoseconds: 1_000_000_000)
+            try? await Task.sleep(nanoseconds: 200_000)
             lock.unsafeUnlock()
         }
 
-        try? await Task.sleep(nanoseconds: 500_000)
-
         let results = await withTaskGroup(of: Bool.self) { group in
             group.addTask {
-                try? await Task.sleep(nanoseconds: 5_000_000)
+                try? await Task.sleep(nanoseconds: 10_000)
                 return true
             }
             group.addTask {
