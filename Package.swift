@@ -25,9 +25,9 @@ let package = Package(
             swiftSettings: .upcomingFeatures
         ),
         .testTarget(
-            name: "FlyingFoxTests",
+            name: "FlyingFoxXCTests",
             dependencies: ["FlyingFox"],
-            path: "FlyingFox/Tests",
+            path: "FlyingFox/XCTests",
             resources: [
                 .copy("Stubs")
             ],
@@ -40,9 +40,9 @@ let package = Package(
             swiftSettings: .upcomingFeatures
         ),
         .testTarget(
-            name: "FlyingSocksTests",
+            name: "FlyingSocksXCTests",
             dependencies: ["FlyingSocks"],
-            path: "FlyingSocks/Tests",
+            path: "FlyingSocks/XCTests",
             resources: [
                 .copy("Resources")
             ],
