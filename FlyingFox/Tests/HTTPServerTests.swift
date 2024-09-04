@@ -356,7 +356,7 @@ final class HTTPServerTests: XCTestCase {
         await taskStop.value
     }
 
-    func disabled_testServer_Returns500_WhenHandlerTimesout() async throws {
+    func testServer_Returns500_WhenHandlerTimesout() async throws {
         let server = HTTPServer.make(timeout: 0.5)
         await server.appendRoute("*") { _ in
             try await Task.sleep(seconds: 5)

@@ -315,7 +315,7 @@ final class WSFrameEncoderTests: XCTestCase {
         ) { XCTAssertEqual($0, .disconnected) }
     }
 
-    func debug_testWebSocketConnectionToVI() async throws {
+    func testWebSocketConnectionToVI() async throws {
         let addr = try Socket.makeAddressINET(fromIP4: "192.236.209.31", port: 80)
         let socket = try await AsyncSocket.connected(to: addr)
         defer { try? socket.close() }
