@@ -215,6 +215,11 @@ final class SocketPoolTests: XCTestCase {
         let cnRead = await Continuation.make()
         let cnRead1 = await Continuation.make()
         let cnWrite = await Continuation.make()
+        defer {
+            cnRead.resume()
+            cnRead1.resume()
+            cnWrite.resume()
+        }
 
         _ = waiting.appendContinuation(cnRead, for: .validMock, events: .read)
         _ = waiting.appendContinuation(cnRead1, for: .validMock, events: .read)
