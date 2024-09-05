@@ -50,7 +50,7 @@ extension Array where Element == SwiftSetting {
 extension [PackageDescription.Target] {
     static var testingTargets: [PackageDescription.Target] {
     #if canImport(Darwin) || compiler(>=6.1)
-        return [
+        [
             .testTarget(
                 name: "FlyingFoxTests",
                 dependencies: ["FlyingFox"],
@@ -71,7 +71,7 @@ extension [PackageDescription.Target] {
             )
         ]
         #else
-        return [
+        [
             .testTarget(
                 name: "FlyingFoxXCTests",
                 dependencies: ["FlyingFox"],
