@@ -89,7 +89,7 @@ extension [PackageDescription.Target] {
                     .copy("Resources")
                 ],
                 swiftSettings: .upcomingFeatures
-            ),
+            )
         ]
         #endif
     }
