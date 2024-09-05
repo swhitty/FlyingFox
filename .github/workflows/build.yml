@@ -85,7 +85,7 @@ jobs:
 
   linux_swift_6_0:
     runs-on: ubuntu-latest
-    container: swiftlang/swift:nightly-6.0-jammy
+    container: swiftlang/swift:nightly-jammy
     steps:
       - name: Checkout
         uses: actions/checkout@v4

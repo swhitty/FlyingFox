@@ -49,7 +49,7 @@ extension Array where Element == SwiftSetting {
 
 extension [PackageDescription.Target] {
     static var testingTargets: [PackageDescription.Target] {
-        #if canImport(Darwin)
+    #if canImport(Darwin) || compiler(>=6.1)
         return [
             .testTarget(
                 name: "FlyingFoxTests",
