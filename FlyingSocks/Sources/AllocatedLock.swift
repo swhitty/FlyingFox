@@ -42,7 +42,7 @@ package struct AllocatedLock<State>: @unchecked Sendable {
     }
 
     @inlinable
-    package func withLock<R, E>(_ body: @Sendable (inout State) throws(E) -> sending R) throws(E) -> sending R where E: Error {
+    package func withLock<R, E>(_ body: (inout sending State) throws(E) -> sending R) throws(E) -> sending R where E: Error {
         storage.lock()
         defer { storage.unlock() }
         return try body(&storage.state)

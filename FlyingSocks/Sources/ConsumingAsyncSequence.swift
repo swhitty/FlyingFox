@@ -106,8 +106,7 @@ extension ConsumingAsyncSequence {
         }
 
         func setState(_ state: State) {
-            let t = Transferring(state)
-            self.state.withLock { $0 = t.value }
+            self.state.withLock { $0 = state }
         }
     }
 }
