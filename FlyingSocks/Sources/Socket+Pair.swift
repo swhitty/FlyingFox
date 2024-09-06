@@ -35,9 +35,7 @@ import Darwin
 import Glibc
 #endif
 
-@testable import FlyingSocks
-
-extension Socket {
+package extension Socket {
 
     static func socketpair(_ domain: Int32, _ type: Int32, _ protocol: Int32) -> (FileDescriptor, FileDescriptor) {
         var sockets: [Int32] = [-1, -1]
@@ -63,8 +61,4 @@ extension Socket {
 
         return (s1, s2)
     }
-}
-
-extension Socket.FileDescriptor {
-    static let validMock = Socket.FileDescriptor(rawValue: 999)
 }
