@@ -38,7 +38,7 @@ import FoundationNetworking
 
 final class URLSessionAsyncTests: XCTestCase {
 
-    func testURLSession_MakesRequest() async throws {
+    func disabled_testURLSession_MakesRequest() async throws {
         let request = URLRequest(url: URL(string: "https://pie.dev/status/208")!)
         let (_, response) = try await URLSession.shared.data(for: request)
 

@@ -174,7 +174,7 @@ struct HTTPHandlerTests {
 
     //MARK: - ProxyHTTPHandler
     
-    @Test
+    @Test(.disabled("pie.dev appears to be down"))
     func proxyHandler_ReturnsResponse() async throws {
         let handler = ProxyHTTPHandler(base: "https://pie.dev")
         var response = try await handler.handleRequest(.make(method: .GET,
