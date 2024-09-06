@@ -37,12 +37,13 @@ import FoundationNetworking
 public struct ProxyHTTPHandler: HTTPHandler, Sendable {
 
     private let base: String
+    private let session: URLSession
+    private let timeout: TimeInterval?
 
-    private var session: URLSession
-
-    public init(base: String, session: URLSession = .shared) {
+    public init(base: String, session: URLSession = .shared, timeout: TimeInterval? = nil) {
         self.base = base
         self.session = session
+        self.timeout = timeout
     }
 
     public func handleRequest(_ request: HTTPRequest) async throws -> HTTPResponse {
@@ -54,6 +55,9 @@ public struct ProxyHTTPHandler: HTTPHandler, Sendable {
     func makeURLRequest(for request: HTTPRequest) async throws -> URLRequest {
         let url = try makeURL(for: request)
         var req = URLRequest(url: url)
+        if let timeout {
+            req.timeoutInterval = timeout
+        }
         req.httpMethod = request.method.rawValue
         req.httpBody = try await request.bodyData
         req.allHTTPHeaderFields = request.headers.reduce(into: [:]) {

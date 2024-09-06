@@ -177,7 +177,7 @@ final class HTTPHandlerTests: XCTestCase {
     //MARK: - ProxyHTTPHandler
     
     func disabled_testProxyHandler_ReturnsResponse() async throws {
-        let handler = ProxyHTTPHandler(base: "https://pie.dev")
+        let handler = ProxyHTTPHandler(base: "https://pie.dev", timeout: 2)
         var response = try await handler.handleRequest(.make(method: .GET,
                                                              path: "/status/202",
                                                              query: [.init(name: "hello", value: "world")]))

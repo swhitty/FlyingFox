@@ -40,7 +40,8 @@ struct URLSessionAsyncTests {
 
     @Test(.disabled("pie.dev is down"))
     func session_MakesRequest() async throws {
-        let request = URLRequest(url: URL(string: "https://pie.dev/status/208")!)
+        var request = URLRequest(url: URL(string: "https://pie.dev/status/208")!)
+        request.timeoutInterval = 2
         let (_, response) = try await URLSession.shared.data(for: request)
 
         #expect(
