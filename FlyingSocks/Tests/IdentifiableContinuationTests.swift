@@ -259,7 +259,7 @@ private extension Actor {
 
     func identifiableContinuation<T: Sendable>(
         body:  @Sendable (IdentifiableContinuation<T, Never>) -> Void,
-    onCancel handler: @Sendable (IdentifiableContinuation<T, Never>.ID) -> Void = { _ in }
+        onCancel handler: @Sendable (IdentifiableContinuation<T, Never>.ID) -> Void = { _ in }
     ) async -> T {
 #if compiler(>=6.0)
         await withIdentifiableContinuation(body: body, onCancel: handler)
@@ -270,7 +270,7 @@ private extension Actor {
 
     func throwingIdentifiableContinuation<T: Sendable>(
         body:  @Sendable (IdentifiableContinuation<T, any Error>) -> Void,
-    onCancel handler: @Sendable (IdentifiableContinuation<T, any Error>.ID) -> Void = { _ in }
+        onCancel handler: @Sendable (IdentifiableContinuation<T, any Error>.ID) -> Void = { _ in }
     ) async throws -> T {
 #if compiler(>=6.0)
         try await withIdentifiableThrowingContinuation(body: body, onCancel: handler)

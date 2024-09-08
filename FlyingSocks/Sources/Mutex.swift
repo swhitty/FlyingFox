@@ -1,14 +1,14 @@
 //
-//  AllocatedLock.swift
-//  AllocatedLock
+//  Mutex.swift
+//  swift-mutex
 //
-//  Created by Simon Whitty on 10/04/2023.
-//  Copyright 2023 Simon Whitty
+//  Created by Simon Whitty on 07/09/2024.
+//  Copyright 2024 Simon Whitty
 //
 //  Distributed under the permissive MIT license
 //  Get the latest version from here:
 //
-//  https://github.com/swhitty/AllocatedLock
+//  https://github.com/swhitty/swift-mutex
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
 //  of this software and associated documentation files (the "Software"), to deal
@@ -29,68 +29,65 @@
 //  SOFTWARE.
 //
 
-// Backports the Swift interface around os_unfair_lock_t available in recent Darwin platforms
-//
-package struct AllocatedLock<State>: @unchecked Sendable {
+// Backports the Swift 6.0 Mutex API
+@usableFromInline
+package struct Mutex<Value>: @unchecked Sendable {
+    let storage: Storage
+}
+
+#if compiler(>=6)
+package extension Mutex {
 
     @usableFromInline
-    let storage: Storage
-
-#if compiler(>=6.0)
-    package init(initialState: sending State) {
-        self.storage = Storage(initialState: initialState)
+    init(_ initialValue: consuming sending Value) {
+        self.storage = Storage(initialValue)
     }
 
-    @inlinable
-    package func withLock<R, E>(_ body: (inout sending State) throws(E) -> sending R) throws(E) -> sending R where E: Error {
+    @usableFromInline
+    borrowing func withLock<Result, E: Error>(
+        _ body: (inout sending Value) throws(E) -> sending Result
+    ) throws(E) -> sending Result {
         storage.lock()
         defer { storage.unlock() }
-        return try body(&storage.state)
+        return try body(&storage.value)
     }
+
+    @usableFromInline
+    borrowing func withLockIfAvailable<Result, E>(
+        _ body: (inout sending Value) throws(E) -> sending Result
+    ) throws(E) -> sending Result? where E: Error {
+        guard storage.tryLock() else { return nil }
+        defer { storage.unlock() }
+        return try body(&storage.value)
+    }
+}
 #else
-    package init(initialState: State) {
-        self.storage = Storage(initialState: initialState)
+package extension Mutex {
+
+    @usableFromInline
+    init(_ initialValue: Value) {
+        self.storage = Storage(initialValue)
     }
 
-    @inlinable
-    package func withLock<R>(_ body: @Sendable (inout State) throws -> R) rethrows -> R {
+    @usableFromInline
+    borrowing func withLock<Result>(
+        _ body: (inout Value) throws -> Result
+    ) rethrows -> Result {
         storage.lock()
         defer { storage.unlock() }
-        return try body(&storage.state)
+        return try body(&storage.value)
     }
+
+    @usableFromInline
+    borrowing func withLockIfAvailable<Result>(
+        _ body: (inout Value) throws -> Result
+    ) rethrows -> Result? {
+        guard storage.tryLock() else { return nil }
+        defer { storage.unlock() }
+        return try body(&storage.value)
+    }
+}
 #endif
-}
-
-package extension AllocatedLock where State == Void {
-
-    init() {
-        self.storage = Storage(initialState: ())
-    }
-
-    @inlinable @available(*, noasync)
-    func lock() {
-        storage.lock()
-    }
-
-    @inlinable @available(*, noasync)
-    func unlock() {
-        storage.unlock()
-    }
-
-    @inlinable
-    func withLock<R>(_ body: @Sendable () throws -> R) rethrows -> R where R: Sendable {
-        storage.lock()
-        defer { storage.unlock() }
-        return try body()
-    }
-}
-
-package extension AllocatedLock {
-
-    func copy() -> State where State: Sendable {
-        withLock { $0 }
-    }
-}
 
 #if canImport(Darwin)
 
@@ -98,29 +95,31 @@ import struct os.os_unfair_lock_t
 import struct os.os_unfair_lock
 import func os.os_unfair_lock_lock
 import func os.os_unfair_lock_unlock
+import func os.os_unfair_lock_trylock
 
-extension AllocatedLock {
-    @usableFromInline
+extension Mutex {
+
     final class Storage {
         private let _lock: os_unfair_lock_t
 
-        @usableFromInline
-        var state: State
+        var value: Value
 
-        init(initialState: State) {
+        init(_ initialValue: Value) {
             self._lock = .allocate(capacity: 1)
             self._lock.initialize(to: os_unfair_lock())
-            self.state = initialState
+            self.value = initialValue
         }
 
-        @usableFromInline
         func lock() {
             os_unfair_lock_lock(_lock)
         }
 
-        @usableFromInline
         func unlock() {
             os_unfair_lock_unlock(_lock)
+        }
+
+        func tryLock() -> Bool {
+            os_unfair_lock_trylock(_lock)
         }
 
         deinit {
@@ -134,33 +133,34 @@ extension AllocatedLock {
 
 import Glibc
 
-extension AllocatedLock {
-    @usableFromInline
+extension Mutex {
+
     final class Storage {
         private let _lock: UnsafeMutablePointer<pthread_mutex_t>
 
-        @usableFromInline
-        var state: State
+        var value: Value
 
-        init(initialState: State) {
+        init(_ initialValue: Value) {
             var attr = pthread_mutexattr_t()
             pthread_mutexattr_init(&attr)
             self._lock = .allocate(capacity: 1)
             let err = pthread_mutex_init(self._lock, &attr)
             precondition(err == 0, "pthread_mutex_init error: \(err)")
-            self.state = initialState
+            self.value = initialValue
         }
 
-        @usableFromInline
         func lock() {
             let err = pthread_mutex_lock(_lock)
             precondition(err == 0, "pthread_mutex_lock error: \(err)")
         }
 
-        @usableFromInline
         func unlock() {
             let err = pthread_mutex_unlock(_lock)
             precondition(err == 0, "pthread_mutex_unlock error: \(err)")
+        }
+
+        func tryLock() -> Bool {
+            pthread_mutex_trylock(_lock) == 0
         }
 
         deinit {
@@ -176,30 +176,37 @@ extension AllocatedLock {
 import ucrt
 import WinSDK
 
-extension AllocatedLock {
-    @usableFromInline
+extension Mutex {
+
     final class Storage {
         private let _lock: UnsafeMutablePointer<SRWLOCK>
 
-        @usableFromInline
-        var state: State
+        var value: Value
 
-        init(initialState: State) {
+        init(_ initialValue: Value) {
             self._lock = .allocate(capacity: 1)
             InitializeSRWLock(self._lock)
-            self.state = initialState
+            self.value = initialValue
         }
 
-        @usableFromInline
         func lock() {
             AcquireSRWLockExclusive(_lock)
         }
 
-        @usableFromInline
         func unlock() {
             ReleaseSRWLockExclusive(_lock)
+        }
+
+        func tryLock() -> Bool {
+            TryAcquireSRWLockExclusive(_lock)
         }
     }
 }
 
 #endif
+
+package extension Mutex where Value: Sendable {
+    func copy() -> Value {
+        withLock { $0 }
+    }
+}

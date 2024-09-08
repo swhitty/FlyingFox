@@ -67,10 +67,10 @@ extension ConsumingAsyncSequence {
 
     final class SharedBuffer: @unchecked Sendable {
 
-        private(set) var state: AllocatedLock<State>
+        private(set) var state: Mutex<State>
 
         init(_ sequence: Base) {
-            self.state = AllocatedLock(initialState: .initial(sequence))
+            self.state = Mutex(.initial(sequence))
         }
 
         enum State: @unchecked Sendable {

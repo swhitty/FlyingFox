@@ -48,7 +48,7 @@ package struct AsyncBufferedEmptySequence<Element: Sendable>: Sendable, AsyncBuf
             if completeImmediately {
                 return nil
             }
-            let state = AllocatedLock(initialState: State())
+            let state = Mutex(State())
             return await withTaskCancellationHandler {
                 await withCheckedContinuation { (continuation: CheckedContinuation<Element?, Never>) in
                     let shouldCancel = state.withLock {

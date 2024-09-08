@@ -44,6 +44,7 @@
 ///   - body: A closure that takes a `IdentifiableContinuation` parameter.
 ///   - handler: Cancellation closure executed when the current Task is cancelled.  Handler is always called _after_ the body closure is compeled.
 /// - Returns: The value continuation is resumed with.
+@inlinable
 package func withIdentifiableContinuation<T>(
   isolation: isolated (any Actor)? = #isolation,
   function: String = #function,
@@ -51,7 +52,7 @@ package func withIdentifiableContinuation<T>(
   onCancel handler: @Sendable (IdentifiableContinuation<T, Never>.ID) -> Void
 ) async -> T {
     let id = IdentifiableContinuation<T, Never>.ID()
-    let state = AllocatedLock(initialState: (isStarted: false, isCancelled: false))
+    let state = Mutex((isStarted: false, isCancelled: false))
     nonisolated(unsafe) let body = body
     return await withTaskCancellationHandler {
         await withCheckedContinuation(isolation: isolation, function: function) {
@@ -90,6 +91,7 @@ package func withIdentifiableContinuation<T>(
 ///   - body: A closure that takes a `IdentifiableContinuation` parameter.
 ///   - handler: Cancellation closure executed when the current Task is cancelled.  Handler is always called _after_ the body closure is compeled.
 /// - Returns: The value continuation is resumed with.
+@inlinable
 package func withIdentifiableThrowingContinuation<T>(
   isolation: isolated (any Actor)? = #isolation,
   function: String = #function,
@@ -97,7 +99,7 @@ package func withIdentifiableThrowingContinuation<T>(
   onCancel handler: @Sendable (IdentifiableContinuation<T, any Error>.ID) -> Void
 ) async throws -> T {
     let id = IdentifiableContinuation<T, any Error>.ID()
-    let state = AllocatedLock(initialState: (isStarted: false, isCancelled: false))
+    let state = Mutex((isStarted: false, isCancelled: false))
     nonisolated(unsafe) let body = body
     return try await withTaskCancellationHandler {
         try await withCheckedThrowingContinuation(isolation: isolation, function: function) {
@@ -138,6 +140,7 @@ package func withIdentifiableThrowingContinuation<T>(
 ///   - handler: Cancellation closure executed when the current Task is cancelled.  Handler is always called _after_ the body closure is compeled.
 /// - Returns: The value continuation is resumed with.
 @_unsafeInheritExecutor
+@inlinable
 package func withIdentifiableContinuation<T>(
   isolation: isolated some Actor,
   function: String = #function,
@@ -145,7 +148,7 @@ package func withIdentifiableContinuation<T>(
   onCancel handler: @Sendable (IdentifiableContinuation<T, Never>.ID) -> Void
 ) async -> T {
     let id = IdentifiableContinuation<T, Never>.ID()
-    let state = AllocatedLock(initialState: (isStarted: false, isCancelled: false))
+    let state = Mutex((isStarted: false, isCancelled: false))
     return await withTaskCancellationHandler {
         await withCheckedContinuation(function: function) {
             let continuation = IdentifiableContinuation(id: id, continuation: $0)
@@ -186,6 +189,7 @@ package func withIdentifiableContinuation<T>(
 ///   - handler: Cancellation closure executed when the current Task is cancelled.  Handler is always called _after_ the body closure is compeled.
 /// - Returns: The value continuation is resumed with.
 @_unsafeInheritExecutor
+@inlinable
 package func withIdentifiableThrowingContinuation<T>(
   isolation: isolated some Actor,
   function: String = #function,
@@ -193,7 +197,7 @@ package func withIdentifiableThrowingContinuation<T>(
   onCancel handler: @Sendable (IdentifiableContinuation<T, any Error>.ID) -> Void
 ) async throws -> T {
     let id = IdentifiableContinuation<T, any Error>.ID()
-    let state = AllocatedLock(initialState: (isStarted: false, isCancelled: false))
+    let state = Mutex((isStarted: false, isCancelled: false))
     return try await withTaskCancellationHandler {
         try await withCheckedThrowingContinuation(function: function) {
             let continuation = IdentifiableContinuation(id: id, continuation: $0)
@@ -219,23 +223,30 @@ package func withIdentifiableThrowingContinuation<T>(
 }
 #endif
 
+@usableFromInline
 package struct IdentifiableContinuation<T, E>: Sendable, Identifiable where E: Error {
 
+    @usableFromInline
     package let id: ID
 
+    @usableFromInline
     package final class ID: Hashable, Sendable {
 
+        @usableFromInline
         init() { }
 
+        @usableFromInline
         package func hash(into hasher: inout Hasher) {
             ObjectIdentifier(self).hash(into: &hasher)
         }
 
+        @usableFromInline
         package static func == (lhs: IdentifiableContinuation<T, E>.ID, rhs: IdentifiableContinuation<T, E>.ID) -> Bool {
             lhs === rhs
         }
     }
 
+    @usableFromInline
     init(id: ID, continuation: CheckedContinuation<T, E>) {
         self.id = id
         self.continuation = continuation

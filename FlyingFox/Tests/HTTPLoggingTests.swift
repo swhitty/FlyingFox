@@ -90,7 +90,7 @@ struct HTTPLoggingTests {
     @Test
     func disabledLogger_DoesNotExecuteDebugClosure() {
         let logger = DisabledLogger()
-        let didLog = AllocatedLock(initialState: false)
+        let didLog = Mutex(false)
 
         logger.logDebug({
             didLog.withLock { $0 = true }
@@ -103,7 +103,7 @@ struct HTTPLoggingTests {
     @Test
     func disabledLogger_DoesNotExecuteInfoClosure() {
         let logger = DisabledLogger()
-        let didLog = AllocatedLock(initialState: false)
+        let didLog = Mutex(false)
 
         logger.logInfo({
             didLog.withLock { $0 = true }
@@ -116,7 +116,7 @@ struct HTTPLoggingTests {
     @Test
     func disabledLogger_DoesNotExecuteWarningClosure() {
         let logger = DisabledLogger()
-        let didLog = AllocatedLock(initialState: false)
+        let didLog = Mutex(false)
 
         logger.logWarning({
             didLog.withLock { $0 = true }
@@ -129,7 +129,7 @@ struct HTTPLoggingTests {
     @Test
     func disabledLogger_DoesNotExecuteErrorClosure() {
         let logger = DisabledLogger()
-        let didLog = AllocatedLock(initialState: false)
+        let didLog = Mutex(false)
 
         logger.logError({
             didLog.withLock { $0 = true }
@@ -142,7 +142,7 @@ struct HTTPLoggingTests {
     @Test
     func disabledLogger_DoesNotExecuteCriticalClosure() {
         let logger = DisabledLogger()
-        let didLog = AllocatedLock(initialState: false)
+        let didLog = Mutex(false)
 
         logger.logCritical({
             didLog.withLock { $0 = true }

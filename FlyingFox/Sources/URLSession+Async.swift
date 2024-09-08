@@ -39,7 +39,7 @@ extension URLSession {
 
     // Ports macOS Foundation method to Linux
     func data(for request: URLRequest) async throws -> (Data, URLResponse) {
-        let state = AllocatedLock(initialState: (isCancelled: false, task: URLSessionDataTask?.none))
+        let state = Mutex((isCancelled: false, task: URLSessionDataTask?.none))
         return try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { continuation in
                 let task = dataTask(with: request) { data, response, error in
