@@ -1,6 +1,6 @@
 //
 //  TaskTimeout.swift
-//  TaskTimeout
+//  swift-timeout
 //
 //  Created by Simon Whitty on 31/08/2024.
 //  Copyright 2024 Simon Whitty
@@ -8,7 +8,7 @@
 //  Distributed under the permissive MIT license
 //  Get the latest version from here:
 //
-//  https://github.com/swhitty/TaskTimeout
+//  https://github.com/swhitty/swift-timeout
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
 //  of this software and associated documentation files (the "Software"), to deal
@@ -31,11 +31,11 @@
 
 import Foundation
 
-package struct TimeoutError: LocalizedError {
-    package var errorDescription: String?
+public struct TimeoutError: LocalizedError {
+    public var errorDescription: String?
 
-    package init(timeout: TimeInterval) {
-        self.errorDescription = "Task timed out before completion. Timeout: \(timeout) seconds."
+    init(_ description: String) {
+        self.errorDescription = description
     }
 }
 
@@ -45,34 +45,31 @@ package func withThrowingTimeout<T>(
     seconds: TimeInterval,
     body: () async throws -> sending T
 ) async throws -> sending T {
-    let transferringBody = { try await Transferring(body()) }
-    typealias NonSendableClosure = () async throws -> Transferring<T>
-    typealias SendableClosure = @Sendable () async throws -> Transferring<T>
-    return try await withoutActuallyEscaping(transferringBody) {
-        (_ fn: @escaping NonSendableClosure) async throws -> Transferring<T> in
-        let sendableFn = unsafeBitCast(fn, to: SendableClosure.self)
-        return try await _withThrowingTimeout(isolation: isolation, seconds: seconds, body: sendableFn)
-    }.value
-}
-
-// Sendable
-private func _withThrowingTimeout<T: Sendable>(
-    isolation: isolated (any Actor)? = #isolation,
-    seconds: TimeInterval,
-    body: @Sendable @escaping () async throws -> T
-) async throws -> T {
-    try await withThrowingTaskGroup(of: T.self, isolation: isolation) { group in
-        group.addTask {
-            try await body()
+    try await withoutActuallyEscaping(body) { escapingBody in
+        let bodyTask = Task {
+            defer { _ = isolation }
+            return try await Transferring(escapingBody())
         }
-        group.addTask {
+        let timeoutTask = Task {
+            defer { bodyTask.cancel() }
             try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
-            throw TimeoutError(timeout: seconds)
+            throw TimeoutError("Task timed out before completion. Timeout: \(seconds) seconds.")
         }
-        let success = try await group.next()!
-        group.cancelAll()
-        return success
-    }
+
+        let bodyResult = await withTaskCancellationHandler {
+            await bodyTask.result
+        } onCancel: {
+            bodyTask.cancel()
+        }
+        timeoutTask.cancel()
+
+        if case .failure(let timeoutError) = await timeoutTask.result,
+           timeoutError is TimeoutError {
+            throw timeoutError
+        } else {
+            return try bodyResult.get()
+        }
+    }.value
 }
 #else
 package func withThrowingTimeout<T>(
@@ -100,7 +97,7 @@ private func _withThrowingTimeout<T: Sendable>(
         }
         group.addTask {
             try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
-            throw TimeoutError(timeout: seconds)
+            throw TimeoutError("Task timed out before completion. Timeout: \(seconds) seconds.")
         }
         let success = try await group.next()!
         group.cancelAll()
@@ -132,26 +129,13 @@ package extension Task {
             }
         case .afterTimeout(let seconds):
             if seconds > 0 {
-                return try await getValue(cancellingAfter: seconds)
+                return try await withThrowingTimeout(seconds: seconds) {
+                    try await getValue(cancelling: .whenParentIsCancelled)
+                }
             } else {
                 cancel()
                 return try await value
             }
-        }
-    }
-
-    private func getValue(cancellingAfter seconds: TimeInterval) async throws -> Success {
-        try await withThrowingTaskGroup(of: Void.self) { group in
-            group.addTask {
-                _ = try await getValue(cancelling: .whenParentIsCancelled)
-            }
-            group.addTask {
-                try await Task<Never, Never>.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
-                throw TimeoutError(timeout: seconds)
-            }
-            _ = try await group.next()!
-            group.cancelAll()
-            return try await value
         }
     }
 }

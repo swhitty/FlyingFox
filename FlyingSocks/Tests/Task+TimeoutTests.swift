@@ -50,7 +50,7 @@ struct TaskTimeoutTests {
     func timeoutThrowsError_WhenTimeoutExpires() async {
         // given
         let task = Task<Void, any Error>(timeout: 0.01) {
-            try? await Task.sleep(seconds: 10)
+            try await Task.sleep(seconds: 10)
         }
 
         // then
@@ -141,29 +141,25 @@ struct TaskTimeoutTests {
         )
     }
 
-    @MainActor
-    @Test
+    @Test @MainActor
     func mainActor_ReturnsValue() async throws {
         let val = try await withThrowingTimeout(seconds: 1) {
-            #if compiler(>=5.10)
             MainActor.assertIsolated()
-            #endif
+            try await Task.sleep(nanoseconds: 1_000)
+            MainActor.assertIsolated()
             return "Fish"
         }
         #expect(val == "Fish")
     }
 
     @Test
-    func mainActorThrowsError_WhenTimeoutExpires() async throws {
-        let task = Task { @MainActor in
+    func mainActorThrowsError_WhenTimeoutExpires() async {
+        await #expect(throws: TimeoutError.self) { @MainActor in
             try await withThrowingTimeout(seconds: 0.05) {
                 MainActor.assertIsolated()
-                try? await Task.sleep(nanoseconds: 60_000_000_000)
+                defer { MainActor.assertIsolated() }
+                try await Task.sleep(nanoseconds: 60_000_000_000)
             }
-        }
-
-        await #expect(throws: TimeoutError.self) {
-            try await task.value
         }
     }
 
@@ -186,17 +182,32 @@ struct TaskTimeoutTests {
 
     @Test
     func actor_ReturnsValue() async throws {
-        let val = try await TestActor().returningString("Fish")
-        #expect(val == "Fish")
+        #expect(
+            try await TestActor("Fish").returningValue() == "Fish"
+        )
     }
 
     @Test
     func actorThrowsError_WhenTimeoutExpires() async {
         await #expect(throws: TimeoutError.self) {
-            _ = try await TestActor().returningString(
-                after: 60,
-                timeout: 0.05
-            )
+            try await withThrowingTimeout(seconds: 0.05) {
+                try await TestActor().returningValue(after: 60, timeout: 0.05)
+            }
+        }
+    }
+
+    @Test
+    func timeout_cancels() async {
+        let task = Task {
+            try await withThrowingTimeout(seconds: 1) {
+                try await Task.sleep(nanoseconds: 1_000_000_000)
+            }
+        }
+
+        task.cancel()
+
+        await #expect(throws: CancellationError.self) {
+            try await task.value
         }
     }
 }
@@ -206,9 +217,15 @@ extension Task where Success: Sendable, Failure == any Error {
     // Start a new Task with a timeout.
     init(priority: TaskPriority? = nil, timeout: TimeInterval, operation: @escaping @Sendable () async throws -> Success) {
         self = Task(priority: priority) {
-            try await withThrowingTimeout(seconds: timeout) {
-                try await operation()
+            do {
+                return try await withThrowingTimeout(seconds: timeout) {
+                    try await operation()
+                }
+            } catch {
+                print(error)
+                throw error
             }
+
         }
     }
 }
@@ -227,19 +244,23 @@ public struct NonSendable<T> {
     }
 }
 
-private final actor TestActor {
+private final actor TestActor<T: Sendable> {
 
-    func returningString(_ string: String = "Fish", after sleep: TimeInterval = 0, timeout: TimeInterval = 1) async throws -> String {
-        try await returningValue(string, after: sleep, timeout: timeout)
+    private var value: T
+
+    init(_ value: T) {
+        self.value = value
     }
 
-    func returningValue<T: Sendable>(_ value: T, after sleep: TimeInterval = 0, timeout: TimeInterval = 1) async throws -> T {
+    init() where T == String {
+        self.init("fish")
+    }
+
+    func returningValue(after sleep: TimeInterval = 0, timeout: TimeInterval = 1) async throws -> T {
         try await withThrowingTimeout(seconds: timeout) {
-            if #available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *) {
-                assertIsolated()
-            }
-            try await Task.sleep(seconds: sleep)
-            return value
+            try await Task.sleep(nanoseconds: UInt64(sleep * 1_000_000_000))
+            self.assertIsolated()
+            return self.value
         }
     }
 }

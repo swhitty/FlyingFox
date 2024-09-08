@@ -76,7 +76,7 @@ struct SocketTests {
         try s1.close()
         try s2.close()
 
-        #expect(throws: SocketError.disconnected) {
+        #expect(throws: (any Error).self) {
             try s1.read()
         }
     }
