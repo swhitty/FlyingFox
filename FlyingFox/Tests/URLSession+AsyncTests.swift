@@ -38,7 +38,7 @@ import Testing
 
 struct URLSessionAsyncTests {
 
-    @Test(.disabled("pie.dev is down"))
+    @Test
     func session_MakesRequest() async throws {
         var request = URLRequest(url: URL(string: "https://pie.dev/status/208")!)
         request.timeoutInterval = 2

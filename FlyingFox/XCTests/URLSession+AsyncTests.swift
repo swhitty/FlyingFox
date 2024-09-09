@@ -38,7 +38,7 @@ import FoundationNetworking
 
 final class URLSessionAsyncTests: XCTestCase {
 
-    func disabled_testURLSession_MakesRequest() async throws {
+    func testURLSession_MakesRequest() async throws {
         var request = URLRequest(url: URL(string: "https://pie.dev/status/208")!)
         request.timeoutInterval = 2
         let (_, response) = try await URLSession.shared.data(for: request)
