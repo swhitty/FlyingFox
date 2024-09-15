@@ -54,3 +54,23 @@ public extension HTTPServer {
         }
     }
 }
+
+
+extension HTTPServer.Configuration {
+
+    init(port: UInt16,
+         timeout: TimeInterval = 15,
+         logger: any Logging = HTTPServer.defaultLogger()
+    ) {
+#if canImport(WinSDK)
+        let address = sockaddr_in.inet(port: port)
+#else
+        let address = sockaddr_in6.inet6(port: port)
+#endif
+        self.init(
+            address: address,
+            timeout: timeout,
+            logger: logger
+        )
+    }
+}

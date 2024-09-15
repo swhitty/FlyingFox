@@ -40,9 +40,13 @@ public final actor HTTPServer {
     private let config: Configuration
     private var handlers: RoutedHTTPHandler
 
-    public init(config: Configuration, handler: (any HTTPHandler)) {
+    init(config: Configuration, handler: RoutedHTTPHandler) {
         self.config = config
         self.handlers = Self.makeRootHandler(to: handler)
+    }
+
+    public init(config: Configuration, handler: (any HTTPHandler)? = nil) {
+        self.init(config: config, handler: HTTPServer.makeRootHandler(to: handler))
     }
 
     public init(address: some SocketAddress,
@@ -255,6 +259,12 @@ public final actor HTTPServer {
         return root
     }
 
+    private static func makeRootHandler(to closure: @Sendable @escaping (HTTPRequest) async throws -> HTTPResponse) -> RoutedHTTPHandler {
+        var root = RoutedHTTPHandler()
+        root.appendRoute("*", to: ClosureHTTPHandler(closure))
+        return root
+    }
+
     public static func defaultPool(logger: some Logging = .disabled) -> some AsyncSocketPool {
 #if canImport(Darwin)
         return .kQueue(logger: logger)
@@ -270,31 +280,26 @@ public extension HTTPServer {
 
     init(port: UInt16,
          timeout: TimeInterval = 15,
-         pool: some AsyncSocketPool = defaultPool(),
          logger: any Logging = defaultLogger(),
          handler: (any HTTPHandler)? = nil) {
-#if canImport(WinSDK)
-        let address = sockaddr_in.inet(port: port)
-#else
-        let address = sockaddr_in6.inet6(port: port)
-#endif
-        self.init(address: address,
-                  timeout: timeout,
-                  pool: pool,
-                  logger: logger,
-                  handler: handler)
+        let config = Configuration(
+            port: port,
+            timeout: timeout,
+            logger: logger
+        )
+        self.init(config: config, handler: handler)
     }
 
     init(port: UInt16,
          timeout: TimeInterval = 15,
-         pool: some AsyncSocketPool = defaultPool(),
          logger: any Logging = defaultLogger(),
          handler: @Sendable @escaping (HTTPRequest) async throws -> HTTPResponse) {
-        self.init(port: port,
-                  timeout: timeout,
-                  pool: pool,
-                  logger: logger,
-                  handler: ClosureHTTPHandler(handler))
+        let config = Configuration(
+            port: port,
+            timeout: timeout,
+            logger: logger
+        )
+        self.init(config: config, handler: Self.makeRootHandler(to: handler))
     }
 }
 
