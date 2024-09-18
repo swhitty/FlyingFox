@@ -49,6 +49,7 @@ extension Array where Element == SwiftSetting {
 
 extension [PackageDescription.Target] {
     static var testingTargets: [PackageDescription.Target] {
+        [
             .testTarget(
                 name: "FlyingFoxTests",
                 dependencies: ["FlyingFox"],
