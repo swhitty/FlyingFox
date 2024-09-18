@@ -33,8 +33,26 @@ let package = Package(
         .target(
              name: "CSystemLinux",
              path: "CSystemLinux"
-        )
-    ] + .testingTargets
+        ),
+        .testTarget(
+             name: "FlyingFoxTests",
+             dependencies: ["FlyingFox"],
+             path: "FlyingFox/Tests",
+             resources: [
+                 .copy("Stubs")
+             ],
+             swiftSettings: .upcomingFeatures
+        ),
+        .testTarget(
+             name: "FlyingSocksTests",
+             dependencies: ["FlyingSocks"],
+             path: "FlyingSocks/Tests",
+             resources: [
+                 .copy("Resources")
+             ],
+             swiftSettings: .upcomingFeatures
+         )
+    ]
 )
 
 extension Array where Element == SwiftSetting {
@@ -43,31 +61,6 @@ extension Array where Element == SwiftSetting {
         [
             .enableUpcomingFeature("ExistentialAny"),
             .swiftLanguageMode(.v6)
-        ]
-    }
-}
-
-extension [PackageDescription.Target] {
-    static var testingTargets: [PackageDescription.Target] {
-        [
-            .testTarget(
-                name: "FlyingFoxTests",
-                dependencies: ["FlyingFox"],
-                path: "FlyingFox/Tests",
-                resources: [
-                    .copy("Stubs")
-                ],
-                swiftSettings: .upcomingFeatures
-            ),
-            .testTarget(
-                name: "FlyingSocksTests",
-                dependencies: ["FlyingSocks"],
-                path: "FlyingSocks/Tests",
-                resources: [
-                    .copy("Resources")
-                ],
-                swiftSettings: .upcomingFeatures
-            )
         ]
     }
 }
