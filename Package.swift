@@ -31,10 +31,28 @@ let package = Package(
             swiftSettings: .upcomingFeatures
         ),
         .target(
-             name: "CSystemLinux",
-             path: "CSystemLinux"
+            name: "CSystemLinux",
+            path: "CSystemLinux"
+        ),
+        .testTarget(
+            name: "FlyingFoxTests",
+            dependencies: ["FlyingFox"],
+            path: "FlyingFox/Tests",
+            resources: [
+               .copy("Stubs")
+            ],
+            swiftSettings: .upcomingFeatures
+        ),
+        .testTarget(
+            name: "FlyingSocksTests",
+            dependencies: ["FlyingSocks"],
+            path: "FlyingSocks/Tests",
+            resources: [
+               .copy("Resources")
+            ],
+            swiftSettings: .upcomingFeatures
         )
-    ] + .testingTargets
+    ]
 )
 
 extension Array where Element == SwiftSetting {
@@ -44,53 +62,5 @@ extension Array where Element == SwiftSetting {
             .enableUpcomingFeature("ExistentialAny"),
             .swiftLanguageMode(.v6)
         ]
-    }
-}
-
-extension [PackageDescription.Target] {
-    static var testingTargets: [PackageDescription.Target] {
-    #if canImport(Darwin) || compiler(>=6.1)
-        [
-            .testTarget(
-                name: "FlyingFoxTests",
-                dependencies: ["FlyingFox"],
-                path: "FlyingFox/Tests",
-                resources: [
-                    .copy("Stubs")
-                ],
-                swiftSettings: .upcomingFeatures
-            ),
-            .testTarget(
-                name: "FlyingSocksTests",
-                dependencies: ["FlyingSocks"],
-                path: "FlyingSocks/Tests",
-                resources: [
-                    .copy("Resources")
-                ],
-                swiftSettings: .upcomingFeatures
-            )
-        ]
-        #else
-        [
-            .testTarget(
-                name: "FlyingFoxXCTests",
-                dependencies: ["FlyingFox"],
-                path: "FlyingFox/XCTests",
-                resources: [
-                    .copy("Stubs")
-                ],
-                swiftSettings: .upcomingFeatures
-            ),
-            .testTarget(
-                name: "FlyingSocksXCTests",
-                dependencies: ["FlyingSocks"],
-                path: "FlyingSocks/XCTests",
-                resources: [
-                    .copy("Resources")
-                ],
-                swiftSettings: .upcomingFeatures
-            )
-        ]
-        #endif
     }
 }
