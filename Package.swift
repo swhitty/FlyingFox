@@ -31,27 +31,27 @@ let package = Package(
             swiftSettings: .upcomingFeatures
         ),
         .target(
-             name: "CSystemLinux",
-             path: "CSystemLinux"
+            name: "CSystemLinux",
+            path: "CSystemLinux"
         ),
         .testTarget(
-             name: "FlyingFoxTests",
-             dependencies: ["FlyingFox"],
-             path: "FlyingFox/Tests",
-             resources: [
-                 .copy("Stubs")
-             ],
-             swiftSettings: .upcomingFeatures
+            name: "FlyingFoxTests",
+            dependencies: ["FlyingFox"],
+            path: "FlyingFox/Tests",
+            resources: [
+               .copy("Stubs")
+            ],
+            swiftSettings: .upcomingFeatures
         ),
         .testTarget(
-             name: "FlyingSocksTests",
-             dependencies: ["FlyingSocks"],
-             path: "FlyingSocks/Tests",
-             resources: [
-                 .copy("Resources")
-             ],
-             swiftSettings: .upcomingFeatures
-         )
+            name: "FlyingSocksTests",
+            dependencies: ["FlyingSocks"],
+            path: "FlyingSocks/Tests",
+            resources: [
+               .copy("Resources")
+            ],
+            swiftSettings: .upcomingFeatures
+        )
     ]
 )
 
