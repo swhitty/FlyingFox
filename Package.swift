@@ -49,8 +49,6 @@ extension Array where Element == SwiftSetting {
 
 extension [PackageDescription.Target] {
     static var testingTargets: [PackageDescription.Target] {
-    #if canImport(Darwin) || compiler(>=6.1)
-        [
             .testTarget(
                 name: "FlyingFoxTests",
                 dependencies: ["FlyingFox"],
@@ -70,27 +68,5 @@ extension [PackageDescription.Target] {
                 swiftSettings: .upcomingFeatures
             )
         ]
-        #else
-        [
-            .testTarget(
-                name: "FlyingFoxXCTests",
-                dependencies: ["FlyingFox"],
-                path: "FlyingFox/XCTests",
-                resources: [
-                    .copy("Stubs")
-                ],
-                swiftSettings: .upcomingFeatures
-            ),
-            .testTarget(
-                name: "FlyingSocksXCTests",
-                dependencies: ["FlyingSocks"],
-                path: "FlyingSocks/XCTests",
-                resources: [
-                    .copy("Resources")
-                ],
-                swiftSettings: .upcomingFeatures
-            )
-        ]
-        #endif
     }
 }
