@@ -344,3 +344,6 @@ extension IdentifiableContinuation where T: Sendable {
     }
 }
 
+extension Socket.FileDescriptor {
+    static let validMock = Socket.FileDescriptor(rawValue: 999)
+}
