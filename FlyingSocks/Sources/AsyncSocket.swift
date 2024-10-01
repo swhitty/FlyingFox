@@ -176,6 +176,16 @@ public struct AsyncSocket: Sendable {
     }
 }
 
+package extension AsyncSocket {
+
+    static func makePair(pool: some AsyncSocketPool) throws -> (AsyncSocket, AsyncSocket) {
+        let (s1, s2) = try Socket.makePair()
+        let a1 = try AsyncSocket(socket: s1, pool: pool)
+        let a2 = try AsyncSocket(socket: s2, pool: pool)
+        return (a1, a2)
+    }
+}
+
 private extension AsyncSocketPool {
 
     func loopUntilReady<T>(for events: Socket.Events, on socket: Socket, body: () throws -> T) async throws -> T {

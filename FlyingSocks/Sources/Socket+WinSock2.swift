@@ -112,6 +112,10 @@ extension Socket {
         WinSDK.socket(domain, type, `protocol`)
     }
 
+    static func socketpair(_ domain: Int32, _ type: Int32, _ protocol: Int32) -> (FileDescriptorType, FileDescriptorType) {
+        (-1, -1) // no supported
+    }
+
     static func setsockopt(_ fd: FileDescriptorType, _ level: Int32, _ name: Int32,
                            _ value: UnsafeRawPointer!, _ len: socklen_t) -> Int32 {
         WinSDK.setsockopt(fd, level, name, value.assumingMemoryBound(to: CChar.self), len)

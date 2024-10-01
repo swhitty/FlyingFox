@@ -94,6 +94,12 @@ extension Socket {
         Darwin.socket(domain, type, `protocol`)
     }
 
+    static func socketpair(_ domain: Int32, _ type: Int32, _ protocol: Int32) -> (FileDescriptorType, FileDescriptorType) {
+        var sockets: [Int32] = [-1, -1]
+        _ = Darwin.socketpair(domain, type, `protocol`, &sockets)
+        return (sockets[0], sockets[1])
+    }
+
     static func fcntl(_ fd: FileDescriptorType, _ cmd: Int32) -> Int32 {
         Darwin.fcntl(fd, cmd)
     }

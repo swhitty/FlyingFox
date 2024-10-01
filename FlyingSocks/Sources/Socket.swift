@@ -344,3 +344,25 @@ public extension SocketOption where Self == Int32SocketOption {
         Int32SocketOption(name: SO_RCVBUF)
     }
 }
+
+package extension Socket {
+
+    static func makePair(flags: Flags? = nil) throws -> (Socket, Socket) {
+        let (file1, file2) = Socket.socketpair(AF_UNIX, Socket.stream, 0)
+        guard file1 > -1, file2 > -1 else {
+            throw SocketError.makeFailed("SocketPair")
+        }
+        let s1 = Socket(file: .init(rawValue: file1))
+        let s2 = Socket(file: .init(rawValue: file2))
+
+        if let flags {
+            try s1.setFlags(flags)
+            try s2.setFlags(flags)
+        }
+        return (s1, s2)
+    }
+
+    static func makeNonBlockingPair() throws -> (Socket, Socket) {
+        try Socket.makePair(flags: .nonBlocking)
+    }
+}

@@ -86,8 +86,14 @@ extension Socket {
         return addr
     }
 
-    static func socket(_ domain: Int32, _ type: Int32, _ protocol: Int32) -> Int32 {
+    static func socket(_ domain: Int32, _ type: Int32, _ protocol: Int32) -> FileDescriptorType {
         Glibc.socket(domain, type, `protocol`)
+    }
+
+    static func socketpair(_ domain: Int32, _ type: Int32, _ protocol: Int32) -> (FileDescriptorType, FileDescriptorType) {
+        var sockets: [Int32] = [-1, -1]
+        _ = Glibc.socketpair(domain, type, `protocol`, &sockets)
+        return (sockets[0], sockets[1])
     }
 
     static func fcntl(_ fd: Int32, _ cmd: Int32) -> Int32 {

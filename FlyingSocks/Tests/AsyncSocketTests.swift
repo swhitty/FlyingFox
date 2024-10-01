@@ -214,17 +214,6 @@ extension AsyncSocket {
         try await makePair(pool: .client)
     }
 
-    static func makePair(pool: some AsyncSocketPool) throws -> (AsyncSocket, AsyncSocket) {
-        let (file1, file2) = Socket.socketpair(AF_UNIX, Socket.stream, 0)
-        guard file1.rawValue > -1, file2.rawValue > -1 else {
-            throw SocketError.makeFailed("SocketPair")
-        }
-
-        let s1 = try AsyncSocket(socket: Socket(file: file1), pool: pool)
-        let s2 = try AsyncSocket(socket: Socket(file: file2), pool: pool)
-        return (s1, s2)
-    }
-
     func writeString(_ string: String) async throws {
         try await write(string.data(using: .utf8)!)
     }
