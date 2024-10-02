@@ -219,6 +219,15 @@ extension EventNotification {
 private struct EPOLLEvents: OptionSet, Hashable {
     var rawValue: UInt32
 
+#if canImport(Musl)
+    static let read = EPOLLEvents(rawValue: UInt32(EPOLLIN))
+    static let write = EPOLLEvents(rawValue: UInt32(EPOLLOUT))
+    static let hup = EPOLLEvents(rawValue: UInt32(EPOLLHUP))
+    static let rdhup = EPOLLEvents(rawValue: UInt32(EPOLLRDHUP))
+    static let err = EPOLLEvents(rawValue: UInt32(EPOLLERR))
+    static let pri = EPOLLEvents(rawValue: UInt32(EPOLLPRI))
+    static let edgeTriggered = EPOLLEvents(rawValue: UInt32(EPOLLET))
+#else
     static let read = EPOLLEvents(rawValue: EPOLLIN.rawValue)
     static let write = EPOLLEvents(rawValue: EPOLLOUT.rawValue)
     static let hup = EPOLLEvents(rawValue: EPOLLHUP.rawValue)
@@ -226,6 +235,8 @@ private struct EPOLLEvents: OptionSet, Hashable {
     static let err = EPOLLEvents(rawValue: EPOLLERR.rawValue)
     static let pri = EPOLLEvents(rawValue: EPOLLPRI.rawValue)
     static let edgeTriggered = EPOLLEvents(rawValue: EPOLLET.rawValue)
+#endif
+
 }
 
 private extension Socket.Events {

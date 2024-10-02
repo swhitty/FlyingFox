@@ -95,3 +95,20 @@ jobs:
         run: swift build --build-tests
       - name: Test
         run: swift test --skip-build
+
+  linux_swift_6_0_musl:
+    runs-on: ubuntu-latest
+    container: swift:6.0
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Version
+        run: swift --version
+      - name: SDK List Pre
+        run: swift sdk list
+      - name: Install SDK
+        run: swift sdk install https://download.swift.org/swift-6.0.1-release/static-sdk/swift-6.0.1-RELEASE/swift-6.0.1-RELEASE_static-linux-0.0.1.artifactbundle.tar.gz --checksum d4f46ba40e11e697387468e18987ee622908bc350310d8af54eb5e17c2ff5481
+      - name: SDK List Post
+        run: swift sdk list
+      - name: Build
+        run: swift build --swift-sdk x86_64-swift-linux-musl
