@@ -42,7 +42,7 @@ struct HTTPClientTests {
     func client_sends_request() async throws {
         // given
         let server = HTTPServer(address: .loopback(port: 0))
-        let task = Task { try await server.start() }
+        let task = Task { try await server.run() }
         defer { task.cancel() }
         let client = _HTTPClient()
 

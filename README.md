@@ -44,13 +44,13 @@ Start the server by providing a port number:
 import FlyingFox
 
 let server = HTTPServer(port: 80)
-try await server.start()
+try await server.run()
 ```
 
 The server runs within the the current task. To stop the server, cancel the task terminating all connections immediatley:
 
 ```swift
-let task = Task { try await server.start() }
+let task = Task { try await server.run() }
 task.cancel()
 ```
 
@@ -72,7 +72,7 @@ Retrieve the current listening address:
 await server.listeningAddress
 ```
 
-> Note: iOS will hangup the listening socket when an app is suspended in the background. Once the app returns to the foreground, `HTTPServer.start()` detects this, throwing `SocketError.disconnected`. The server must then be started once more.
+> Note: iOS will hangup the listening socket when an app is suspended in the background. Once the app returns to the foreground, `HTTPServer.run()` detects this, throwing `SocketError.disconnected`. The server must then be started once more.
 
 ## Handlers
 
@@ -360,7 +360,7 @@ struct MyHandler {
 }
 
 let server = HTTPServer(port: 80, handler: MyHandler())
-try await server.start()
+try await server.run()
 ```
 
 The annotations are implemented via [SE-0389 Attached Macros](https://github.com/apple/swift-evolution/blob/main/proposals/0389-attached-macros.md).
