@@ -41,7 +41,7 @@ final class HTTPClientTests: XCTestCase {
     func testClient() async throws {
         // given
         let server = HTTPServer(address: .loopback(port: 0))
-        let task = Task { try await server.start() }
+        let task = Task { try await server.run() }
         defer { task.cancel() }
         let client = _HTTPClient()
 

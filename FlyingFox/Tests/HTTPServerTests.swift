@@ -45,7 +45,7 @@ actor HTTPServerTests {
         self.stopServer = server
         Task {
             try await HTTPServer.$preferConnectionsDiscarding.withValue(preferConnectionsDiscarding) {
-                try await server.start()
+                try await server.run()
             }
         }
         return try await server.waitForListeningPort()
@@ -54,7 +54,7 @@ actor HTTPServerTests {
     @discardableResult
     func startServer(_ server: HTTPServer) async throws -> Task<Void, any Error> {
         self.stopServer = server
-        let task = Task { try await server.start() }
+        let task = Task { try await server.run() }
         try await server.waitUntilListening()
         return task
     }
@@ -69,7 +69,7 @@ actor HTTPServerTests {
         try await startServer(server)
 
         await #expect(throws: SocketError.unsupportedAddress) {
-            try await server.start()
+            try await server.run()
         }
     }
 
@@ -93,9 +93,9 @@ actor HTTPServerTests {
         defer { try! socket.close() }
 
         await #expect(throws: SocketError.self) {
-            try await server.start()
+            try await server.run()
         }
-//        await AsyncAssertThrowsError(try await server.start(), of: SocketError.self) {
+//        await AsyncAssertThrowsError(try await server.run(), of: SocketError.self) {
 //            XCTAssertTrue(
 //                $0.errorDescription?.contains("Address already in use") == true
 //            )
@@ -430,7 +430,7 @@ actor HTTPServerTests {
             return true
         }
 
-        Task { try await server.start() }
+        Task { try await server.run() }
         self.stopServer = server
 
         #expect(try await waiting.value == true)

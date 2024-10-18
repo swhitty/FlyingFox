@@ -45,7 +45,7 @@ final class HTTPServerTests: XCTestCase {
         self.stopServer = server
         Task {
             try await HTTPServer.$preferConnectionsDiscarding.withValue(preferConnectionsDiscarding) {
-                try await server.start()
+                try await server.run()
             }
         }
         return try await server.waitForListeningPort()
@@ -54,7 +54,7 @@ final class HTTPServerTests: XCTestCase {
     @discardableResult
     func startServer(_ server: HTTPServer) async throws -> Task<Void, any Error> {
         self.stopServer = server
-        let task = Task { try await server.start() }
+        let task = Task { try await server.run() }
         try await server.waitUntilListening()
         return task
     }
@@ -67,7 +67,7 @@ final class HTTPServerTests: XCTestCase {
         let server = HTTPServer.make()
         try await startServer(server)
 
-        await AsyncAssertThrowsError(try await server.start(), of: SocketError.self) {
+        await AsyncAssertThrowsError(try await server.run(), of: SocketError.self) {
             XCTAssertEqual($0, .unsupportedAddress)
         }
     }
@@ -89,7 +89,7 @@ final class HTTPServerTests: XCTestCase {
         let socket = try await server.makeSocketAndListen()
         defer { try! socket.close() }
 
-        await AsyncAssertThrowsError(try await server.start(), of: SocketError.self) {
+        await AsyncAssertThrowsError(try await server.run(), of: SocketError.self) {
             XCTAssertTrue(
                 $0.errorDescription?.contains("Address already in use") == true
             )
@@ -405,7 +405,7 @@ final class HTTPServerTests: XCTestCase {
             return true
         }
 
-        Task { try await server.start() }
+        Task { try await server.run() }
         self.stopServer = server
 
         await AsyncAssertEqual(try await waiting.value, true)

@@ -89,7 +89,7 @@ public final actor HTTPServer {
         handlers.appendRoute(route, handler: handler)
     }
 
-    public func start() async throws {
+    public func run() async throws {
         guard state == nil else {
             logger.logCritical("server error: already started")
             throw SocketError.unsupportedAddress
@@ -107,6 +107,11 @@ public final actor HTTPServer {
             }
             throw error
         }
+    }
+
+    @available(*, deprecated, renamed: "run")
+    public func start() async throws {
+        try await run()
     }
 
     func preparePoolAndSocket() async throws -> Socket {
