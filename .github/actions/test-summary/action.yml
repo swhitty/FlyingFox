@@ -1,0 +1,16 @@
+name: 'Test Summary'
+description: 'Summarise test results and coverage'
+inputs:
+  junit:
+    description: 'path to junit xml file'
+    required: true
+  coverage:
+    description: 'path to lcov.json file'
+    required: false
+
+runs:
+  using: "composite"
+  steps:
+    - name: 'Summarise'
+      run: ./.github/actions/test-summary/make-summary.swift ${{ inputs.junit }} ${{ inputs.coverage }} >> $GITHUB_STEP_SUMMARY
+      shell: bash
