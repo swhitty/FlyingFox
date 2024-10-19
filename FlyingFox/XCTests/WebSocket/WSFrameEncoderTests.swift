@@ -209,11 +209,11 @@ final class WSFrameEncoderTests: XCTestCase {
             125
         )
         await AsyncAssertEqual(
-            try await WSFrameEncoder.decodeLength(0x7E, 0x00, 0xFF),
+            try await WSFrameEncoder.decodeLength(0x7E, 0xFF, 0x00),
             0xFF00
         )
         await AsyncAssertEqual(
-            try await WSFrameEncoder.decodeLength(0x7E, 0xFF, 0x00),
+            try await WSFrameEncoder.decodeLength(0x7E, 0x00, 0xFF),
             0x00FF
         )
         await AsyncAssertEqual(
@@ -345,6 +345,14 @@ final class WSFrameEncoderTests: XCTestCase {
 
         frame = WSFrame.close(mask: .mock)
         try await socket.writeFrame(frame)
+    }
+
+    func testRoundtripLength() async throws {
+        for length in 0..<256 {
+            let encoded = WSFrameEncoder.encodeLength(length, hasMask: false)
+            let decoded = try await WSFrameEncoder.decodeLengthMask(encoded)
+            XCTAssertEqual(length, decoded.length)
+        }
     }
 }
 

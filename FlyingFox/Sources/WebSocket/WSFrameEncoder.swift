@@ -138,8 +138,8 @@ struct WSFrameEncoder {
         case 0...125:
             return try await (Int(length0), hasMask ? decodeMask(from: bytes) : nil)
         case 126:
-            let length = try await UInt16(bytes.take()) |
-                                   UInt16(bytes.take()) << 8
+            let length = try await UInt16(bytes.take()) << 8 |
+                                   UInt16(bytes.take())
             return try await (Int(length), hasMask ? decodeMask(from: bytes) : nil)
         default:
             var length = try await UInt64(bytes.take())
