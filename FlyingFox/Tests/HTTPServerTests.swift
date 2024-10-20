@@ -254,6 +254,19 @@ actor HTTPServerTests {
         try await wsTask.send(.string("Hello"))
         #expect(try await wsTask.receive() == .string("Hello"))
     }
+
+    @Test
+    func server_ReturnsWebSocketFramesToURLSession_16BitMessage() async throws {
+        let server = HTTPServer.make(address: .loopback(port: 0))
+        await server.appendRoute("GET /socket", to: .webSocket(EchoWSMessageHandler()))
+        let port = try await startServerWithPort(server)
+
+        let wsTask = URLSession.shared.webSocketTask(with: URL(string: "ws://localhost:\(port)/socket")!)
+        wsTask.resume()
+        let text = String(String(repeating: "A", count: 126))
+        try await wsTask.send(.string(text))
+        #expect(try await wsTask.receive() == .string(text))
+    }
 #endif
 
     @Test
