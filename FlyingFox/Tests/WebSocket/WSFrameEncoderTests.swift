@@ -238,10 +238,10 @@ struct WSFrameEncoderTests {
             try await WSFrameEncoder.decodeLength(0x7D) == 125
         )
         #expect(
-            try await WSFrameEncoder.decodeLength(0x7E, 0x00, 0xFF) == 0xFF00
+            try await WSFrameEncoder.decodeLength(0x7E, 0x00, 0xFF) == 0x00FF
         )
         #expect(
-            try await WSFrameEncoder.decodeLength(0x7E, 0xFF, 0x00) == 0x00FF
+            try await WSFrameEncoder.decodeLength(0x7E, 0xFF, 0x00) == 0xFF00
         )
         #expect(
             try await WSFrameEncoder.decodeLength(0x7E, 0xFF, 0xFF) == 0xFFFF
@@ -370,6 +370,15 @@ struct WSFrameEncoderTests {
 
         frame = WSFrame.close(mask: .mock)
         try await socket.writeFrame(frame)
+    }
+
+    @Test
+    func roundtripLength() async throws {
+        for length in 0..<256 {
+            let encoded = WSFrameEncoder.encodeLength(length, hasMask: false)
+            let decoded = try await WSFrameEncoder.decodeLengthMask(encoded)
+            #expect(length == decoded.length)
+        }
     }
 }
 
