@@ -32,12 +32,12 @@
 import Foundation
 import FlyingSocks
 
-#if canImport(FoundationNetworking)
+#if compiler(<6) && canImport(FoundationNetworking)
 import FoundationNetworking
 
 extension URLSession {
 
-    // Ports macOS Foundation method to Linux
+    // Ports macOS Foundation method to earlier Linux versions
     func data(for request: URLRequest) async throws -> (Data, URLResponse) {
         let state = Mutex((isCancelled: false, task: URLSessionDataTask?.none))
         return try await withTaskCancellationHandler {
