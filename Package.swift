@@ -26,7 +26,7 @@ let package = Package(
         ),
         .target(
             name: "FlyingSocks",
-            dependencies: [.target(name: "CSystemLinux", condition: .when(platforms: [.linux]))],
+            dependencies: [.target(name: "CSystemLinux", condition: .when(platforms: [.linux, .android]))],
             path: "FlyingSocks/Sources",
             swiftSettings: .upcomingFeatures
         ),

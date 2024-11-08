@@ -32,8 +32,13 @@
 import Foundation
 #if canImport(WinSDK)
 import WinSDK.WinSock2
+#elseif canImport(Android)
+import Android
 #endif
 
+#if canImport(CSystemLinux)
+import CSystemLinux
+#endif
 
 public protocol SocketAddress: Sendable {
     static var family: sa_family_t { get }

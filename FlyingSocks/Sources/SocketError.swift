@@ -30,6 +30,9 @@
 //
 
 import Foundation
+#if canImport(Android)
+import Android
+#endif
 
 public enum SocketError: LocalizedError, Equatable {
     case failed(type: String, errno: Int32, message: String)

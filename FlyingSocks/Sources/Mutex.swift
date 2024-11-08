@@ -129,10 +129,12 @@ extension Mutex {
     }
 }
 
-#elseif canImport(Glibc) || canImport(Musl)
+#elseif canImport(Glibc) || canImport(Musl) || canImport(Bionic)
 
 #if canImport(Musl)
 import Musl
+#elseif canImport(Bionic)
+import Android
 #else
 import Glibc
 #endif

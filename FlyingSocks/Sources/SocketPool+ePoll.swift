@@ -219,7 +219,7 @@ extension EventNotification {
 private struct EPOLLEvents: OptionSet, Hashable {
     var rawValue: UInt32
 
-#if canImport(Musl)
+#if canImport(Musl) || canImport(Android)
     static let read = EPOLLEvents(rawValue: UInt32(EPOLLIN))
     static let write = EPOLLEvents(rawValue: UInt32(EPOLLOUT))
     static let hup = EPOLLEvents(rawValue: UInt32(EPOLLHUP))
