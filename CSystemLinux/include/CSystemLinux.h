@@ -7,10 +7,14 @@
  See https://swift.org/LICENSE.txt for license information
 */
 
-#ifdef __linux__
+#pragma once
 
-#include <sys/epoll.h>
-#include <sys/eventfd.h>
-
+#ifdef __ANDROID__
+#include <linux/eventpoll.h>
+#include <poll.h>
 #endif
 
+#ifdef __linux__
+#include <sys/epoll.h>
+#include <sys/eventfd.h>
+#endif

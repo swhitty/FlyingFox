@@ -31,6 +31,8 @@
 
 #if canImport(WinSDK)
 import WinSDK.WinSock2
+#elseif canImport(Android)
+import Android
 #endif
 import Foundation
 
