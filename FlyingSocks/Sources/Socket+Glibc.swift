@@ -42,6 +42,7 @@ extension Socket.FileDescriptor {
 
 extension Socket {
     static let stream = Int32(SOCK_STREAM.rawValue)
+    static let datagram = Int32(SOCK_DGRAM.rawValue)
     static let in_addr_any = Glibc.in_addr(s_addr: Glibc.in_addr_t(0))
 
     static func makeAddressINET(port: UInt16) -> Glibc.sockaddr_in {
@@ -171,6 +172,14 @@ extension Socket {
 
     static func pollfd(fd: FileDescriptorType, events: Int16, revents: Int16) -> Glibc.pollfd {
         Glibc.pollfd(fd: fd, events: events, revents: revents)
+    }
+
+    static func recvfrom(_ fd: FileDescriptorType, _ buffer: UnsafeMutableRawPointer!, _ nbyte: Int, _ flags: Int32, _ addr: UnsafeMutablePointer<sockaddr>!, _ len: UnsafeMutablePointer<socklen_t>!) -> Int {
+        Glibc.recvfrom(fd, buffer, nbyte, flags, addr, len)
+    }
+
+    static func sendto(_ fd: FileDescriptorType, _ buffer: UnsafeRawPointer!, _ nbyte: Int, _ flags: Int32, _ destaddr: UnsafePointer<sockaddr>!, _ destlen: socklen_t) -> Int {
+        Glibc.sendto(fd, buffer, nbyte, flags, destaddr, destlen)
     }
 }
 

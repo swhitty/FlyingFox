@@ -235,6 +235,35 @@ public struct Socket: Sendable, Hashable {
         return count
     }
 
+    public func receive(length: Int) throws -> (sockaddr_storage, [UInt8]) {
+        var address: sockaddr_storage?
+        let bytes = try [UInt8](unsafeUninitializedCapacity: length) { buffer, count in
+            (address, count) = try receive(into: buffer.baseAddress!, length: length)
+        }
+
+        return (address!, bytes)
+    }
+
+    private func receive(into buffer: UnsafeMutablePointer<UInt8>, length: Int) throws -> (sockaddr_storage, Int) {
+        var addr = sockaddr_storage()
+        var size = socklen_t(MemoryLayout<sockaddr_storage>.size)
+        let count = withUnsafeMutablePointer(to: &addr) {
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                Socket.recvfrom(file.rawValue, buffer, length, 0, $0, &size)
+            }
+        }
+        guard count > 0 else {
+            if errno == EWOULDBLOCK || errno == EAGAIN {
+                throw SocketError.blocked
+            } else if errno == EBADF || count == 0 {
+                throw SocketError.disconnected
+            } else {
+                throw SocketError.makeFailed("RecvFrom")
+            }
+        }
+        return (addr, count)
+    }
+
     public func write(_ data: Data, from index: Data.Index = 0) throws -> Data.Index {
         precondition(index >= 0)
         guard index < data.endIndex else { return data.endIndex }
@@ -253,6 +282,29 @@ public struct Socket: Sendable, Hashable {
                 throw SocketError.disconnected
             } else {
                 throw SocketError.makeFailed("Write")
+            }
+        }
+        return sent
+    }
+
+    public func send(_ bytes: [UInt8], to address: some SocketAddress) throws -> Int {
+        try bytes.withUnsafeBytes { buffer in
+            try send(buffer.baseAddress!, length: bytes.count, to: address)
+        }
+    }
+
+    private func send(_ pointer: UnsafeRawPointer, length: Int, to address: some SocketAddress) throws -> Int {
+        var addr = address
+        let sent = withUnsafePointer(to: &addr) {
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                Socket.sendto(file.rawValue, pointer, length, 0, $0, address.size)
+            }
+        }
+        guard sent >= 0 else {
+            if errno == EWOULDBLOCK || errno == EAGAIN {
+                throw SocketError.blocked
+            } else {
+                throw SocketError.makeFailed("SendTo")
             }
         }
         return sent
@@ -370,8 +422,8 @@ public extension SocketOption where Self == Int32SocketOption {
 
 package extension Socket {
 
-    static func makePair(flags: Flags? = nil) throws -> (Socket, Socket) {
-        let (file1, file2) = Socket.socketpair(AF_UNIX, Socket.stream, 0)
+    static func makePair(flags: Flags? = nil, type: SocketType = .stream) throws -> (Socket, Socket) {
+        let (file1, file2) = Socket.socketpair(AF_UNIX, type.rawValue, 0)
         guard file1 > -1, file2 > -1 else {
             throw SocketError.makeFailed("SocketPair")
         }

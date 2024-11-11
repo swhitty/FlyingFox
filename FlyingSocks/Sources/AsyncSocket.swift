@@ -129,6 +129,20 @@ public struct AsyncSocket: Sendable {
         return buffer
     }
 
+    public func receive(atMost length: Int = 4096) async throws -> (sockaddr_storage, [UInt8]) {
+        try Task.checkCancellation()
+
+        repeat {
+            do {
+                return try socket.receive(length: length)
+            } catch SocketError.blocked {
+                try await pool.suspendSocket(socket, untilReadyFor: .read)
+            } catch {
+                throw error
+            }
+        } while true
+    }
+
     /// Reads bytes from the socket up to by not over/
     /// - Parameter bytes: The max number of bytes to read
     /// - Returns: an array of the read bytes capped to the number of bytes provided.
@@ -163,6 +177,19 @@ public struct AsyncSocket: Sendable {
         }
     }
 
+    public func send(_ data: [UInt8], to address: some SocketAddress) async throws {
+        let sent = try await pool.loopUntilReady(for: .write, on: socket) {
+            try socket.send(data, to: address)
+        }
+        guard sent == data.count else {
+            throw SocketError.disconnected
+        }
+    }
+
+    public func send(_ data: Data, to address: some SocketAddress) async throws {
+        try await send(Array(data), to: address)
+    }
+
     public func close() throws {
         try socket.close()
     }
@@ -173,6 +200,14 @@ public struct AsyncSocket: Sendable {
 
     public var sockets: AsyncSocketSequence {
         AsyncSocketSequence(socket: self)
+    }
+
+    public var messages: AsyncSocketMessageSequence {
+        AsyncSocketMessageSequence(socket: self)
+    }
+
+    public func messages(maxMessageLength: Int) -> AsyncSocketMessageSequence {
+        AsyncSocketMessageSequence(socket: self, maxMessageLength: maxMessageLength)
     }
 }
 
@@ -234,6 +269,26 @@ public struct AsyncSocketSequence: AsyncSequence, AsyncIteratorProtocol, Sendabl
         } catch {
             throw error
         }
+    }
+}
+
+public struct AsyncSocketMessageSequence: AsyncSequence, AsyncIteratorProtocol, Sendable {
+    public static let DefaultMaxMessageLength: Int = 1500
+
+    public typealias Element = (sockaddr_storage, [UInt8])
+
+    private let socket: AsyncSocket
+    private let maxMessageLength: Int
+
+    public func makeAsyncIterator() -> AsyncSocketMessageSequence { self }
+
+    init(socket: AsyncSocket, maxMessageLength: Int = Self.DefaultMaxMessageLength) {
+        self.socket = socket
+        self.maxMessageLength = maxMessageLength
+    }
+
+    public mutating func next() async throws -> Element? {
+        return try await socket.receive(atMost: maxMessageLength)
     }
 }
 

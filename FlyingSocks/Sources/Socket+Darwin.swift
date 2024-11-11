@@ -42,6 +42,7 @@ extension Socket.FileDescriptor {
 
 extension Socket {
     static let stream = Int32(SOCK_STREAM)
+    static let datagram = Int32(SOCK_DGRAM)
     static let in_addr_any = Darwin.in_addr(s_addr: Darwin.in_addr_t(0))
 
     static func makeAddressINET(port: UInt16) -> Darwin.sockaddr_in {
@@ -175,6 +176,14 @@ extension Socket {
 
     static func pollfd(fd: FileDescriptorType, events: Int16, revents: Int16) -> Darwin.pollfd {
         Darwin.pollfd(fd: fd, events: events, revents: revents)
+    }
+
+    static func recvfrom(_ fd: FileDescriptorType, _ buffer: UnsafeMutableRawPointer!, _ nbyte: Int, _ flags: Int32, _ addr: UnsafeMutablePointer<sockaddr>!, _ len: UnsafeMutablePointer<socklen_t>!) -> Int {
+        Darwin.recvfrom(fd, buffer, nbyte, flags, addr, len)
+    }
+
+    static func sendto(_ fd: FileDescriptorType, _ buffer: UnsafeRawPointer!, _ nbyte: Int, _ flags: Int32, _ destaddr: UnsafePointer<sockaddr>!, _ destlen: socklen_t) -> Int {
+        Darwin.sendto(fd, buffer, nbyte, flags, destaddr, destlen)
     }
 }
 

@@ -44,6 +44,31 @@ public protocol SocketAddress: Sendable {
     static var family: sa_family_t { get }
 }
 
+extension SocketAddress {
+    public var family: sa_family_t {
+        var this = self
+        return withUnsafePointer(to: &this) {
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                $0.pointee.sa_family
+            }
+        }
+    }
+
+    var size: socklen_t {
+        // this needs to work with sockaddr_storage, hence the switch
+        switch Int32(family) {
+        case AF_INET:
+            socklen_t(MemoryLayout<sockaddr_in>.size)
+        case AF_INET6:
+            socklen_t(MemoryLayout<sockaddr_in6>.size)
+        case AF_UNIX:
+            socklen_t(MemoryLayout<sockaddr_un>.size)
+        default:
+            0
+        }
+    }
+}
+
 public extension SocketAddress where Self == sockaddr_in {
 
     static func inet(port: UInt16) -> Self {
