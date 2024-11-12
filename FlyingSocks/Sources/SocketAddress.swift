@@ -107,6 +107,10 @@ public extension SocketAddress where Self == sockaddr_un {
 }
 
 #if compiler(>=6.0)
+extension sockaddr_storage: SocketAddress, @retroactive @unchecked Sendable {
+    public static let family = sa_family_t(AF_UNSPEC)
+}
+
 extension sockaddr_in: SocketAddress, @retroactive @unchecked Sendable {
     public static let family = sa_family_t(AF_INET)
 }
@@ -119,6 +123,10 @@ extension sockaddr_un: SocketAddress, @retroactive @unchecked Sendable {
     public static let family = sa_family_t(AF_UNIX)
 }
 #else
+extension sockaddr_storage: SocketAddress, @unchecked Sendable {
+    public static let family = sa_family_t(AF_UNSPEC)
+}
+
 extension sockaddr_in: SocketAddress, @unchecked Sendable {
     public static let family = sa_family_t(AF_INET)
 }
@@ -134,7 +142,7 @@ extension sockaddr_un: SocketAddress, @unchecked Sendable {
 
 public extension SocketAddress {
     static func make(from storage: sockaddr_storage) throws -> Self {
-        guard storage.ss_family == family else {
+        guard self is sockaddr_storage || storage.ss_family == family else {
             throw SocketError.unsupportedAddress
         }
         var storage = storage

@@ -120,11 +120,11 @@ public struct Socket: Sendable, Hashable {
         return option.makeValue(from: valuePtr.pointee)
     }
 
-    public func bind<A: SocketAddress>(to address: A) throws {
+    public func bind(to address: some SocketAddress) throws {
         var addr = address
         let result = withUnsafePointer(to: &addr) {
             $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-                Socket.bind(file.rawValue, $0, socklen_t(MemoryLayout<A>.size))
+                Socket.bind(file.rawValue, $0, address.size)
             }
         }
         guard result >= 0 else {
@@ -191,11 +191,11 @@ public struct Socket: Sendable, Hashable {
         return (newFile, addr)
     }
 
-    public func connect<A: SocketAddress>(to address: A) throws {
+    public func connect(to address: some SocketAddress) throws {
         var addr = address
         let result = withUnsafePointer(to: &addr) {
             $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-                Socket.connect(file.rawValue, $0, socklen_t(MemoryLayout<A>.size))
+                Socket.connect(file.rawValue, $0, address.size)
             }
         }
         guard result >= 0 || errno == EISCONN else {
