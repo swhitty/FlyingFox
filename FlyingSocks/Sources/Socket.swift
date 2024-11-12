@@ -36,6 +36,22 @@ import WinSDK.WinSock2
 #endif
 import Foundation
 
+public enum SocketType: Sendable {
+    case stream
+    case datagram
+}
+
+extension SocketType {
+    var rawValue: Int32 {
+        switch self {
+        case .stream:
+            Socket.stream
+        case .datagram:
+            Socket.datagram
+        }
+    }
+}
+
 public struct Socket: Sendable, Hashable {
 
     public let file: FileDescriptor
@@ -53,15 +69,20 @@ public struct Socket: Sendable, Hashable {
     }
 
     public init(domain: Int32) throws {
-        try self.init(domain: domain, type: Socket.stream)
+        try self.init(domain: domain, type: .stream)
     }
 
+    @available(*, deprecated, message: "type is now SocketType")
     public init(domain: Int32, type: Int32) throws {
         let descriptor = FileDescriptor(rawValue: Socket.socket(domain, type, 0))
         guard descriptor != .invalid else {
             throw SocketError.makeFailed("CreateSocket")
         }
         self.file = descriptor
+    }
+
+    public init(domain: Int32, type: SocketType) throws {
+        try self.init(domain: domain, type: type.rawValue)
     }
 
     public var flags: Flags {
@@ -364,7 +385,7 @@ package extension Socket {
         return (s1, s2)
     }
 
-    static func makeNonBlockingPair() throws -> (Socket, Socket) {
-        try Socket.makePair(flags: .nonBlocking)
+    static func makeNonBlockingPair(type: SocketType = .stream) throws -> (Socket, Socket) {
+        try Socket.makePair(flags: .nonBlocking, type: type)
     }
 }

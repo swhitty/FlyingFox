@@ -198,7 +198,7 @@ extension AsyncSocket {
     static func makeListening(pool: some AsyncSocketPool) throws -> AsyncSocket {
         let address = sockaddr_un.unix(path: #function)
         try? Socket.unlink(address)
-        let socket = try Socket(domain: AF_UNIX, type: Socket.stream)
+        let socket = try Socket(domain: AF_UNIX, type: .stream)
         try socket.setValue(true, for: .localAddressReuse)
         try socket.bind(to: address)
         try socket.listen()
@@ -206,7 +206,7 @@ extension AsyncSocket {
     }
 
     static func make(pool: some AsyncSocketPool) throws -> AsyncSocket {
-        let socket = try Socket(domain: AF_UNIX, type: Socket.stream)
+        let socket = try Socket(domain: AF_UNIX, type: .stream)
         return try AsyncSocket(socket: socket, pool: pool)
     }
 

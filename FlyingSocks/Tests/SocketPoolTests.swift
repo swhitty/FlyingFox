@@ -85,7 +85,7 @@ struct SocketPoolTests {
         try await pool.prepare()
 
         let task = Task {
-            let socket = try Socket(domain: AF_UNIX, type: Socket.stream)
+            let socket = try Socket(domain: AF_UNIX, type: .stream)
             try await pool.suspendSocket(socket, untilReadyFor: .read)
         }
 
@@ -125,7 +125,7 @@ struct SocketPoolTests {
 
         try? await task.value
 
-        let socket = try Socket(domain: AF_UNIX, type: Socket.stream)
+        let socket = try Socket(domain: AF_UNIX, type: .stream)
         await #expect(throws: (any Error).self) {
             try await pool.suspendSocket(socket, untilReadyFor: .read)
         }
@@ -138,7 +138,7 @@ struct SocketPoolTests {
         let task = Task { try await pool.run() }
         defer { task.cancel() }
 
-        let socket = try Socket(domain: AF_UNIX, type: Socket.stream)
+        let socket = try Socket(domain: AF_UNIX, type: .stream)
         let suspension = Task {
             try await pool.suspendSocket(socket, untilReadyFor: .read)
         }
@@ -160,7 +160,7 @@ struct SocketPoolTests {
         let task = Task { try await pool.run() }
         defer { task.cancel() }
 
-        let socket = try Socket(domain: AF_UNIX, type: Socket.stream)
+        let socket = try Socket(domain: AF_UNIX, type: .stream)
         let suspension = Task {
             try await pool.suspendSocket(socket, untilReadyFor: .read)
         }

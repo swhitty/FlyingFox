@@ -83,7 +83,7 @@ public struct AsyncSocket: Sendable {
                                  pool: some AsyncSocketPool,
                                  timeout: TimeInterval = 5) async throws -> Self {
         try await withThrowingTimeout(seconds: timeout) {
-            let socket = try Socket(domain: Int32(type(of: address).family), type: Socket.stream)
+            let socket = try Socket(domain: Int32(type(of: address).family), type: .stream)
             let asyncSocket = try AsyncSocket(socket: socket, pool: pool)
             try await asyncSocket.connect(to: address)
             return asyncSocket
@@ -178,8 +178,8 @@ public struct AsyncSocket: Sendable {
 
 package extension AsyncSocket {
 
-    static func makePair(pool: some AsyncSocketPool) throws -> (AsyncSocket, AsyncSocket) {
-        let (s1, s2) = try Socket.makePair()
+    static func makePair(pool: some AsyncSocketPool, type: SocketType = .stream) throws -> (AsyncSocket, AsyncSocket) {
+        let (s1, s2) = try Socket.makePair(type: type)
         let a1 = try AsyncSocket(socket: s1, pool: pool)
         let a2 = try AsyncSocket(socket: s2, pool: pool)
         return (a1, a2)

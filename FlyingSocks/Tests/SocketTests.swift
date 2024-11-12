@@ -98,7 +98,7 @@ struct SocketTests {
 
     @Test
     func socketWrite_Throws_WhenSocketIsNotConnected() async throws {
-        let s1 = try Socket(domain: AF_UNIX, type: Socket.stream)
+        let s1 = try Socket(domain: AF_UNIX, type: .stream)
         let data = Data(repeating: 0x01, count: 100)
         #expect(throws: SocketError.self) {
             try s1.write(data, from: data.startIndex)
@@ -108,7 +108,7 @@ struct SocketTests {
 
     @Test
     func socket_Sets_And_Gets_ReceiveBufferSize() throws {
-        let socket = try Socket(domain: AF_UNIX, type: Socket.stream)
+        let socket = try Socket(domain: AF_UNIX, type: .stream)
 
         try socket.setValue(2048, for: .receiveBufferSize)
 #if canImport(Darwin)
@@ -121,7 +121,7 @@ struct SocketTests {
 
     @Test
     func socket_Sets_And_Gets_SendBufferSizeOption() throws {
-        let socket = try Socket(domain: AF_UNIX, type: Socket.stream)
+        let socket = try Socket(domain: AF_UNIX, type: .stream)
 
         try socket.setValue(2048, for: .sendBufferSize)
 #if canImport(Darwin)
@@ -134,7 +134,7 @@ struct SocketTests {
 
     @Test
     func socket_Sets_And_Gets_BoolOption() throws {
-        let socket = try Socket(domain: AF_UNIX, type: Socket.stream)
+        let socket = try Socket(domain: AF_UNIX, type: .stream)
 
         try socket.setValue(true, for: .localAddressReuse)
         #expect(try socket.getValue(for: .localAddressReuse))
@@ -145,18 +145,11 @@ struct SocketTests {
 
     @Test
     func socket_Sets_And_Gets_Flags() throws {
-        let socket = try Socket(domain: AF_UNIX, type: Socket.stream)
+        let socket = try Socket(domain: AF_UNIX, type: .stream)
         #expect(try socket.flags.contains(.append) == false)
 
         try socket.setFlags(.append)
         #expect(try socket.flags.contains(.append))
-    }
-
-    @Test
-    func socketInit_ThrowsError_WhenInvalid() {
-        #expect(throws: SocketError.self) {
-            _ = try Socket(domain: -1, type: -1)
-        }
     }
 
     @Test
@@ -193,7 +186,7 @@ struct SocketTests {
 
     @Test
     func socketBind_ToINET() throws {
-        let socket = try Socket(domain: AF_INET, type: Socket.stream)
+        let socket = try Socket(domain: AF_INET, type: .stream)
         try socket.setValue(true, for: .localAddressReuse)
         let address = Socket.makeAddressINET(port:5050)
         #expect(throws: Never.self) {

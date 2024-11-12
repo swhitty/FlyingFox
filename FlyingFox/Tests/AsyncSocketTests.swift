@@ -40,7 +40,7 @@ extension AsyncSocket {
     }
 
     static func make(pool: some AsyncSocketPool) throws -> AsyncSocket {
-        let socket = try Socket(domain: AF_UNIX, type: Socket.stream)
+        let socket = try Socket(domain: AF_UNIX, type: .stream)
         return try AsyncSocket(socket: socket, pool: pool)
     }
 
