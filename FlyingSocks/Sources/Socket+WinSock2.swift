@@ -44,6 +44,10 @@ public typealias sa_family_t = UInt8
 
 public extension Socket {
     typealias FileDescriptorType = UInt64
+    typealias IovLengthType = UInt
+    typealias ControlMessageHeaderLengthType = DWORD
+    typealias IPv4InterfaceIndexType = ULONG
+    typealias IPv6InterfaceIndexType = ULONG
 }
 
 extension Socket.FileDescriptor {
@@ -54,6 +58,10 @@ extension Socket {
     static let stream = Int32(SOCK_STREAM)
     static let datagram = Int32(SOCK_DGRAM)
     static let in_addr_any = WinSDK.in_addr()
+    static let ipproto_ip = Int32(IPPROTO_IP)
+    static let ipproto_ipv6 = Int32(IPPROTO_IPV6)
+    static let ip_pktinfo = Int32(IP_PKTINFO)
+    static let ipv6_pktinfo = Int32(IPV6_PKTINFO)
 
     static func makeAddressINET(port: UInt16) -> WinSDK.sockaddr_in {
         WinSDK.sockaddr_in(
@@ -192,6 +200,14 @@ extension Socket {
 
     static func sendto(_ fd: FileDescriptorType, _ buffer: UnsafeRawPointer!, _ nbyte: Int, _ flags: Int32, _ destaddr: UnsafePointer<sockaddr>!, _ destlen: socklen_t) -> Int {
         WinSDK.sendto(fd, buffer, nbyte, flags, destaddr, destlen)
+    }
+
+    static func recvmsg(_ fd: FileDescriptorType, _ message: UnsafeMutablePointer<msghdr>, _ flags: Int32) -> Int {
+        WinSDK.recvmsg(fd, message, flags)
+    }
+
+    static func sendmsg(_ fd: FileDescriptorType, _ message: UnsafePointer<msghdr>, _ flags: Int32) -> Int {
+        WinSDK.sendmsg(fd, message, flags)
     }
 }
 

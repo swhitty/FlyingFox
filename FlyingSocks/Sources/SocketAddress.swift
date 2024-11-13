@@ -67,6 +67,18 @@ extension SocketAddress {
             0
         }
     }
+
+    public func makeStorage() -> sockaddr_storage {
+        var storage = sockaddr_storage()
+
+        withUnsafeMutablePointer(to: &storage) {
+            $0.withMemoryRebound(to: Self.self, capacity: 1) {
+                $0.pointee = self
+            }
+        }
+
+        return storage
+    }
 }
 
 public extension SocketAddress where Self == sockaddr_in {

@@ -34,6 +34,10 @@ import Glibc
 
 public extension Socket {
     typealias FileDescriptorType = Int32
+    typealias IovLengthType = Int
+    typealias ControlMessageHeaderLengthType = Int
+    typealias IPv4InterfaceIndexType = Int32
+    typealias IPv6InterfaceIndexType = UInt32
 }
 
 extension Socket.FileDescriptor {
@@ -44,6 +48,10 @@ extension Socket {
     static let stream = Int32(SOCK_STREAM.rawValue)
     static let datagram = Int32(SOCK_DGRAM.rawValue)
     static let in_addr_any = Glibc.in_addr(s_addr: Glibc.in_addr_t(0))
+    static let ipproto_ip = Int32(IPPROTO_IP)
+    static let ipproto_ipv6 = Int32(IPPROTO_IPV6)
+    static let ip_pktinfo = Int32(IP_PKTINFO)
+    static let ipv6_pktinfo = Int32(IPV6_PKTINFO)
 
     static func makeAddressINET(port: UInt16) -> Glibc.sockaddr_in {
         Glibc.sockaddr_in(
@@ -181,6 +189,19 @@ extension Socket {
     static func sendto(_ fd: FileDescriptorType, _ buffer: UnsafeRawPointer!, _ nbyte: Int, _ flags: Int32, _ destaddr: UnsafePointer<sockaddr>!, _ destlen: socklen_t) -> Int {
         Glibc.sendto(fd, buffer, nbyte, flags, destaddr, destlen)
     }
+
+    static func recvmsg(_ fd: FileDescriptorType, _ message: UnsafeMutablePointer<msghdr>, _ flags: Int32) -> Int {
+        Glibc.recvmsg(fd, message, flags)
+    }
+
+    static func sendmsg(_ fd: FileDescriptorType, _ message: UnsafePointer<msghdr>, _ flags: Int32) -> Int {
+        Glibc.sendmsg(fd, message, flags)
+    }
+}
+
+struct in6_pktinfo {
+    var ipi6_addr: in6_addr
+    var ipi6_ifindex: CUnsignedInt
 }
 
 #endif

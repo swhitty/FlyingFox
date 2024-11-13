@@ -62,6 +62,25 @@ public extension AsyncSocketPool where Self == SocketPool<Poll> {
 
 public struct AsyncSocket: Sendable {
 
+    public struct Message: Sendable {
+        public let peerAddress: sockaddr_storage
+        public let bytes: [UInt8]
+        public let interfaceIndex: UInt32?
+        public let localAddress: sockaddr_storage?
+
+        public init(
+            peerAddress: sockaddr_storage,
+            bytes: [UInt8],
+            interfaceIndex: UInt32? = nil,
+            localAddress: sockaddr_storage? = nil
+        ) {
+            self.peerAddress = peerAddress
+            self.bytes = bytes
+            self.interfaceIndex = interfaceIndex
+            self.localAddress = localAddress
+        }
+    }
+
     public let socket: Socket
     let pool: any AsyncSocketPool
 
@@ -143,6 +162,23 @@ public struct AsyncSocket: Sendable {
         } while true
     }
 
+#if !canImport(WinSDK)
+    public func receive(atMost length: Int) async throws -> Message {
+        try Task.checkCancellation()
+
+        repeat {
+            do {
+                let (peerAddress, bytes, interfaceIndex, localAddress) = try socket.receive(length: length)
+                return Message(peerAddress: peerAddress, bytes: bytes, interfaceIndex: interfaceIndex, localAddress: localAddress)
+            } catch SocketError.blocked {
+                try await pool.suspendSocket(socket, untilReadyFor: .read)
+            } catch {
+                throw error
+            }
+        } while true
+    }
+#endif
+
     /// Reads bytes from the socket up to by not over/
     /// - Parameter bytes: The max number of bytes to read
     /// - Returns: an array of the read bytes capped to the number of bytes provided.
@@ -189,6 +225,31 @@ public struct AsyncSocket: Sendable {
     public func send(_ data: Data, to address: some SocketAddress) async throws {
         try await send(Array(data), to: address)
     }
+
+#if !canImport(WinSDK)
+    public func send(
+        message: [UInt8],
+        to peerAddress: some SocketAddress,
+        interfaceIndex: UInt32? = nil,
+        from localAddress: (some SocketAddress)? = nil
+    ) async throws {
+        let sent = try await pool.loopUntilReady(for: .write, on: socket) {
+            try socket.send(message: message, to: peerAddress, interfaceIndex: interfaceIndex, from: localAddress)
+        }
+        guard sent == message.count else {
+            throw SocketError.disconnected
+        }
+    }
+
+    public func send(
+        message: Data,
+        to peerAddress: some SocketAddress,
+        interfaceIndex: UInt32? = nil,
+        from localAddress: (some SocketAddress)? = nil
+    ) async throws {
+        try await send(message: Array(message), to: peerAddress, interfaceIndex: interfaceIndex, from: localAddress)
+    }
+#endif
 
     public func close() throws {
         try socket.close()
@@ -275,7 +336,8 @@ public struct AsyncSocketSequence: AsyncSequence, AsyncIteratorProtocol, Sendabl
 public struct AsyncSocketMessageSequence: AsyncSequence, AsyncIteratorProtocol, Sendable {
     public static let DefaultMaxMessageLength: Int = 1500
 
-    public typealias Element = (sockaddr_storage, [UInt8])
+    // Windows has a different recvmsg() API signature which is presently unsupported
+    public typealias Element = AsyncSocket.Message
 
     private let socket: AsyncSocket
     private let maxMessageLength: Int
@@ -288,7 +350,15 @@ public struct AsyncSocketMessageSequence: AsyncSequence, AsyncIteratorProtocol, 
     }
 
     public mutating func next() async throws -> Element? {
-        return try await socket.receive(atMost: maxMessageLength)
+#if !canImport(WinSDK)
+        try await socket.receive(atMost: maxMessageLength)
+#else
+        let peerAddress: sockaddr_storage
+        let bytes: [UInt8]
+
+        (peerAddress, bytes) = try await socket.receive(atMost: maxMessageLength)
+        return AsyncSocket.Message(peerAddress: peerAddress, bytes: bytes)
+#endif
     }
 }
 
