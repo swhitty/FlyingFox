@@ -192,7 +192,7 @@ struct AsyncSocketTests {
     func datagramSocketReceivesChunk_WhenAvailable() async throws {
         let (s1, s2, addr) = try await AsyncSocket.makeDatagramPair()
 
-        async let d2: (sockaddr_storage, [UInt8]) = s2.receive(atMost: 100)
+        async let d2: (any SocketAddress, [UInt8]) = s2.receive(atMost: 100)
         // TODO: calling send() on Darwin to an unconnected datagram domain
         // socket returns EISCONN
 #if canImport(Darwin)

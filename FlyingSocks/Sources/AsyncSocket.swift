@@ -63,16 +63,16 @@ public extension AsyncSocketPool where Self == SocketPool<Poll> {
 public struct AsyncSocket: Sendable {
 
     public struct Message: Sendable {
-        public let peerAddress: sockaddr_storage
+        public let peerAddress: any SocketAddress
         public let bytes: [UInt8]
         public let interfaceIndex: UInt32?
-        public let localAddress: sockaddr_storage?
+        public let localAddress: (any SocketAddress)?
 
         public init(
-            peerAddress: sockaddr_storage,
+            peerAddress: any SocketAddress,
             bytes: [UInt8],
             interfaceIndex: UInt32? = nil,
-            localAddress: sockaddr_storage? = nil
+            localAddress: (any SocketAddress)? = nil
         ) {
             self.peerAddress = peerAddress
             self.bytes = bytes
@@ -148,7 +148,7 @@ public struct AsyncSocket: Sendable {
         return buffer
     }
 
-    public func receive(atMost length: Int = 4096) async throws -> (sockaddr_storage, [UInt8]) {
+    public func receive(atMost length: Int = 4096) async throws -> (any SocketAddress, [UInt8]) {
         try Task.checkCancellation()
 
         repeat {
@@ -353,7 +353,7 @@ public struct AsyncSocketMessageSequence: AsyncSequence, AsyncIteratorProtocol, 
 #if !canImport(WinSDK)
         try await socket.receive(atMost: maxMessageLength)
 #else
-        let peerAddress: sockaddr_storage
+        let peerAddress: any SocketAddress
         let bytes: [UInt8]
 
         (peerAddress, bytes) = try await socket.receive(atMost: maxMessageLength)

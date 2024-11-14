@@ -249,8 +249,8 @@ public struct Socket: Sendable, Hashable {
         return count
     }
 
-    public func receive(length: Int) throws -> (sockaddr_storage, [UInt8]) {
-        var address: sockaddr_storage?
+    public func receive(length: Int) throws -> (any SocketAddress, [UInt8]) {
+        var address: (any SocketAddress)?
         let bytes = try [UInt8](unsafeUninitializedCapacity: length) { buffer, count in
             (address, count) = try receive(into: buffer.baseAddress!, length: length)
         }
@@ -258,7 +258,7 @@ public struct Socket: Sendable, Hashable {
         return (address!, bytes)
     }
 
-    private func receive(into buffer: UnsafeMutablePointer<UInt8>, length: Int) throws -> (sockaddr_storage, Int) {
+    private func receive(into buffer: UnsafeMutablePointer<UInt8>, length: Int) throws -> (any SocketAddress, Int) {
         var addr = sockaddr_storage()
         var size = socklen_t(MemoryLayout<sockaddr_storage>.size)
         let count = addr.withMutableSockAddr {
@@ -277,10 +277,10 @@ public struct Socket: Sendable, Hashable {
     }
 
 #if !canImport(WinSDK)
-    public func receive(length: Int) throws -> (sockaddr_storage, [UInt8], UInt32?, sockaddr_storage?) {
-        var peerAddress: sockaddr_storage?
+    public func receive(length: Int) throws -> (any SocketAddress, [UInt8], UInt32?, (any SocketAddress)?) {
+        var peerAddress: (any SocketAddress)?
         var interfaceIndex: UInt32?
-        var localAddress: sockaddr_storage?
+        var localAddress: (any SocketAddress)?
 
         let bytes = try [UInt8](unsafeUninitializedCapacity: length) { buffer, count in
             (peerAddress, count, interfaceIndex, localAddress) = try receive(into: buffer.baseAddress!, length: length, flags: 0)
@@ -295,7 +295,7 @@ public struct Socket: Sendable, Hashable {
         into buffer: UnsafeMutablePointer<UInt8>,
         length: Int,
         flags: Int32
-    ) throws -> (sockaddr_storage, Int, UInt32?, sockaddr_storage?) {
+    ) throws -> (any SocketAddress, Int, UInt32?, (any SocketAddress)?) {
         var iov = iovec()
         var msg = msghdr()
         var peerAddress = sockaddr_storage()
