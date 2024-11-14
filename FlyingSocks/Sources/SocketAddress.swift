@@ -46,12 +46,7 @@ public protocol SocketAddress: Sendable {
 
 extension SocketAddress {
     public var family: sa_family_t {
-        var this = self
-        return withUnsafePointer(to: &this) {
-            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-                $0.pointee.sa_family
-            }
-        }
+        withSockAddr { $0.pointee.sa_family }
     }
 
     var size: socklen_t {
@@ -154,7 +149,7 @@ extension sockaddr_un: SocketAddress, @unchecked Sendable {
 
 public extension SocketAddress {
     static func make(from storage: sockaddr_storage) throws -> Self {
-        guard self is sockaddr_storage || storage.ss_family == family else {
+        guard self is sockaddr_storage.Type || storage.ss_family == family else {
             throw SocketError.unsupportedAddress
         }
         var storage = storage
@@ -228,6 +223,36 @@ extension Socket {
         var address = address
         guard Socket.unlink(&address.sun_path.0) == 0 else {
             throw SocketError.makeFailed("unlink")
+        }
+    }
+}
+
+public struct AnySocketAddress: Sendable, SocketAddress {
+    public static var family: sa_family_t {
+        sa_family_t(AF_UNSPEC)
+    }
+
+    private var storage: sockaddr_storage
+
+    public init(_ sa: any SocketAddress) {
+        storage = sa.makeStorage()
+    }
+}
+
+public extension SocketAddress {
+    func withSockAddr<T>(_ body: (_ sa: UnsafePointer<sockaddr>) throws -> T) rethrows -> T {
+        try withUnsafePointer(to: self) {
+            try $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { sa in
+                try body(sa)
+            }
+        }
+    }
+
+    mutating func withMutableSockAddr<T>(_ body: (_ sa: UnsafeMutablePointer<sockaddr>) throws -> T) rethrows -> T {
+        try withUnsafeMutablePointer(to: &self) {
+            try $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { sa in
+                try body(sa)
+            }
         }
     }
 }

@@ -147,11 +147,8 @@ public struct Socket: Sendable, Hashable {
     }
 
     public func bind(to address: some SocketAddress) throws {
-        var addr = address
-        let result = withUnsafePointer(to: &addr) {
-            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-                Socket.bind(file.rawValue, $0, address.size)
-            }
+        let result = address.withSockAddr {
+            Socket.bind(file.rawValue, $0, address.size)
         }
         guard result >= 0 else {
             throw SocketError.makeFailed("Bind")
@@ -170,10 +167,8 @@ public struct Socket: Sendable, Hashable {
         var addr = sockaddr_storage()
         var len = socklen_t(MemoryLayout<sockaddr_storage>.size)
 
-        let result = withUnsafeMutablePointer(to: &addr) {
-            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-                Socket.getpeername(file.rawValue, $0, &len)
-            }
+        let result = addr.withMutableSockAddr {
+            Socket.getpeername(file.rawValue, $0, &len)
         }
         if result != 0 {
             throw SocketError.makeFailed("GetPeerName")
@@ -185,10 +180,8 @@ public struct Socket: Sendable, Hashable {
         var addr = sockaddr_storage()
         var len = socklen_t(MemoryLayout<sockaddr_storage>.size)
 
-        let result = withUnsafeMutablePointer(to: &addr) {
-            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-                Socket.getsockname(file.rawValue, $0, &len)
-            }
+        let result = addr.withMutableSockAddr {
+            Socket.getsockname(file.rawValue, $0, &len)
         }
         if result != 0 {
             throw SocketError.makeFailed("GetSockName")
@@ -200,10 +193,8 @@ public struct Socket: Sendable, Hashable {
         var addr = sockaddr_storage()
         var len = socklen_t(MemoryLayout<sockaddr_storage>.size)
 
-        let newFile = withUnsafeMutablePointer(to: &addr) {
-            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-                FileDescriptor(rawValue: Socket.accept(file.rawValue, $0, &len))
-            }
+        let newFile = addr.withMutableSockAddr {
+            FileDescriptor(rawValue: Socket.accept(file.rawValue, $0, &len))
         }
 
         guard newFile != .invalid else {
@@ -218,11 +209,8 @@ public struct Socket: Sendable, Hashable {
     }
 
     public func connect(to address: some SocketAddress) throws {
-        var addr = address
-        let result = withUnsafePointer(to: &addr) {
-            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-                Socket.connect(file.rawValue, $0, address.size)
-            }
+        let result = address.withSockAddr {
+            Socket.connect(file.rawValue, $0, address.size)
         }
         guard result >= 0 || errno == EISCONN else {
             if errno == EINPROGRESS {
@@ -273,10 +261,8 @@ public struct Socket: Sendable, Hashable {
     private func receive(into buffer: UnsafeMutablePointer<UInt8>, length: Int) throws -> (sockaddr_storage, Int) {
         var addr = sockaddr_storage()
         var size = socklen_t(MemoryLayout<sockaddr_storage>.size)
-        let count = withUnsafeMutablePointer(to: &addr) {
-            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-                Socket.recvfrom(file.rawValue, buffer, length, 0, $0, &size)
-            }
+        let count = addr.withMutableSockAddr {
+            Socket.recvfrom(file.rawValue, buffer, length, 0, $0, &size)
         }
         guard count > 0 else {
             if errno == EWOULDBLOCK {
@@ -387,11 +373,8 @@ public struct Socket: Sendable, Hashable {
     }
 
     private func send(_ pointer: UnsafeRawPointer, length: Int, to address: some SocketAddress) throws -> Int {
-        var addr = address
-        let sent = withUnsafePointer(to: &addr) {
-            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-                Socket.sendto(file.rawValue, pointer, length, 0, $0, address.size)
-            }
+        let sent = address.withSockAddr {
+            Socket.sendto(file.rawValue, pointer, length, 0, $0, address.size)
         }
         guard sent >= 0 else {
             if errno == EWOULDBLOCK || errno == EAGAIN {

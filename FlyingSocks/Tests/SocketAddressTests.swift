@@ -332,6 +332,41 @@ struct SocketAddressTests {
             }
         }
     }
+
+    @Test
+    func testTypeErasedSockAddress() throws {
+        var addrIn6 = sockaddr_in6()
+        addrIn6.sin6_family = sa_family_t(AF_INET6)
+        addrIn6.sin6_port = UInt16(9090).bigEndian
+        addrIn6.sin6_addr = try Socket.makeInAddr(fromIP6: "fe80::1")
+
+        let storage = AnySocketAddress(addrIn6)
+
+        #expect(storage.family == sa_family_t(AF_INET6))
+        #expect(storage.family == addrIn6.sin6_family)
+
+        withUnsafeBytes(of: addrIn6) { addrIn6Ptr in
+            let storagePtr = addrIn6Ptr.bindMemory(to: sockaddr_storage.self)
+            #expect(storagePtr.baseAddress!.pointee.ss_family == sa_family_t(AF_INET6))
+            let sockaddrIn6Ptr = addrIn6Ptr.bindMemory(to: sockaddr_in6.self)
+            #expect(sockaddrIn6Ptr.baseAddress!.pointee.sin6_port == addrIn6.sin6_port)
+            let addrArray = withUnsafeBytes(of: sockaddrIn6Ptr.baseAddress!.pointee.sin6_addr) {
+                Array($0.bindMemory(to: UInt8.self))
+            }
+            let expectedArray = withUnsafeBytes(of: addrIn6.sin6_addr) {
+                Array($0.bindMemory(to: UInt8.self))
+            }
+            #expect(addrArray == expectedArray)
+        }
+
+        storage.withSockAddr { sa in
+            #expect(sa.pointee.sa_family == sa_family_t(AF_INET6))
+        }
+
+        addrIn6.withSockAddr { sa in
+            #expect(sa.pointee.sa_family == sa_family_t(AF_INET6))
+        }
+    }
 }
 
 // this is a bit ugly but necessary to get unknown_CheckSize() to function
