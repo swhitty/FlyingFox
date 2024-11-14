@@ -249,6 +249,23 @@ public struct AsyncSocket: Sendable {
     ) async throws {
         try await send(message: Array(message), to: peerAddress, interfaceIndex: interfaceIndex, from: localAddress)
     }
+
+    public func send(message: Message) async throws {
+        let localAddress: AnySocketAddress?
+
+        if let unwrappedLocalAddress = message.localAddress {
+            localAddress = AnySocketAddress(unwrappedLocalAddress)
+        } else {
+            localAddress = nil
+        }
+
+        try await send(
+            message: message.bytes,
+            to: AnySocketAddress(message.peerAddress),
+            interfaceIndex: message.interfaceIndex,
+            from: localAddress
+        )
+    }
 #endif
 
     public func close() throws {

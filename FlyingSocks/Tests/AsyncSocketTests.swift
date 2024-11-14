@@ -210,7 +210,7 @@ struct AsyncSocketTests {
 
 #if !canImport(WinSDK)
     @Test
-    func datagramSocketReceivesMessage_WhenAvailable() async throws {
+    func datagramSocketReceivesMessageTupleAPI_WhenAvailable() async throws {
         let (s1, s2, addr) = try await AsyncSocket.makeDatagramPair()
 
         async let d2: AsyncSocket.Message = s2.receive(atMost: 100)
@@ -218,6 +218,31 @@ struct AsyncSocketTests {
         try await s1.write("Swift".data(using: .utf8)!)
 #else
         try await s1.send(message: "Swift".data(using: .utf8)!, to: addr, from: addr)
+#endif
+        let v2 = try await d2
+        #expect(String(data: Data(v2.bytes), encoding: .utf8) == "Swift")
+
+        try s1.close()
+        try s2.close()
+        try? Socket.unlink(addr)
+    }
+#endif
+
+#if !canImport(WinSDK)
+    @Test
+    func datagramSocketReceivesMessageStructAPI_WhenAvailable() async throws {
+        let (s1, s2, addr) = try await AsyncSocket.makeDatagramPair()
+        let messageToSend = AsyncSocket.Message(
+            peerAddress: addr,
+            bytes: Array("Swift".data(using: .utf8)!),
+            localAddress: addr
+        )
+
+        async let d2: AsyncSocket.Message = s2.receive(atMost: 100)
+#if canImport(Darwin)
+        try await s1.write("Swift".data(using: .utf8)!)
+#else
+        try await s1.send(message: messageToSend)
 #endif
         let v2 = try await d2
         #expect(String(data: Data(v2.bytes), encoding: .utf8) == "Swift")
