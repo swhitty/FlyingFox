@@ -187,31 +187,111 @@ struct AsyncSocketTests {
             try await sockets.next() == nil
         )
     }
+
+    @Test
+    func datagramSocketReceivesChunk_WhenAvailable() async throws {
+        let (s1, s2, addr) = try await AsyncSocket.makeDatagramPair()
+
+        async let d2: (any SocketAddress, [UInt8]) = s2.receive(atMost: 100)
+        // TODO: calling send() on Darwin to an unconnected datagram domain
+        // socket returns EISCONN
+#if canImport(Darwin)
+        try await s1.write("Swift".data(using: .utf8)!)
+#else
+        try await s1.send("Swift".data(using: .utf8)!, to: addr)
+#endif
+        let v2 = try await d2
+        #expect(String(data: Data(v2.1), encoding: .utf8) == "Swift")
+
+        try s1.close()
+        try s2.close()
+        try? Socket.unlink(addr)
+    }
+
+#if !canImport(WinSDK)
+    @Test
+    func datagramSocketReceivesMessageTupleAPI_WhenAvailable() async throws {
+        let (s1, s2, addr) = try await AsyncSocket.makeDatagramPair()
+
+        async let d2: AsyncSocket.Message = s2.receive(atMost: 100)
+#if canImport(Darwin)
+        try await s1.write("Swift".data(using: .utf8)!)
+#else
+        try await s1.send(message: "Swift".data(using: .utf8)!, to: addr, from: addr)
+#endif
+        let v2 = try await d2
+        #expect(String(data: Data(v2.bytes), encoding: .utf8) == "Swift")
+
+        try s1.close()
+        try s2.close()
+        try? Socket.unlink(addr)
+    }
+#endif
+
+#if !canImport(WinSDK)
+    @Test
+    func datagramSocketReceivesMessageStructAPI_WhenAvailable() async throws {
+        let (s1, s2, addr) = try await AsyncSocket.makeDatagramPair()
+        let messageToSend = AsyncSocket.Message(
+            peerAddress: addr,
+            bytes: Array("Swift".data(using: .utf8)!),
+            localAddress: addr
+        )
+
+        async let d2: AsyncSocket.Message = s2.receive(atMost: 100)
+#if canImport(Darwin)
+        try await s1.write("Swift".data(using: .utf8)!)
+#else
+        try await s1.send(message: messageToSend)
+#endif
+        let v2 = try await d2
+        #expect(String(data: Data(v2.bytes), encoding: .utf8) == "Swift")
+
+        try s1.close()
+        try s2.close()
+        try? Socket.unlink(addr)
+    }
+#endif
 }
 
 extension AsyncSocket {
 
-    static func make() async throws -> AsyncSocket {
-        try await make(pool: .client)
+    static func make(type: SocketType = .stream) async throws -> AsyncSocket {
+        try await make(pool: .client, type: type)
     }
 
     static func makeListening(pool: some AsyncSocketPool) throws -> AsyncSocket {
         let address = sockaddr_un.unix(path: #function)
         try? Socket.unlink(address)
-        let socket = try Socket(domain: AF_UNIX, type: Socket.stream)
+        let socket = try Socket(domain: AF_UNIX, type: .stream)
         try socket.setValue(true, for: .localAddressReuse)
         try socket.bind(to: address)
         try socket.listen()
         return try AsyncSocket(socket: socket, pool: pool)
     }
 
-    static func make(pool: some AsyncSocketPool) throws -> AsyncSocket {
-        let socket = try Socket(domain: AF_UNIX, type: Socket.stream)
+    static func make(pool: some AsyncSocketPool, type: SocketType = .stream) throws -> AsyncSocket {
+        let socket = try Socket(domain: AF_UNIX, type: type)
         return try AsyncSocket(socket: socket, pool: pool)
     }
 
+    static func makeDatagramPair() async throws -> (AsyncSocket, AsyncSocket, sockaddr_un) {
+        let socketPair = try await makePair(pool: .client, type: .datagram)
+        guard let endpoint = FileManager.default.makeTemporaryFile() else {
+            throw SocketError.makeFailed("MakeTemporaryFile")
+        }
+        let addr = sockaddr_un.unix(path: endpoint.path)
+
+        try socketPair.1.socket.bind(to: addr)
+#if canImport(Darwin)
+        try await socketPair.0.connect(to: addr)
+#endif
+
+        return (socketPair.0, socketPair.1, addr)
+    }
+
     static func makePair() async throws -> (AsyncSocket, AsyncSocket) {
-        try await makePair(pool: .client)
+        try await makePair(pool: .client, type: .stream)
     }
 
     func writeString(_ string: String) async throws {

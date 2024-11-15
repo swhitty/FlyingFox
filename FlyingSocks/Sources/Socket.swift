@@ -36,6 +36,22 @@ import WinSDK.WinSock2
 #endif
 import Foundation
 
+public enum SocketType: Sendable {
+    case stream
+    case datagram
+}
+
+extension SocketType {
+    var rawValue: Int32 {
+        switch self {
+        case .stream:
+            Socket.stream
+        case .datagram:
+            Socket.datagram
+        }
+    }
+}
+
 public struct Socket: Sendable, Hashable {
 
     public let file: FileDescriptor
@@ -53,15 +69,23 @@ public struct Socket: Sendable, Hashable {
     }
 
     public init(domain: Int32) throws {
-        try self.init(domain: domain, type: Socket.stream)
+        try self.init(domain: domain, type: .stream)
     }
 
+    @available(*, deprecated, message: "type is now SocketType")
     public init(domain: Int32, type: Int32) throws {
         let descriptor = FileDescriptor(rawValue: Socket.socket(domain, type, 0))
         guard descriptor != .invalid else {
             throw SocketError.makeFailed("CreateSocket")
         }
         self.file = descriptor
+        if type == SocketType.datagram.rawValue {
+            try setPktInfo(domain: domain)
+        }
+    }
+
+    public init(domain: Int32, type: SocketType) throws {
+        try self.init(domain: domain, type: type.rawValue)
     }
 
     public var flags: Flags {
@@ -77,6 +101,29 @@ public struct Socket: Sendable, Hashable {
     public func setFlags(_ flags: Flags) throws {
         if Socket.fcntl(file.rawValue, F_SETFL, flags.rawValue) == -1 {
             throw SocketError.makeFailed("SetFlags")
+        }
+    }
+
+    // enable return of ip_pktinfo/ipv6_pktinfo on recvmsg()
+    private func setPktInfo(domain: Int32) throws {
+        var enable = Int32(1)
+        let level: Int32
+        let name: Int32
+
+        switch domain {
+        case AF_INET:
+            level = Socket.ipproto_ip
+            name = Self.ip_pktinfo
+        case AF_INET6:
+            level = Socket.ipproto_ipv6
+            name = Self.ipv6_pktinfo
+        default:
+            return
+        }
+
+        let result = Socket.setsockopt(file.rawValue, level, name, &enable, socklen_t(MemoryLayout<Int32>.size))
+        guard result >= 0 else {
+            throw SocketError.makeFailed("SetPktInfoOption")
         }
     }
 
@@ -99,12 +146,9 @@ public struct Socket: Sendable, Hashable {
         return option.makeValue(from: valuePtr.pointee)
     }
 
-    public func bind<A: SocketAddress>(to address: A) throws {
-        var addr = address
-        let result = withUnsafePointer(to: &addr) {
-            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-                Socket.bind(file.rawValue, $0, socklen_t(MemoryLayout<A>.size))
-            }
+    public func bind(to address: some SocketAddress) throws {
+        let result = address.withSockAddr {
+            Socket.bind(file.rawValue, $0, address.size)
         }
         guard result >= 0 else {
             throw SocketError.makeFailed("Bind")
@@ -123,10 +167,8 @@ public struct Socket: Sendable, Hashable {
         var addr = sockaddr_storage()
         var len = socklen_t(MemoryLayout<sockaddr_storage>.size)
 
-        let result = withUnsafeMutablePointer(to: &addr) {
-            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-                Socket.getpeername(file.rawValue, $0, &len)
-            }
+        let result = addr.withMutableSockAddr {
+            Socket.getpeername(file.rawValue, $0, &len)
         }
         if result != 0 {
             throw SocketError.makeFailed("GetPeerName")
@@ -138,10 +180,8 @@ public struct Socket: Sendable, Hashable {
         var addr = sockaddr_storage()
         var len = socklen_t(MemoryLayout<sockaddr_storage>.size)
 
-        let result = withUnsafeMutablePointer(to: &addr) {
-            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-                Socket.getsockname(file.rawValue, $0, &len)
-            }
+        let result = addr.withMutableSockAddr {
+            Socket.getsockname(file.rawValue, $0, &len)
         }
         if result != 0 {
             throw SocketError.makeFailed("GetSockName")
@@ -153,10 +193,8 @@ public struct Socket: Sendable, Hashable {
         var addr = sockaddr_storage()
         var len = socklen_t(MemoryLayout<sockaddr_storage>.size)
 
-        let newFile = withUnsafeMutablePointer(to: &addr) {
-            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-                FileDescriptor(rawValue: Socket.accept(file.rawValue, $0, &len))
-            }
+        let newFile = addr.withMutableSockAddr {
+            FileDescriptor(rawValue: Socket.accept(file.rawValue, $0, &len))
         }
 
         guard newFile != .invalid else {
@@ -170,12 +208,9 @@ public struct Socket: Sendable, Hashable {
         return (newFile, addr)
     }
 
-    public func connect<A: SocketAddress>(to address: A) throws {
-        var addr = address
-        let result = withUnsafePointer(to: &addr) {
-            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-                Socket.connect(file.rawValue, $0, socklen_t(MemoryLayout<A>.size))
-            }
+    public func connect(to address: some SocketAddress) throws {
+        let result = address.withSockAddr {
+            Socket.connect(file.rawValue, $0, address.size)
         }
         guard result >= 0 || errno == EISCONN else {
             if errno == EINPROGRESS {
@@ -214,6 +249,100 @@ public struct Socket: Sendable, Hashable {
         return count
     }
 
+    public func receive(length: Int) throws -> (any SocketAddress, [UInt8]) {
+        var address: (any SocketAddress)?
+        let bytes = try [UInt8](unsafeUninitializedCapacity: length) { buffer, count in
+            (address, count) = try receive(into: buffer.baseAddress!, length: length)
+        }
+
+        return (address!, bytes)
+    }
+
+    private func receive(into buffer: UnsafeMutablePointer<UInt8>, length: Int) throws -> (any SocketAddress, Int) {
+        var addr = sockaddr_storage()
+        var size = socklen_t(MemoryLayout<sockaddr_storage>.size)
+        let count = addr.withMutableSockAddr {
+            Socket.recvfrom(file.rawValue, buffer, length, 0, $0, &size)
+        }
+        guard count > 0 else {
+            if errno == EWOULDBLOCK {
+                throw SocketError.blocked
+            } else if errno == EBADF || count == 0 {
+                throw SocketError.disconnected
+            } else {
+                throw SocketError.makeFailed("RecvFrom")
+            }
+        }
+        return (addr, count)
+    }
+
+#if !canImport(WinSDK)
+    public func receive(length: Int) throws -> (any SocketAddress, [UInt8], UInt32?, (any SocketAddress)?) {
+        var peerAddress: (any SocketAddress)?
+        var interfaceIndex: UInt32?
+        var localAddress: (any SocketAddress)?
+
+        let bytes = try [UInt8](unsafeUninitializedCapacity: length) { buffer, count in
+            (peerAddress, count, interfaceIndex, localAddress) = try receive(into: buffer.baseAddress!, length: length, flags: 0)
+        }
+
+        return (peerAddress!, bytes, interfaceIndex, localAddress)
+    }
+
+    private static let ControlMsgBufferSize = MemoryLayout<cmsghdr>.size + max(MemoryLayout<in_pktinfo>.size, MemoryLayout<in6_pktinfo>.size)
+
+    private func receive(
+        into buffer: UnsafeMutablePointer<UInt8>,
+        length: Int,
+        flags: Int32
+    ) throws -> (any SocketAddress, Int, UInt32?, (any SocketAddress)?) {
+        var iov = iovec()
+        var msg = msghdr()
+        var peerAddress = sockaddr_storage()
+        var localAddress: sockaddr_storage?
+        var interfaceIndex: UInt32?
+        var controlMsgBuffer = [UInt8](repeating: 0, count: Socket.ControlMsgBufferSize)
+
+        iov.iov_base = UnsafeMutableRawPointer(buffer)
+        iov.iov_len = IovLengthType(length)
+
+        let count = withUnsafeMutablePointer(to: &iov) { iov in
+            msg.msg_iov = iov
+            msg.msg_iovlen = 1
+            msg.msg_namelen = socklen_t(MemoryLayout<sockaddr_storage>.size)
+
+            return withUnsafeMutablePointer(to: &peerAddress) { peerAddress in
+                msg.msg_name = UnsafeMutableRawPointer(peerAddress)
+
+                return controlMsgBuffer.withUnsafeMutableBytes { controlMsgBuffer in
+                    msg.msg_control = UnsafeMutableRawPointer(controlMsgBuffer.baseAddress)
+                    msg.msg_controllen = ControlMessageHeaderLengthType(controlMsgBuffer.count)
+
+                    let count = Socket.recvmsg(file.rawValue, &msg, flags)
+
+                    if count > 0, msg.msg_controllen != 0 {
+                        (interfaceIndex, localAddress) = Socket.getPacketInfoControl(msghdr: msg)
+                    }
+
+                    return count
+                }
+            }
+        }
+
+        guard count > 0 else {
+            if errno == EWOULDBLOCK || errno == EAGAIN {
+                throw SocketError.blocked
+            } else if errno == EBADF || count == 0 {
+                throw SocketError.disconnected
+            } else {
+                throw SocketError.makeFailed("RecvMsg")
+            }
+        }
+
+        return (peerAddress, count, interfaceIndex, localAddress)
+    }
+#endif
+
     public func write(_ data: Data, from index: Data.Index = 0) throws -> Data.Index {
         precondition(index >= 0)
         guard index < data.endIndex else { return data.endIndex }
@@ -236,6 +365,95 @@ public struct Socket: Sendable, Hashable {
         }
         return sent
     }
+
+    public func send(_ bytes: [UInt8], to address: some SocketAddress) throws -> Int {
+        try bytes.withUnsafeBytes { buffer in
+            try send(buffer.baseAddress!, length: bytes.count, to: address)
+        }
+    }
+
+    private func send(_ pointer: UnsafeRawPointer, length: Int, to address: some SocketAddress) throws -> Int {
+        let sent = address.withSockAddr {
+            Socket.sendto(file.rawValue, pointer, length, 0, $0, address.size)
+        }
+        guard sent >= 0 else {
+            if errno == EWOULDBLOCK || errno == EAGAIN {
+                throw SocketError.blocked
+            } else {
+                throw SocketError.makeFailed("SendTo")
+            }
+        }
+        return sent
+    }
+
+#if !canImport(WinSDK)
+    public func send(
+        message: [UInt8],
+        to peerAddress: some SocketAddress,
+        interfaceIndex: UInt32? = nil,
+        from localAddress: (some SocketAddress)? = nil
+    ) throws -> Int {
+        try message.withUnsafeBytes { buffer in
+            try send(
+                buffer.baseAddress!,
+                length: buffer.count,
+                flags: 0,
+                to: peerAddress,
+                interfaceIndex: interfaceIndex,
+                from: localAddress
+            )
+        }
+    }
+
+    private func send(
+        _ pointer: UnsafeRawPointer,
+        length: Int,
+        flags: Int32,
+        to peerAddress: some SocketAddress,
+        interfaceIndex: UInt32? = nil,
+        from localAddress: (some SocketAddress)? = nil
+    ) throws -> Int {
+        var iov = iovec()
+        var msg = msghdr()
+        let family = peerAddress.family
+
+        iov.iov_base = UnsafeMutableRawPointer(mutating: pointer)
+        iov.iov_len = IovLengthType(length)
+
+        let sent = withUnsafeMutablePointer(to: &iov) { iov in
+            var peerAddress = peerAddress
+
+            msg.msg_iov = iov
+            msg.msg_iovlen = 1
+            msg.msg_namelen = peerAddress.size
+
+            return withUnsafeMutablePointer(to: &peerAddress) { peerAddress in
+                msg.msg_name = UnsafeMutableRawPointer(peerAddress)
+
+                return Socket.withPacketInfoControl(
+                    family: family,
+                    interfaceIndex: interfaceIndex,
+                    address: localAddress) { control, controllen in
+                    if let control {
+                        msg.msg_control = UnsafeMutableRawPointer(mutating: control)
+                        msg.msg_controllen = controllen
+                    }
+                    return Socket.sendmsg(file.rawValue, &msg, flags)
+                }
+            }
+        }
+
+        guard sent >= 0 else {
+            if errno == EWOULDBLOCK || errno == EAGAIN {
+                throw SocketError.blocked
+            } else {
+                throw SocketError.makeFailed("SendMsg")
+            }
+        }
+
+        return sent
+    }
+#endif
 
     public func close() throws {
         if Socket.close(file.rawValue) == -1 {
@@ -349,8 +567,8 @@ public extension SocketOption where Self == Int32SocketOption {
 
 package extension Socket {
 
-    static func makePair(flags: Flags? = nil) throws -> (Socket, Socket) {
-        let (file1, file2) = Socket.socketpair(AF_UNIX, Socket.stream, 0)
+    static func makePair(flags: Flags? = nil, type: SocketType = .stream) throws -> (Socket, Socket) {
+        let (file1, file2) = Socket.socketpair(AF_UNIX, type.rawValue, 0)
         guard file1 > -1, file2 > -1 else {
             throw SocketError.makeFailed("SocketPair")
         }
@@ -364,7 +582,134 @@ package extension Socket {
         return (s1, s2)
     }
 
-    static func makeNonBlockingPair() throws -> (Socket, Socket) {
-        try Socket.makePair(flags: .nonBlocking)
+    static func makeNonBlockingPair(type: SocketType = .stream) throws -> (Socket, Socket) {
+        try Socket.makePair(flags: .nonBlocking, type: type)
     }
 }
+
+#if !canImport(WinSDK)
+fileprivate extension Socket {
+    // https://github.com/swiftlang/swift-evolution/blob/main/proposals/0138-unsaferawbufferpointer.md
+    private static func withControlMessage(
+        control: UnsafeRawPointer,
+        controllen: ControlMessageHeaderLengthType,
+        _ body: (cmsghdr, UnsafeRawBufferPointer) -> ()
+    ) {
+        let controlBuffer = UnsafeRawBufferPointer(start: control, count: Int(controllen))
+        var cmsgHeaderIndex = 0
+
+        while true {
+            let cmsgDataIndex = cmsgHeaderIndex + MemoryLayout<cmsghdr>.stride
+
+            if cmsgDataIndex > controllen {
+                break
+            }
+
+            let header = controlBuffer.load(fromByteOffset: cmsgHeaderIndex, as: cmsghdr.self)
+            if Int(header.cmsg_len) < MemoryLayout<cmsghdr>.stride {
+                break
+            }
+
+            cmsgHeaderIndex = cmsgDataIndex
+            cmsgHeaderIndex += Int(header.cmsg_len) - MemoryLayout<cmsghdr>.stride
+            if cmsgHeaderIndex > controlBuffer.count {
+                break
+            }
+            body(header, UnsafeRawBufferPointer(rebasing: controlBuffer[cmsgDataIndex..<cmsgHeaderIndex]))
+
+            cmsgHeaderIndex += MemoryLayout<cmsghdr>.alignment - 1
+            cmsgHeaderIndex &= ~(MemoryLayout<cmsghdr>.alignment - 1)
+        }
+    }
+
+    static func getPacketInfoControl(
+        msghdr: msghdr
+    ) -> (UInt32?, sockaddr_storage?) {
+        var interfaceIndex: UInt32?
+        var localAddress = sockaddr_storage()
+
+        withControlMessage(control: msghdr.msg_control, controllen: msghdr.msg_controllen) { cmsghdr, cmsgdata in
+            switch cmsghdr.cmsg_level {
+            case Socket.ipproto_ip:
+                guard cmsghdr.cmsg_type == Socket.ip_pktinfo else { break }
+                cmsgdata.baseAddress!.withMemoryRebound(to: in_pktinfo.self, capacity: 1) { pktinfo in
+                    var sin = sockaddr_in()
+                    sin.sin_addr = pktinfo.pointee.ipi_addr
+                    interfaceIndex = UInt32(pktinfo.pointee.ipi_ifindex)
+                    localAddress = sin.makeStorage()
+                }
+            case Socket.ipproto_ipv6:
+                guard cmsghdr.cmsg_type == Socket.ipv6_pktinfo else { break }
+                cmsgdata.baseAddress!.withMemoryRebound(to: in6_pktinfo.self, capacity: 1) { pktinfo in
+                    var sin6 = sockaddr_in6()
+                    sin6.sin6_addr = pktinfo.pointee.ipi6_addr
+                    interfaceIndex = UInt32(pktinfo.pointee.ipi6_ifindex)
+                    localAddress = sin6.makeStorage()
+                }
+            default:
+                break
+            }
+        }
+
+        return (interfaceIndex, interfaceIndex != nil ? localAddress : nil)
+    }
+
+    static func withPacketInfoControl<T>(
+        family: sa_family_t,
+        interfaceIndex: UInt32?,
+        address: (some SocketAddress)?,
+        _ body: (UnsafePointer<cmsghdr>?, ControlMessageHeaderLengthType) -> T
+    ) -> T {
+        switch Int32(family) {
+        case AF_INET:
+            let buffer = ManagedBuffer<cmsghdr, in_pktinfo>.create(minimumCapacity: 1) { buffer in
+                buffer.withUnsafeMutablePointers { header, element in
+                    header.pointee.cmsg_len = ControlMessageHeaderLengthType(MemoryLayout<cmsghdr>.size + MemoryLayout<in_pktinfo>.size)
+                    header.pointee.cmsg_level = SOL_SOCKET
+                    header.pointee.cmsg_type = Socket.ipproto_ip
+                    element.pointee.ipi_ifindex = IPv4InterfaceIndexType(interfaceIndex ?? 0)
+                    if let address {
+                        var address = address
+                        withUnsafePointer(to: &address) {
+                            $0.withMemoryRebound(to: sockaddr_in.self, capacity: 1) {
+                                element.pointee.ipi_addr = $0.pointee.sin_addr
+                            }
+                        }
+                    } else {
+                        element.pointee.ipi_addr.s_addr = 0
+                    }
+
+                    return header.pointee
+                }
+            }
+
+            return buffer.withUnsafeMutablePointerToHeader { body($0, ControlMessageHeaderLengthType($0.pointee.cmsg_len)) }
+        case AF_INET6:
+            let buffer = ManagedBuffer<cmsghdr, in6_pktinfo>.create(minimumCapacity: 1) { buffer in
+                buffer.withUnsafeMutablePointers { header, element in
+                    header.pointee.cmsg_len = ControlMessageHeaderLengthType(MemoryLayout<cmsghdr>.size + MemoryLayout<in6_pktinfo>.size)
+                    header.pointee.cmsg_level = SOL_SOCKET
+                    header.pointee.cmsg_type = Socket.ipproto_ipv6
+                    element.pointee.ipi6_ifindex = IPv6InterfaceIndexType(interfaceIndex ?? 0)
+                    if let address {
+                        var address = address
+                        withUnsafePointer(to: &address) {
+                            $0.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) {
+                                element.pointee.ipi6_addr = $0.pointee.sin6_addr
+                            }
+                        }
+                    } else {
+                        element.pointee.ipi6_addr = in6_addr()
+                    }
+
+                    return header.pointee
+                }
+            }
+
+            return buffer.withUnsafeMutablePointerToHeader { body($0, ControlMessageHeaderLengthType($0.pointee.cmsg_len)) }
+        default:
+            return body(nil, 0)
+        }
+    }
+}
+#endif

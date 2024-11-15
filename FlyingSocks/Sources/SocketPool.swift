@@ -93,7 +93,7 @@ public final actor SocketPool<Queue: EventQueue>: AsyncSocketPool {
     public func run() async throws {
         guard state == .ready else { throw Error("Not Ready") }
         state = .running
-        defer { cancellAll() }
+        defer { cancelAll() }
 
         repeat {
             if waiting.isEmpty {
@@ -151,11 +151,11 @@ public final actor SocketPool<Queue: EventQueue>: AsyncSocketPool {
         case complete
     }
 
-    private func cancellAll() {
-        logger.logInfo("SocketPoll cancellAll")
+    private func cancelAll() {
+        logger.logInfo("SocketPoll cancelAll")
         try? queue.stop()
         state = .complete
-        waiting.cancellAll()
+        waiting.cancelAll()
         waiting = Waiting()
         if let loop {
             self.loop = nil
@@ -270,7 +270,7 @@ public final actor SocketPool<Queue: EventQueue>: AsyncSocketPool {
             }
         }
 
-        mutating func cancellAll() {
+        mutating func cancelAll() {
             let continuations = storage.values.flatMap(\.values).map(\.continuation)
             storage = [:]
             for continuation in continuations {

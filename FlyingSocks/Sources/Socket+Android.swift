@@ -37,6 +37,10 @@ let EPOLLET: UInt32 = 1 << 31;
 
 public extension Socket {
     typealias FileDescriptorType = Int32
+    typealias IovLengthType = UInt
+    typealias ControlMessageHeaderLengthType = Int
+    typealias IPv4InterfaceIndexType = Int32
+    typealias IPv6InterfaceIndexType = Int32
 }
 
 extension Socket.FileDescriptor {
@@ -45,7 +49,12 @@ extension Socket.FileDescriptor {
 
 extension Socket {
     static let stream = Int32(SOCK_STREAM)
+    static let datagram = Int32(SOCK_DGRAM)
     static let in_addr_any = Android.in_addr(s_addr: Android.in_addr_t(0))
+    static let ipproto_ip = Int32(IPPROTO_IP)
+    static let ipproto_ipv6 = Int32(IPPROTO_IPV6)
+    static let ip_pktinfo = Int32(IP_PKTINFO)
+    static let ipv6_pktinfo = Int32(IPV6_PKTINFO)
 
     static func makeAddressINET(port: UInt16) -> Android.sockaddr_in {
         Android.sockaddr_in(
@@ -174,6 +183,22 @@ extension Socket {
 
     static func pollfd(fd: FileDescriptorType, events: Int16, revents: Int16) -> Android.pollfd {
         Android.pollfd(fd: fd, events: events, revents: revents)
+    }
+
+    static func recvfrom(_ fd: FileDescriptorType, _ buffer: UnsafeMutableRawPointer!, _ nbyte: Int, _ flags: Int32, _ addr: UnsafeMutablePointer<sockaddr>!, _ len: UnsafeMutablePointer<socklen_t>!) -> Int {
+        Android.recvfrom(fd, buffer, nbyte, flags, addr, len)
+    }
+
+    static func sendto(_ fd: FileDescriptorType, _ buffer: UnsafeRawPointer!, _ nbyte: Int, _ flags: Int32, _ destaddr: UnsafePointer<sockaddr>!, _ destlen: socklen_t) -> Int {
+        Android.sendto(fd, buffer, nbyte, flags, destaddr, destlen)
+    }
+
+    static func recvmsg(_ fd: FileDescriptorType, _ message: UnsafeMutablePointer<msghdr>, _ flags: Int32) -> Int {
+        Android.recvmsg(fd, message, flags)
+    }
+
+    static func sendmsg(_ fd: FileDescriptorType, _ message: UnsafePointer<msghdr>, _ flags: Int32) -> Int {
+        Android.sendmsg(fd, message, flags)
     }
 }
 

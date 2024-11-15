@@ -44,6 +44,38 @@ public protocol SocketAddress: Sendable {
     static var family: sa_family_t { get }
 }
 
+extension SocketAddress {
+    public var family: sa_family_t {
+        withSockAddr { $0.pointee.sa_family }
+    }
+
+    var size: socklen_t {
+        // this needs to work with sockaddr_storage, hence the switch
+        switch Int32(family) {
+        case AF_INET:
+            socklen_t(MemoryLayout<sockaddr_in>.size)
+        case AF_INET6:
+            socklen_t(MemoryLayout<sockaddr_in6>.size)
+        case AF_UNIX:
+            socklen_t(MemoryLayout<sockaddr_un>.size)
+        default:
+            0
+        }
+    }
+
+    public func makeStorage() -> sockaddr_storage {
+        var storage = sockaddr_storage()
+
+        withUnsafeMutablePointer(to: &storage) {
+            $0.withMemoryRebound(to: Self.self, capacity: 1) {
+                $0.pointee = self
+            }
+        }
+
+        return storage
+    }
+}
+
 public extension SocketAddress where Self == sockaddr_in {
 
     static func inet(port: UInt16) -> Self {
@@ -82,6 +114,10 @@ public extension SocketAddress where Self == sockaddr_un {
 }
 
 #if compiler(>=6.0)
+extension sockaddr_storage: SocketAddress, @retroactive @unchecked Sendable {
+    public static let family = sa_family_t(AF_UNSPEC)
+}
+
 extension sockaddr_in: SocketAddress, @retroactive @unchecked Sendable {
     public static let family = sa_family_t(AF_INET)
 }
@@ -94,6 +130,10 @@ extension sockaddr_un: SocketAddress, @retroactive @unchecked Sendable {
     public static let family = sa_family_t(AF_UNIX)
 }
 #else
+extension sockaddr_storage: SocketAddress, @unchecked Sendable {
+    public static let family = sa_family_t(AF_UNSPEC)
+}
+
 extension sockaddr_in: SocketAddress, @unchecked Sendable {
     public static let family = sa_family_t(AF_INET)
 }
@@ -109,7 +149,7 @@ extension sockaddr_un: SocketAddress, @unchecked Sendable {
 
 public extension SocketAddress {
     static func make(from storage: sockaddr_storage) throws -> Self {
-        guard storage.ss_family == family else {
+        guard self is sockaddr_storage.Type || storage.ss_family == family else {
             throw SocketError.unsupportedAddress
         }
         var storage = storage
@@ -183,6 +223,36 @@ extension Socket {
         var address = address
         guard Socket.unlink(&address.sun_path.0) == 0 else {
             throw SocketError.makeFailed("unlink")
+        }
+    }
+}
+
+public struct AnySocketAddress: Sendable, SocketAddress {
+    public static var family: sa_family_t {
+        sa_family_t(AF_UNSPEC)
+    }
+
+    private var storage: sockaddr_storage
+
+    public init(_ sa: any SocketAddress) {
+        storage = sa.makeStorage()
+    }
+}
+
+public extension SocketAddress {
+    func withSockAddr<T>(_ body: (_ sa: UnsafePointer<sockaddr>) throws -> T) rethrows -> T {
+        try withUnsafePointer(to: self) {
+            try $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { sa in
+                try body(sa)
+            }
+        }
+    }
+
+    mutating func withMutableSockAddr<T>(_ body: (_ sa: UnsafeMutablePointer<sockaddr>) throws -> T) rethrows -> T {
+        try withUnsafeMutablePointer(to: &self) {
+            try $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { sa in
+                try body(sa)
+            }
         }
     }
 }
