@@ -36,6 +36,21 @@ import Testing
 struct SocketTests {
 
     @Test
+    func socketType_init() throws {
+        #expect(try SocketType(rawValue: Socket.stream) == .stream)
+        #expect(try SocketType(rawValue: Socket.datagram) == .datagram)
+        #expect(throws: (any Error).self) {
+            try SocketType(rawValue: -1)
+        }
+    }
+
+    @Test
+    func socketType_rawValue() {
+        #expect(SocketType.stream.rawValue == Socket.stream)
+        #expect(SocketType.datagram.rawValue == Socket.datagram)
+    }
+
+    @Test
     func socketEvents() {
         let events: Set<Socket.Event> = [.read, .write]
 

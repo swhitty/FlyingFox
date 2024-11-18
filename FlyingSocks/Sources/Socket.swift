@@ -41,13 +41,24 @@ public enum SocketType: Sendable {
     case datagram
 }
 
-extension SocketType {
+package extension SocketType {
     var rawValue: Int32 {
         switch self {
         case .stream:
             Socket.stream
         case .datagram:
             Socket.datagram
+        }
+    }
+
+    init(rawValue: Int32) throws {
+        switch rawValue {
+        case Socket.stream:
+            self = .stream
+        case Socket.datagram:
+            self = .datagram
+        default:
+            throw SocketError.makeFailed("Invalid SocketType")
         }
     }
 }
@@ -74,18 +85,18 @@ public struct Socket: Sendable, Hashable {
 
     @available(*, deprecated, message: "type is now SocketType")
     public init(domain: Int32, type: Int32) throws {
-        let descriptor = FileDescriptor(rawValue: Socket.socket(domain, type, 0))
+        try self.init(domain: domain, type: SocketType(rawValue: type))
+    }
+
+    public init(domain: Int32, type: SocketType) throws {
+        let descriptor = FileDescriptor(rawValue: Socket.socket(domain, type.rawValue, 0))
         guard descriptor != .invalid else {
             throw SocketError.makeFailed("CreateSocket")
         }
         self.file = descriptor
-        if type == SocketType.datagram.rawValue {
+        if type == .datagram {
             try setPktInfo(domain: domain)
         }
-    }
-
-    public init(domain: Int32, type: SocketType) throws {
-        try self.init(domain: domain, type: type.rawValue)
     }
 
     public var flags: Flags {

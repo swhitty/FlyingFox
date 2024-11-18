@@ -34,6 +34,17 @@ import XCTest
 
 final class SocketTests: XCTestCase {
 
+    func testSocketType_init() {
+        XCTAssertEqual(try SocketType(rawValue: Socket.stream), .stream)
+        XCTAssertEqual(try SocketType(rawValue: Socket.datagram), .datagram)
+        XCTAssertThrowsError(try SocketType(rawValue: -1))
+    }
+
+    func funcSocketType_rawValue() {
+        XCTAssertEqual(SocketType.stream.rawValue, Socket.stream)
+        XCTAssertEqual(SocketType.datagram.rawValue, Socket.datagram)
+    }
+
     func testSocketEvents() {
         let events: Set<Socket.Event> = [.read, .write]
 
