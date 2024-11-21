@@ -133,7 +133,7 @@ public struct Socket: Sendable, Hashable {
             name = Self.ip_pktinfo
         case AF_INET6:
             level = Socket.ipproto_ipv6
-            name = Self.ipv6_pktinfo
+            name = Self.ipv6_recvpktinfo
         default:
             return
         }
