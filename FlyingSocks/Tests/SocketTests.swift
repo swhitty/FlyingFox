@@ -321,6 +321,45 @@ struct SocketTests {
             try Socket.inet_ntop(AF_INET6, &addr.sin6_addr, buffer, maxLength)
         }
     }
+
+    @Test
+    func makes_datagram_ip4() throws {
+        #expect(throws: Never.self) {
+            try Socket(domain: Int32(sa_family_t(AF_INET)), type: .datagram)
+        }
+    }
+
+    @Test
+    func makes_datagram_ip6() throws {
+        #expect(throws: Never.self) {
+            try Socket(domain: Int32(sa_family_t(AF_INET6)), type: .datagram)
+        }
+    }
+
+    @Test
+    func packetInfoIP() throws {
+        let socket = try Socket(domain: Int32(sa_family_t(AF_INET)), type: .datagram)
+        #expect(
+            try socket.getValue(for: .packetInfoIP) == false
+        )
+
+        try socket.setValue(true, for: .packetInfoIP)
+        #expect(
+            try socket.getValue(for: .packetInfoIP) == true
+        )
+    }
+
+    @Test
+    func packetInfoIPv6() throws {
+        let socket = try Socket(domain: Int32(sa_family_t(AF_INET6)), type: .datagram)
+
+        withKnownIssue("Permission denied error is thrown") {
+            try socket.setValue(true, for: .packetInfoIPv6)
+            #expect(
+                try socket.getValue(for: .packetInfoIPv6) == true
+            )
+        }
+    }
 }
 
 extension Socket.Flags {

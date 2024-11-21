@@ -258,6 +258,60 @@ final class SocketTests: XCTestCase {
         let buffer = UnsafeMutablePointer<CChar>.allocate(capacity: Int(maxLength))
         XCTAssertThrowsError(try Socket.inet_ntop(AF_INET6, &addr.sin6_addr, buffer, maxLength))
     }
+
+    func testMakes_datagram_ip4() throws {
+        XCTAssertNoThrow(
+            try Socket(domain: Int32(sa_family_t(AF_INET)), type: .datagram)
+        )
+    }
+
+    func testMakes_datagram_ip6() throws {
+        XCTAssertNoThrow(
+            try Socket(domain: Int32(sa_family_t(AF_INET6)), type: .datagram)
+        )
+    }
+
+    func testPacketInfoIP() throws {
+        let socket = try Socket(domain: Int32(sa_family_t(AF_INET)), type: .datagram)
+        XCTAssertFalse(
+            try socket.getValue(for: .packetInfoIP)
+        )
+
+        try socket.setValue(true, for: .packetInfoIP)
+        XCTAssertTrue(
+            try socket.getValue(for: .packetInfoIP)
+        )
+    }
+
+    #if canImport(Darwin)
+    func testPacketInfoIPv6() throws {
+        let socket = try Socket(domain: Int32(sa_family_t(AF_INET6)), type: .datagram)
+        XCTAssertFalse(
+            try socket.getValue(for: .packetInfoIPv6)
+        )
+
+        try XCTExpectFailure("Permission denied error is thrown") {
+            try socket.setValue(true, for: .packetInfoIPv6)
+            XCTAssertTrue(
+                try socket.getValue(for: .packetInfoIPv6)
+            )
+        }
+    }
+    #else
+    // Linux does not support XCTExpectFailure
+    func testPacketInfoIPv6() throws {
+        let socket = try Socket(domain: Int32(sa_family_t(AF_INET6)), type: .datagram)
+        do {
+            try socket.setValue(true, for: .packetInfoIPv6)
+            XCTAssertTrue(
+                try socket.getValue(for: .packetInfoIPv6)
+            )
+            XCTFail("Expected Failure")
+        } catch {
+            () // expected failure
+        }
+    }
+    #endif
 }
 
 extension Socket.Flags {

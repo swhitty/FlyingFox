@@ -94,9 +94,6 @@ public struct Socket: Sendable, Hashable {
             throw SocketError.makeFailed("CreateSocket")
         }
         self.file = descriptor
-        if type == .datagram {
-            try setPktInfo(domain: domain)
-        }
     }
 
     public var socketType: SocketType {
@@ -118,29 +115,6 @@ public struct Socket: Sendable, Hashable {
     public func setFlags(_ flags: Flags) throws {
         if Socket.fcntl(file.rawValue, F_SETFL, flags.rawValue) == -1 {
             throw SocketError.makeFailed("SetFlags")
-        }
-    }
-
-    // enable return of ip_pktinfo/ipv6_pktinfo on recvmsg()
-    private func setPktInfo(domain: Int32) throws {
-        var enable = Int32(1)
-        let level: Int32
-        let name: Int32
-
-        switch domain {
-        case AF_INET:
-            level = Socket.ipproto_ip
-            name = Self.ip_pktinfo
-        case AF_INET6:
-            level = Socket.ipproto_ipv6
-            name = Self.ipv6_pktinfo
-        default:
-            return
-        }
-
-        let result = Socket.setsockopt(file.rawValue, level, name, &enable, socklen_t(MemoryLayout<Int32>.size))
-        guard result >= 0 else {
-            throw SocketError.makeFailed("SetPktInfoOption")
         }
     }
 
@@ -571,6 +545,14 @@ public struct Int32SocketOption: SocketOption {
 public extension SocketOption where Self == BoolSocketOption {
     static var localAddressReuse: Self {
         BoolSocketOption(name: SO_REUSEADDR)
+    }
+
+    static var packetInfoIP: Self {
+        BoolSocketOption(level: Socket.ipproto_ip, name: Socket.ip_pktinfo)
+    }
+
+    static var packetInfoIPv6: Self {
+        BoolSocketOption(level: Socket.ipproto_ipv6, name: Socket.ipv6_pktinfo)
     }
 
     #if canImport(Darwin)
