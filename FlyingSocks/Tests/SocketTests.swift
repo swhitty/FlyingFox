@@ -321,6 +321,24 @@ struct SocketTests {
             try Socket.inet_ntop(AF_INET6, &addr.sin6_addr, buffer, maxLength)
         }
     }
+
+    @Test
+    func makes_datagram_ip4() throws {
+        let socket = try Socket(domain: Int32(sa_family_t(AF_INET)), type: .datagram)
+
+        #expect(
+            try socket.getValue(for: .packetInfoIP) == true
+        )
+    }
+
+    @Test
+    func makes_datagram_ip6() throws {
+        let socket = try Socket(domain: Int32(sa_family_t(AF_INET6)), type: .datagram)
+
+        #expect(
+            try socket.getValue(for: .packetInfoIPv6) == true
+        )
+    }
 }
 
 extension Socket.Flags {

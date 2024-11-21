@@ -258,6 +258,20 @@ final class SocketTests: XCTestCase {
         let buffer = UnsafeMutablePointer<CChar>.allocate(capacity: Int(maxLength))
         XCTAssertThrowsError(try Socket.inet_ntop(AF_INET6, &addr.sin6_addr, buffer, maxLength))
     }
+
+    func testMakes_datagram_ip4() throws {
+        let socket = try Socket(domain: Int32(sa_family_t(AF_INET)), type: .datagram)
+        XCTAssertTrue(
+            try socket.getValue(for: .packetInfoIP)
+        )
+    }
+
+    func testMakes_datagram_ip6() throws {
+        let socket = try Socket(domain: Int32(sa_family_t(AF_INET6)), type: .datagram)
+        XCTAssertTrue(
+            try socket.getValue(for: .packetInfoIPv6)
+        )
+    }
 }
 
 extension Socket.Flags {
