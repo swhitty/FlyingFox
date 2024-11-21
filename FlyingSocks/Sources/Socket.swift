@@ -147,7 +147,7 @@ public struct Socket: Sendable, Hashable {
     public func setValue<O: SocketOption>(_ value: O.Value, for option: O) throws {
         var value = option.makeSocketValue(from: value)
         let result = withUnsafeBytes(of: &value) {
-            Socket.setsockopt(file.rawValue, SOL_SOCKET, option.name, $0.baseAddress!, socklen_t($0.count))
+            Socket.setsockopt(file.rawValue, option.level, option.name, $0.baseAddress!, socklen_t($0.count))
         }
         guard result >= 0 else {
             throw SocketError.makeFailed("SetOption")
@@ -157,7 +157,7 @@ public struct Socket: Sendable, Hashable {
     public func getValue<O: SocketOption>(for option: O) throws -> O.Value {
         let valuePtr = UnsafeMutablePointer<O.SocketValue>.allocate(capacity: 1)
         var length = socklen_t(MemoryLayout<O.SocketValue>.size)
-        guard Socket.getsockopt(file.rawValue, SOL_SOCKET, option.name, valuePtr, &length) >= 0 else {
+        guard Socket.getsockopt(file.rawValue, option.level, option.name, valuePtr, &length) >= 0 else {
             throw SocketError.makeFailed("GetOption")
         }
         return option.makeValue(from: valuePtr.pointee)
@@ -522,15 +522,22 @@ public protocol SocketOption {
     associatedtype Value
     associatedtype SocketValue
 
+    var level: Int32 { get }
     var name: Int32 { get }
     func makeValue(from socketValue: SocketValue) -> Value
     func makeSocketValue(from value: Value) -> SocketValue
 }
 
+public extension SocketOption {
+    var level: Int32 { SOL_SOCKET }
+}
+
 public struct BoolSocketOption: SocketOption {
+    public var level: Int32
     public var name: Int32
 
-    public init(name: Int32) {
+    public init(level: Int32 = SOL_SOCKET, name: Int32) {
+        self.level = level
         self.name = name
     }
 
@@ -544,9 +551,11 @@ public struct BoolSocketOption: SocketOption {
 }
 
 public struct Int32SocketOption: SocketOption {
+    public var level: Int32
     public var name: Int32
 
-    public init(name: Int32) {
+    public init(level: Int32 = SOL_SOCKET, name: Int32) {
+        self.level = level
         self.name = name
     }
 
