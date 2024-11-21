@@ -99,6 +99,12 @@ public struct Socket: Sendable, Hashable {
         }
     }
 
+    public var socketType: SocketType {
+        get throws {
+            try SocketType(rawValue: getValue(for: .socketType))
+        }
+    }
+
     public var flags: Flags {
         get throws {
             let flags = Socket.fcntl(file.rawValue, F_GETFL)
@@ -567,6 +573,11 @@ public extension SocketOption where Self == BoolSocketOption {
 }
 
 public extension SocketOption where Self == Int32SocketOption {
+
+    static var socketType: Self {
+        Int32SocketOption(name: SO_TYPE)
+    }
+
     static var sendBufferSize: Self {
         Int32SocketOption(name: SO_SNDBUF)
     }

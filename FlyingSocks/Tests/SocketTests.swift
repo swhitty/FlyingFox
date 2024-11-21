@@ -51,6 +51,41 @@ struct SocketTests {
     }
 
     @Test
+    func getSocketType_stream() throws {
+        #expect(
+            try Socket(domain: AF_INET).socketType == .stream
+        )
+        #expect(
+            try Socket(domain: AF_INET6).socketType == .stream
+        )
+        #expect(
+            try Socket(domain: AF_UNIX).socketType == .stream
+        )
+        #expect(
+            try Socket(domain: AF_INET, type: .stream).socketType == .stream
+        )
+        #expect(
+            try Socket(domain: AF_INET, type: .stream).socketType == .stream
+        )
+        #expect(
+            try Socket(domain: AF_INET, type: .stream).socketType == .stream
+        )
+    }
+
+    @Test
+    func getSocketType_datagram() throws {
+        #expect(
+            try Socket(domain: AF_INET, type: .datagram).socketType == .datagram
+        )
+        #expect(
+            try Socket(domain: AF_INET, type: .datagram).socketType == .datagram
+        )
+        #expect(
+            try Socket(domain: AF_INET, type: .datagram).socketType == .datagram
+        )
+    }
+
+    @Test
     func socketEvents() {
         let events: Set<Socket.Event> = [.read, .write]
 
