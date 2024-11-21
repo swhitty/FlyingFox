@@ -370,6 +370,6 @@ struct SocketAddressTests {
 }
 
 // this is a bit ugly but necessary to get unknown_CheckSize() to function
-extension sockaddr: SocketAddress, @unchecked Sendable {
+extension sockaddr: SocketAddress, @retroactive @unchecked Sendable {
     public static var family: sa_family_t { sa_family_t(AF_UNSPEC) }
 }
