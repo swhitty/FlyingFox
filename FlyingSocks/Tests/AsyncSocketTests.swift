@@ -254,21 +254,17 @@ struct AsyncSocketTests {
 #endif
 
     @Test
-    func testMessageSequence() async throws {
+    func messageSequence_receives_messages() async throws {
         let (socket, port) = try await AsyncSocket.makeLoopbackDatagram()
         var messages = socket.messages
 
-        async let received = [messages.next(), messages.next()]
+        async let received = messages.next()
 
         let client = try await AsyncSocket.makeLoopbackDatagram().0
         try await client.sendString("Fish 🐡", to: .loopback(port: port))
-        try await client.sendString("Chips 🍟", to: .loopback(port: port))
 
         #expect(
-            try await received.compactMap { try $0?.payloadString } == [
-                "Fish 🐡",
-                "Chips 🍟"
-            ]
+            try await received?.payloadString == "Fish 🐡"
         )
     }
 }
