@@ -252,12 +252,31 @@ struct AsyncSocketTests {
         try? Socket.unlink(addr)
     }
 #endif
+
+    @Test
+    func testMessageSequence() async throws {
+        let (socket, port) = try await AsyncSocket.makeLoopbackDatagram()
+        var messages = socket.messages
+
+        async let received = [messages.next(), messages.next()]
+
+        let client = try await AsyncSocket.makeLoopbackDatagram().0
+        try await client.sendString("Fish 🐡", to: .loopback(port: port))
+        try await client.sendString("Chips 🍟", to: .loopback(port: port))
+
+        #expect(
+            try await received.compactMap { try $0?.payloadString } == [
+                "Fish 🐡",
+                "Chips 🍟"
+            ]
+        )
+    }
 }
 
 extension AsyncSocket {
 
-    static func make(type: SocketType = .stream) async throws -> AsyncSocket {
-        try await make(pool: .client, type: type)
+    static func make(domain: Int32 = AF_UNIX, type: SocketType = .stream) async throws -> AsyncSocket {
+        try await make(pool: .client, domain: domain, type: type)
     }
 
     static func makeListening(pool: some AsyncSocketPool) throws -> AsyncSocket {
@@ -270,9 +289,20 @@ extension AsyncSocket {
         return try AsyncSocket(socket: socket, pool: pool)
     }
 
-    static func make(pool: some AsyncSocketPool, type: SocketType = .stream) throws -> AsyncSocket {
-        let socket = try Socket(domain: AF_UNIX, type: type)
+    static func make(pool: some AsyncSocketPool,
+                     domain: Int32 = AF_UNIX,
+                     type: SocketType = .stream) throws -> AsyncSocket {
+        let socket = try Socket(domain: domain, type: type)
         return try AsyncSocket(socket: socket, pool: pool)
+    }
+
+    static func makeLoopbackDatagram() async throws -> (AsyncSocket, port: UInt16) {
+        let socket = try await AsyncSocket.make(domain: AF_INET6, type: .datagram)
+        try socket.socket.bind(to: .loopback(port: 0))
+        guard case let .ip6(_, port: port) = try socket.socket.sockname() else {
+            fatalError()
+        }
+        return (socket, port)
     }
 
     static func makeDatagramPair() async throws -> (AsyncSocket, AsyncSocket, sockaddr_un) {
@@ -304,6 +334,22 @@ extension AsyncSocket {
             throw SocketError.makeFailed("Read")
         }
         return string
+    }
+
+    func sendString(_ string: String, to address: some SocketAddress) async throws {
+        try await send(string.data(using: .utf8)!, to:address)
+    }
+}
+
+private extension AsyncSocket.Message {
+
+    var payloadString: String {
+        get throws {
+            guard let text = String(bytes: bytes, encoding: .utf8) else {
+                throw SocketError.disconnected
+            }
+            return text
+        }
     }
 }
 
