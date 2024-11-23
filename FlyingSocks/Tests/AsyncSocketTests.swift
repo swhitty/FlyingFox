@@ -267,6 +267,22 @@ struct AsyncSocketTests {
             try await received?.payloadString == "Fish 🐡"
         )
     }
+
+    @Test
+    func messageSequence_sendsMessage_receivesMessage() async throws {
+        let (socket, port) = try await AsyncSocket.makeLoopbackDatagram()
+        var messages = socket.messages
+
+        async let received = messages.next()
+
+        let client = try await AsyncSocket.makeLoopbackDatagram().0
+        let message = AsyncSocket.Message(peerAddress: .loopback(port: port), bytes: [0x01, 0x02])
+        try await client.send(message: message)
+
+        #expect(
+            try await received?.bytes == [0x01, 0x02]
+        )
+    }
 }
 
 extension AsyncSocket {
