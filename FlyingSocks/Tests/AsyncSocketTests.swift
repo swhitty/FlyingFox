@@ -209,52 +209,43 @@ struct AsyncSocketTests {
     }
 
 #if !canImport(WinSDK)
+    #if canImport(Darwin)
     @Test
-    func datagramSocketReceivesMessageTupleAPI_WhenAvailable() async throws {
-        let (s1, s2, addr) = try await AsyncSocket.makeDatagramPair()
+    func messageSequence_sendsMessage_receivesTuple() async throws {
+        let (socket, port) = try await AsyncSocket.makeLoopbackDatagram()
 
-        async let d2: AsyncSocket.Message = s2.receive(atMost: 100)
-#if canImport(Darwin)
-        try await s1.write("Swift".data(using: .utf8)!)
-#else
-        try await s1.send(message: "Swift".data(using: .utf8)!, to: addr, from: addr)
-#endif
-        let v2 = try await d2
-        #expect(String(data: Data(v2.bytes), encoding: .utf8) == "Swift")
+        async let received: (any SocketAddress, [UInt8]) = socket.receive(atMost: 100)
 
-        try s1.close()
-        try s2.close()
-        try? Socket.unlink(addr)
-    }
-#endif
+        let client = try await AsyncSocket.makeLoopbackDatagram().0
+        let message = AsyncSocket.Message(peerAddress: .loopback(port: port), payload: "Chips 🍟")
+        try await client.send(message: message)
 
-#if !canImport(WinSDK)
-    @Test
-    func datagramSocketReceivesMessageStructAPI_WhenAvailable() async throws {
-        let (s1, s2, addr) = try await AsyncSocket.makeDatagramPair()
-        let messageToSend = AsyncSocket.Message(
-            peerAddress: addr,
-            bytes: Array("Swift".data(using: .utf8)!),
-            localAddress: addr
+        #expect(
+            try await received.1 == Array("Chips 🍟".data(using: .utf8)!)
         )
-
-        async let d2: AsyncSocket.Message = s2.receive(atMost: 100)
-#if canImport(Darwin)
-        try await s1.write("Swift".data(using: .utf8)!)
-#else
-        try await s1.send(message: messageToSend)
-#endif
-        let v2 = try await d2
-        #expect(String(data: Data(v2.bytes), encoding: .utf8) == "Swift")
-
-        try s1.close()
-        try s2.close()
-        try? Socket.unlink(addr)
     }
-#endif
+    #else
+    @Test
+    func sendMessage_receivesTuple() async throws {
+        let (s1, s2, addr) = try await AsyncSocket.makeDatagramPair()
+        defer {
+            try? s1.close()
+            try? s2.close()
+            try? Socket.unlink(addr)
+        }
+        async let received: (any SocketAddress, [UInt8]) = s2.receive(atMost: 100)
+
+        let message = AsyncSocket.Message(peerAddress: addr, payload: "Shrimp 🦐")
+        try await s1.send(message: message)
+
+        #expect(
+            try await received.1 == Array("Shrimp 🦐".data(using: .utf8)!)
+        )
+    }
+    #endif
 
     @Test
-    func messageSequence_receives_messages() async throws {
+    func messageSequence_sendsData_receivesMessage() async throws {
         let (socket, port) = try await AsyncSocket.makeLoopbackDatagram()
         var messages = socket.messages
 
@@ -267,6 +258,44 @@ struct AsyncSocketTests {
             try await received?.payloadString == "Fish 🐡"
         )
     }
+
+    #if canImport(Darwin)
+    @Test
+    func messageSequence_sendsMessage_receivesMessage() async throws {
+        let (socket, port) = try await AsyncSocket.makeLoopbackDatagram()
+        var messages = socket.messages
+
+        async let received = messages.next()
+
+        let client = try await AsyncSocket.makeLoopbackDatagram().0
+        let message = AsyncSocket.Message(peerAddress: .loopback(port: port), payload: "Chips 🍟")
+        try await client.send(message: message)
+
+        #expect(
+            try await received?.payloadString == "Chips 🍟"
+        )
+    }
+    #else
+    @Test
+    func sendMessage_receivesMessage() async throws {
+        let (s1, s2, addr) = try await AsyncSocket.makeDatagramPair()
+        defer {
+            try? s1.close()
+            try? s2.close()
+            try? Socket.unlink(addr)
+        }
+
+        async let received: AsyncSocket.Message = s2.receive(atMost: 100)
+
+        let message = AsyncSocket.Message(peerAddress: addr, payload: "Shrimp 🦐")
+        try await s1.send(message: message)
+
+        #expect(
+            try await received.payloadString == "Shrimp 🦐"
+        )
+    }
+    #endif
+#endif
 }
 
 extension AsyncSocket {
@@ -341,11 +370,18 @@ private extension AsyncSocket.Message {
 
     var payloadString: String {
         get throws {
-            guard let text = String(bytes: bytes, encoding: .utf8) else {
+            guard let text = String(data: payload, encoding: .utf8) else {
                 throw SocketError.disconnected
             }
             return text
         }
+    }
+
+    init(peerAddress: some SocketAddress, payload: String) {
+        self.init(
+            peerAddress: peerAddress,
+            payload: payload.data(using: .utf8)!
+        )
     }
 }
 
