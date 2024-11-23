@@ -397,7 +397,7 @@ public struct Socket: Sendable, Hashable {
         message: [UInt8],
         to peerAddress: some SocketAddress,
         interfaceIndex: UInt32? = nil,
-        from localAddress: (some SocketAddress)? = nil
+        from localAddress: (any SocketAddress)? = nil
     ) throws -> Int {
         try message.withUnsafeBytes { buffer in
             try send(
@@ -417,7 +417,7 @@ public struct Socket: Sendable, Hashable {
         flags: Int32,
         to peerAddress: some SocketAddress,
         interfaceIndex: UInt32? = nil,
-        from localAddress: (some SocketAddress)? = nil
+        from localAddress: (any SocketAddress)? = nil
     ) throws -> Int {
         var iov = iovec()
         var msg = msghdr()
@@ -685,7 +685,7 @@ fileprivate extension Socket {
     static func withPacketInfoControl<T>(
         family: sa_family_t,
         interfaceIndex: UInt32?,
-        address: (some SocketAddress)?,
+        address: (any SocketAddress)?,
         _ body: (UnsafePointer<cmsghdr>?, ControlMessageHeaderLengthType) -> T
     ) -> T {
         switch Int32(family) {
