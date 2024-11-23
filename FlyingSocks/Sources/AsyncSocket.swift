@@ -231,7 +231,7 @@ public struct AsyncSocket: Sendable {
         message: [UInt8],
         to peerAddress: some SocketAddress,
         interfaceIndex: UInt32? = nil,
-        from localAddress: (some SocketAddress)? = nil
+        from localAddress: (any SocketAddress)? = nil
     ) async throws {
         let sent = try await pool.loopUntilReady(for: .write, on: socket) {
             try socket.send(message: message, to: peerAddress, interfaceIndex: interfaceIndex, from: localAddress)
@@ -251,19 +251,11 @@ public struct AsyncSocket: Sendable {
     }
 
     public func send(message: Message) async throws {
-        let localAddress: AnySocketAddress?
-
-        if let unwrappedLocalAddress = message.localAddress {
-            localAddress = AnySocketAddress(unwrappedLocalAddress)
-        } else {
-            localAddress = nil
-        }
-
         try await send(
             message: message.bytes,
             to: AnySocketAddress(message.peerAddress),
             interfaceIndex: message.interfaceIndex,
-            from: localAddress
+            from: message.localAddress
         )
     }
 #endif
