@@ -29,7 +29,11 @@
 //  SOFTWARE.
 //
 
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
 import Foundation
+#endif
 
 public protocol AsyncSocketPool: Sendable {
 
@@ -63,11 +67,27 @@ public extension AsyncSocketPool where Self == SocketPool<Poll> {
 public struct AsyncSocket: Sendable {
 
     public struct Message: Sendable {
-        public let peerAddress: any SocketAddress
-        public let bytes: [UInt8]
-        public let interfaceIndex: UInt32?
-        public let localAddress: (any SocketAddress)?
+        public var peerAddress: any SocketAddress
+        public var payload: Data
+        public var interfaceIndex: UInt32?
+        public var localAddress: (any SocketAddress)?
 
+        public init(
+            peerAddress: any SocketAddress,
+            payload: Data,
+            interfaceIndex: UInt32? = nil,
+            localAddress: (any SocketAddress)? = nil
+        ) {
+            self.peerAddress = peerAddress
+            self.payload = payload
+            self.interfaceIndex = interfaceIndex
+            self.localAddress = localAddress
+        }
+
+        @available(*, deprecated, renamed: "payload")
+        public var bytes: [UInt8] { Array(payload) }
+
+        @available(*, deprecated, renamed: "init(peerAddress:payload:)")
         public init(
             peerAddress: any SocketAddress,
             bytes: [UInt8],
@@ -75,7 +95,7 @@ public struct AsyncSocket: Sendable {
             localAddress: (any SocketAddress)? = nil
         ) {
             self.peerAddress = peerAddress
-            self.bytes = bytes
+            self.payload = Data(bytes)
             self.interfaceIndex = interfaceIndex
             self.localAddress = localAddress
         }
@@ -169,7 +189,7 @@ public struct AsyncSocket: Sendable {
         repeat {
             do {
                 let (peerAddress, bytes, interfaceIndex, localAddress) = try socket.receive(length: length)
-                return Message(peerAddress: peerAddress, bytes: bytes, interfaceIndex: interfaceIndex, localAddress: localAddress)
+                return Message(peerAddress: peerAddress, payload: Data(bytes), interfaceIndex: interfaceIndex, localAddress: localAddress)
             } catch SocketError.blocked {
                 try await pool.suspendSocket(socket, untilReadyFor: .read)
             } catch {
@@ -228,11 +248,12 @@ public struct AsyncSocket: Sendable {
 
 #if !canImport(WinSDK)
     public func send(
-        message: [UInt8],
+        message: some Sequence<UInt8>,
         to peerAddress: some SocketAddress,
         interfaceIndex: UInt32? = nil,
         from localAddress: (any SocketAddress)? = nil
     ) async throws {
+        let message = Array(message)
         let sent = try await pool.loopUntilReady(for: .write, on: socket) {
             try socket.send(message: message, to: peerAddress, interfaceIndex: interfaceIndex, from: localAddress)
         }
@@ -241,18 +262,9 @@ public struct AsyncSocket: Sendable {
         }
     }
 
-    public func send(
-        message: Data,
-        to peerAddress: some SocketAddress,
-        interfaceIndex: UInt32? = nil,
-        from localAddress: (some SocketAddress)? = nil
-    ) async throws {
-        try await send(message: Array(message), to: peerAddress, interfaceIndex: interfaceIndex, from: localAddress)
-    }
-
     public func send(message: Message) async throws {
         try await send(
-            message: message.bytes,
+            message: message.payload,
             to: AnySocketAddress(message.peerAddress),
             interfaceIndex: message.interfaceIndex,
             from: message.localAddress
