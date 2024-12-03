@@ -18,9 +18,9 @@ jobs:
       - name: Version
         run: swift --version
       - name: Build
-        run: swift test --enable-code-coverage --filter do_not_test
+        run: swift build --build-tests --enable-code-coverage 
       - name: Test
-        run: swift test --enable-code-coverage --skip-build --xunit-output result.xml
+        run: swift test --skip-build --enable-code-coverage --xunit-output result.xml
         timeout-minutes: 1
       - name: Gather code coverage
         run: xcrun llvm-cov export -format="lcov" .build/debug/FlyingFoxPackageTests.xctest/Contents/MacOS/FlyingFoxPackageTests -instr-profile .build/debug/codecov/default.profdata > coverage_report.lcov
