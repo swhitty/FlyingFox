@@ -122,16 +122,9 @@ struct HTTPDecoder {
         if length <= sharedRequestReplaySize {
             return HTTPBodySequence(shared: bytes, count: length, suggestedBufferSize: 4096)
         } else {
-            return HTTPBodySequence(from: bytes, count: length, suggestedBufferSize: 4096)
+            let prefix = AsyncBufferedPrefixSequence(base: bytes, count: length)
+            return HTTPBodySequence(from: prefix, count: length, suggestedBufferSize: 4096)
         }
-    }
-
-    func makeBodyData(from bytes: some AsyncBufferedSequence<UInt8>, length: Int) async throws -> Data {
-        var iterator = bytes.makeAsyncIterator()
-        guard let buffer = try await iterator.nextBuffer(count: length) else {
-            throw Error("AsyncBufferedSequence prematurely ended")
-        }
-        return Data(buffer)
     }
 }
 

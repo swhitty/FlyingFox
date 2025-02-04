@@ -185,6 +185,29 @@ actor HTTPServerTests {
     }
 
     @Test
+    func requests_larger_than_shared_buffer() async throws {
+        // given
+        let server = HTTPServer.make(sharedRequestReplaySize: 100)
+        let port = try await startServerWithPort(server, preferConnectionsDiscarding: true)
+
+        await server.appendRoute("/fish") { req in
+            let count = try await req.bodyData.count
+            return HTTPResponse(statusCode: .ok, body: "\(count) bytes".data(using: .utf8)!)
+        }
+
+        // when
+        var request = URLRequest(url: URL(string: "http://localhost:\(port)/fish")!)
+        request.httpMethod = "POST"
+        request.httpBody = Data(repeating: 0x0, count: 200)
+        let (body, _) = try await URLSession.shared.data(for: request)
+
+        // then
+        #expect(
+            String(data: body, encoding: .utf8) == "200 bytes"
+        )
+    }
+
+    @Test
     func connections_AreHandled_FallbackTaskGroup() async throws {
         let server = HTTPServer.make()
         let port = try await startServerWithPort(server, preferConnectionsDiscarding: false)
@@ -539,12 +562,18 @@ extension HTTPServer {
 
     static func make(port: UInt16 = 0,
                      timeout: TimeInterval = 15,
+                     sharedRequestReplaySize: Int? = nil,
                      logger: some Logging = .disabled,
                      handler: (any HTTPHandler)? = nil) -> HTTPServer {
-        HTTPServer(port: port,
-                   timeout: timeout,
-                   logger: logger,
-                   handler: handler)
+        var config = Configuration(
+            port: port,
+            timeout: timeout,
+            logger: logger
+        )
+        if let sharedRequestReplaySize {
+            config.sharedRequestReplaySize = sharedRequestReplaySize
+        }
+        return HTTPServer(config: config, handler: handler)
     }
 
     static func make(port: UInt16 = 0,
