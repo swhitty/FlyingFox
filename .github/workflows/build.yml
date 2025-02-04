@@ -29,6 +29,12 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage_report.lcov
+      - name: Upload Junit
+        if: ${{ !cancelled() }}
+        uses: codecov/test-results-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./result.xml
       - name: 📄 Summary
         uses: ./.github/actions/test-summary
         with:
