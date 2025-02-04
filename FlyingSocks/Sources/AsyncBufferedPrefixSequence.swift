@@ -30,6 +30,8 @@
 //
 
 package struct AsyncBufferedPrefixSequence<Base: AsyncBufferedSequence>: AsyncBufferedSequence {
+    package typealias Element = Base.Element
+
     private let base: Base
     private let count: Int
     
