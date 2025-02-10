@@ -38,7 +38,7 @@ struct HTTPDecoderTests {
 
     @Test
     func GETMethod_IsParsed() async throws {
-        let request = try await HTTPDecoder().decodeRequestFromString(
+        let request = try await HTTPDecoder.make().decodeRequestFromString(
             """
             GET /hello HTTP/1.1\r
             \r
@@ -52,7 +52,7 @@ struct HTTPDecoderTests {
 
     @Test
     func POSTMethod_IsParsed() async throws {
-        let request = try await HTTPDecoder().decodeRequestFromString(
+        let request = try await HTTPDecoder.make().decodeRequestFromString(
             """
             POST /hello HTTP/1.1\r
             \r
@@ -66,7 +66,7 @@ struct HTTPDecoderTests {
 
     @Test
     func CUSTOMMethod_IsParsed() async throws {
-        let request = try await HTTPDecoder().decodeRequestFromString(
+        let request = try await HTTPDecoder.make().decodeRequestFromString(
             """
             FISH /hello HTTP/1.1\r
             \r
@@ -80,7 +80,7 @@ struct HTTPDecoderTests {
 
     @Test
     func path_IsParsed() async throws {
-        let request = try await HTTPDecoder().decodeRequestFromString(
+        let request = try await HTTPDecoder.make().decodeRequestFromString(
             """
             GET /hello/world?fish=Chips&with=Mushy%20Peas HTTP/1.1\r
             \r
@@ -101,7 +101,7 @@ struct HTTPDecoderTests {
 
     @Test
     func naughtyPath_IsParsed() async throws {
-        let request = try await HTTPDecoder().decodeRequestFromString(
+        let request = try await HTTPDecoder.make().decodeRequestFromString(
             """
             GET /../a/b/../c/./d.html?fish=Chips&with=Mushy%20Peas HTTP/1.1\r
             \r
@@ -128,7 +128,7 @@ struct HTTPDecoderTests {
 
     @Test
     func headers_AreParsed() async throws {
-        let request = try await HTTPDecoder().decodeRequestFromString(
+        let request = try await HTTPDecoder.make().decodeRequestFromString(
             """
             GET /hello HTTP/1.1\r
             Fish: Chips\r
@@ -149,7 +149,7 @@ struct HTTPDecoderTests {
 
     @Test
     func body_IsNotParsed_WhenContentLength_IsNotProvided() async throws {
-        let request = try await HTTPDecoder().decodeRequestFromString(
+        let request = try await HTTPDecoder.make().decodeRequestFromString(
             """
             GET /hello HTTP/1.1\r
             \r
@@ -164,7 +164,7 @@ struct HTTPDecoderTests {
 
     @Test
     func body_IsParsed_WhenContentLength_IsProvided() async throws {
-        let request = try await HTTPDecoder().decodeRequestFromString(
+        let request = try await HTTPDecoder.make().decodeRequestFromString(
             """
             GET /hello HTTP/1.1\r
             Content-Length: 5\r
@@ -181,7 +181,7 @@ struct HTTPDecoderTests {
     @Test
     func invalidStatusLine_ThrowsError() async {
         await #expect(throws: HTTPDecoder.Error.self) {
-            try await HTTPDecoder().decodeRequestFromString(
+            try await HTTPDecoder.make().decodeRequestFromString(
                 """
                 GET/hello HTTP/1.1\r
                 \r
@@ -193,27 +193,32 @@ struct HTTPDecoderTests {
     @Test
     func body_ThrowsError_WhenSequenceEnds() async throws {
         await #expect(throws: SocketError.self) {
-            try await HTTPDecoder().readBody(from: AsyncBufferedEmptySequence(completeImmediately: true), length: "100").get()
+            try await HTTPDecoder.make(sharedRequestReplaySize: 1024).readBody(from: AsyncBufferedEmptySequence(completeImmediately: true), length: "100").get()
+        }
+        await #expect(throws: SocketError.self) {
+            try await HTTPDecoder.make(sharedRequestBufferSize: 1024).readBody(from: AsyncBufferedEmptySequence(completeImmediately: true), length: "100").get()
         }
     }
 
     @Test
     func bodySequence_CanReplay_WhenSizeIsLessThanMax() async throws {
-        let sequence = try await HTTPDecoder(sharedRequestReplaySize: 100).readBodyFromString("Fish & Chips")
+        let decoder = HTTPDecoder.make(sharedRequestBufferSize: 1, sharedRequestReplaySize: 100)
+        let sequence = try await decoder.readBodyFromString("Fish & Chips")
         #expect(sequence.count == 12)
         #expect(sequence.canReplay)
     }
 
     @Test
     func bodySequence_CanNotReplay_WhenSizeIsGreaterThanMax() async throws {
-        let sequence = try await HTTPDecoder(sharedRequestReplaySize: 2).readBodyFromString("Fish & Chips")
+        let decoder = HTTPDecoder.make(sharedRequestBufferSize: 1, sharedRequestReplaySize: 2)
+        let sequence = try await decoder.readBodyFromString("Fish & Chips")
         #expect(sequence.count == 12)
         #expect(!sequence.canReplay)
     }
 
     @Test
     func invalidPathDecodes() {
-        let comps = HTTPDecoder().makeComponents(from: nil)
+        let comps = HTTPDecoder.make().makeComponents(from: nil)
         #expect(comps.path == "")
         #expect(comps.query == [])
     }
@@ -221,22 +226,22 @@ struct HTTPDecoderTests {
     @Test
     func percentEncodedPathDecodes() {
         #expect(
-            HTTPDecoder().readComponents(from: "/fish%20chips").path == "/fish chips"
+            HTTPDecoder.make().readComponents(from: "/fish%20chips").path == "/fish chips"
         )
         #expect(
-            HTTPDecoder().readComponents(from: "/ocean/fish%20and%20chips").path == "/ocean/fish and chips"
+            HTTPDecoder.make().readComponents(from: "/ocean/fish%20and%20chips").path == "/ocean/fish and chips"
         )
     }
 
     @Test
     func percentQueryStringDecodes() {
         #expect(
-            HTTPDecoder().readComponents(from: "/?fish=%F0%9F%90%9F").query == [
+            HTTPDecoder.make().readComponents(from: "/?fish=%F0%9F%90%9F").query == [
                 .init(name: "fish", value: "🐟")
             ]
         )
         #expect(
-            HTTPDecoder().readComponents(from: "?%F0%9F%90%A1=chips").query == [
+            HTTPDecoder.make().readComponents(from: "?%F0%9F%90%A1=chips").query == [
                 .init(name: "🐡", value: "chips")
             ]
         )
@@ -248,7 +253,7 @@ struct HTTPDecoderTests {
         urlComps.queryItems = [.init(name: "name", value: nil)]
 
         #expect(
-            HTTPDecoder().makeComponents(from: urlComps).query == [
+            HTTPDecoder.make().makeComponents(from: urlComps).query == [
                 .init(name: "name", value: "")
             ]
         )
@@ -257,7 +262,7 @@ struct HTTPDecoderTests {
     @Test
     func responseInvalidStatusLine_ThrowsErrorM() async throws {
         await #expect(throws: HTTPDecoder.Error.self) {
-            try await HTTPDecoder().decodeRequestFromString(
+            try await HTTPDecoder.make().decodeRequestFromString(
                 """
                 HTTP/1.1\r
                 \r
@@ -268,7 +273,7 @@ struct HTTPDecoderTests {
 
     @Test
     func responseBody_IsNotParsed_WhenContentLength_IsNotProvided() async throws {
-        let response = try await HTTPDecoder().decodeResponseFromString(
+        let response = try await HTTPDecoder.make().decodeResponseFromString(
             """
             HTTP/1.1 202 OK \r
             \r
@@ -283,7 +288,7 @@ struct HTTPDecoderTests {
 
     @Test
     func responseBody_IsParsed_WhenContentLength_IsProvided() async throws {
-        let response = try await HTTPDecoder().decodeResponseFromString(
+        let response = try await HTTPDecoder.make().decodeResponseFromString(
             """
             HTTP/1.1 202 OK \r
             Content-Length: 5\r
@@ -314,12 +319,5 @@ private extension HTTPDecoder {
             from: ConsumingAsyncSequence(data),
             length: "\(data.count)"
         )
-    }
-}
-
-private extension HTTPDecoder {
-
-    init() {
-        self.init(sharedRequestReplaySize: 1024)
     }
 }

@@ -37,7 +37,7 @@ import XCTest
 final class HTTPDecoderTests: XCTestCase {
 
     func testGETMethod_IsParsed() async throws {
-        let request = try await HTTPDecoder().decodeRequestFromString(
+        let request = try await HTTPDecoder.make().decodeRequestFromString(
             """
             GET /hello HTTP/1.1\r
             \r
@@ -51,7 +51,7 @@ final class HTTPDecoderTests: XCTestCase {
     }
 
     func testPOSTMethod_IsParsed() async throws {
-        let request = try await HTTPDecoder().decodeRequestFromString(
+        let request = try await HTTPDecoder.make().decodeRequestFromString(
             """
             POST /hello HTTP/1.1\r
             \r
@@ -65,7 +65,7 @@ final class HTTPDecoderTests: XCTestCase {
     }
 
     func testCUSTOMMethod_IsParsed() async throws {
-        let request = try await HTTPDecoder().decodeRequestFromString(
+        let request = try await HTTPDecoder.make().decodeRequestFromString(
             """
             FISH /hello HTTP/1.1\r
             \r
@@ -79,7 +79,7 @@ final class HTTPDecoderTests: XCTestCase {
     }
 
     func testPath_IsParsed() async throws {
-        let request = try await HTTPDecoder().decodeRequestFromString(
+        let request = try await HTTPDecoder.make().decodeRequestFromString(
             """
             GET /hello/world?fish=Chips&with=Mushy%20Peas HTTP/1.1\r
             \r
@@ -99,7 +99,7 @@ final class HTTPDecoderTests: XCTestCase {
     }
 
     func testNaughtyPath_IsParsed() async throws {
-        let request = try await HTTPDecoder().decodeRequestFromString(
+        let request = try await HTTPDecoder.make().decodeRequestFromString(
             """
             GET /../a/b/../c/./d.html?fish=Chips&with=Mushy%20Peas HTTP/1.1\r
             \r
@@ -126,7 +126,7 @@ final class HTTPDecoderTests: XCTestCase {
     }
 
     func testHeaders_AreParsed() async throws {
-        let request = try await HTTPDecoder().decodeRequestFromString(
+        let request = try await HTTPDecoder.make().decodeRequestFromString(
             """
             GET /hello HTTP/1.1\r
             Fish: Chips\r
@@ -145,7 +145,7 @@ final class HTTPDecoderTests: XCTestCase {
     }
 
     func testBody_IsNotParsed_WhenContentLength_IsNotProvided() async throws {
-        let request = try await HTTPDecoder().decodeRequestFromString(
+        let request = try await HTTPDecoder.make().decodeRequestFromString(
             """
             GET /hello HTTP/1.1\r
             \r
@@ -160,7 +160,7 @@ final class HTTPDecoderTests: XCTestCase {
     }
 
     func testBody_IsParsed_WhenContentLength_IsProvided() async throws {
-        let request = try await HTTPDecoder().decodeRequestFromString(
+        let request = try await HTTPDecoder.make().decodeRequestFromString(
             """
             GET /hello HTTP/1.1\r
             Content-Length: 5\r
@@ -177,7 +177,7 @@ final class HTTPDecoderTests: XCTestCase {
 
     func testInvalidStatusLine_ThrowsErrorM() async throws {
         do {
-            _ = try await HTTPDecoder().decodeRequestFromString(
+            _ = try await HTTPDecoder.make().decodeRequestFromString(
                 """
                 GET/hello HTTP/1.1\r
                 \r
@@ -191,25 +191,31 @@ final class HTTPDecoderTests: XCTestCase {
 
     func testBody_ThrowsError_WhenSequenceEnds() async throws {
         await AsyncAssertThrowsError(
-            _ = try await HTTPDecoder().readBody(from: AsyncBufferedEmptySequence(completeImmediately: true), length: "100").get(),
+            _ = try await HTTPDecoder.make(sharedRequestReplaySize: 1024).readBody(from: AsyncBufferedEmptySequence(completeImmediately: true), length: "100").get(),
+            of: SocketError.self
+        )
+        await AsyncAssertThrowsError(
+            _ = try await HTTPDecoder.make(sharedRequestReplaySize: 1024).readBody(from: AsyncBufferedEmptySequence(completeImmediately: true), length: "100").get(),
             of: SocketError.self
         )
     }
 
     func testBodySequence_CanReplay_WhenSizeIsLessThanMax() async throws {
-        let sequence = try await HTTPDecoder(sharedRequestReplaySize: 100).readBodyFromString("Fish & Chips")
+        let decoder = HTTPDecoder.make(sharedRequestBufferSize: 1, sharedRequestReplaySize: 100)
+        let sequence = try await decoder.readBodyFromString("Fish & Chips")
         XCTAssertEqual(sequence.count, 12)
         XCTAssertTrue(sequence.canReplay)
     }
 
     func testBodySequence_CanNotReplay_WhenSizeIsGreaterThanMax() async throws {
-        let sequence = try await HTTPDecoder(sharedRequestReplaySize: 2).readBodyFromString("Fish & Chips")
+        let decoder = HTTPDecoder.make(sharedRequestBufferSize: 1, sharedRequestReplaySize: 2)
+        let sequence = try await decoder.readBodyFromString("Fish & Chips")
         XCTAssertEqual(sequence.count, 12)
         XCTAssertFalse(sequence.canReplay)
     }
 
     func testInvalidPathDecodes() {
-        let comps = HTTPDecoder().makeComponents(from: nil)
+        let comps = HTTPDecoder.make().makeComponents(from: nil)
         XCTAssertEqual(
             comps.path, ""
         )
@@ -220,22 +226,22 @@ final class HTTPDecoderTests: XCTestCase {
 
     func testPercentEncodedPathDecodes() {
         XCTAssertEqual(
-            HTTPDecoder().readComponents(from: "/fish%20chips").path,
+            HTTPDecoder.make().readComponents(from: "/fish%20chips").path,
             "/fish chips"
         )
         XCTAssertEqual(
-            HTTPDecoder().readComponents(from: "/ocean/fish%20and%20chips").path,
+            HTTPDecoder.make().readComponents(from: "/ocean/fish%20and%20chips").path,
             "/ocean/fish and chips"
         )
     }
 
     func testPercentQueryStringDecodes() {
         XCTAssertEqual(
-            HTTPDecoder().readComponents(from: "/?fish=%F0%9F%90%9F").query,
+            HTTPDecoder.make().readComponents(from: "/?fish=%F0%9F%90%9F").query,
             [.init(name: "fish", value: "🐟")]
         )
         XCTAssertEqual(
-            HTTPDecoder().readComponents(from: "?%F0%9F%90%A1=chips").query,
+            HTTPDecoder.make().readComponents(from: "?%F0%9F%90%A1=chips").query,
             [.init(name: "🐡", value: "chips")]
         )
     }
@@ -245,14 +251,14 @@ final class HTTPDecoderTests: XCTestCase {
         urlComps.queryItems = [.init(name: "name", value: nil)]
 
         XCTAssertEqual(
-            HTTPDecoder().makeComponents(from: urlComps).query,
+            HTTPDecoder.make().makeComponents(from: urlComps).query,
             [.init(name: "name", value: "")]
         )
     }
 
     func testResponseInvalidStatusLine_ThrowsErrorM() async throws {
         do {
-            _ = try await HTTPDecoder().decodeResponseFromString(
+            _ = try await HTTPDecoder.make().decodeResponseFromString(
                 """
                 HTTP/1.1\r
                 \r
@@ -265,7 +271,7 @@ final class HTTPDecoderTests: XCTestCase {
     }
 
     func testResponseBody_IsNotParsed_WhenContentLength_IsNotProvided() async throws {
-        let response = try await HTTPDecoder().decodeResponseFromString(
+        let response = try await HTTPDecoder.make().decodeResponseFromString(
             """
             HTTP/1.1 202 OK \r
             \r
@@ -280,7 +286,7 @@ final class HTTPDecoderTests: XCTestCase {
     }
 
     func testResponseBody_IsParsed_WhenContentLength_IsProvided() async throws {
-        let response = try await HTTPDecoder().decodeResponseFromString(
+        let response = try await HTTPDecoder.make().decodeResponseFromString(
             """
             HTTP/1.1 202 OK \r
             Content-Length: 5\r
@@ -312,12 +318,5 @@ private extension HTTPDecoder {
             from: ConsumingAsyncSequence(data),
             length: "\(data.count)"
         )
-    }
-}
-
-private extension HTTPDecoder {
-
-    init() {
-        self.init(sharedRequestReplaySize: 1024)
     }
 }
