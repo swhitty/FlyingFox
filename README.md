@@ -2,7 +2,6 @@
 [![Codecov](https://codecov.io/gh/swhitty/FlyingFox/graphs/badge.svg)](https://codecov.io/gh/swhitty/FlyingFox)
 [![Platforms](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Fswhitty%2FFlyingFox%2Fbadge%3Ftype%3Dplatforms)](https://swiftpackageindex.com/swhitty/FlyingFox)
 [![Swift 6.0](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Fswhitty%2FFlyingFox%2Fbadge%3Ftype%3Dswift-versions)](https://swiftpackageindex.com/swhitty/FlyingFox)
-[![Twitter](https://img.shields.io/badge/twitter-@simonwhitty-blue.svg)](http://twitter.com/simonwhitty)
 
 # Introduction
 
