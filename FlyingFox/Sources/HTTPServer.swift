@@ -208,7 +208,7 @@ public final actor HTTPServer {
     private func makeConnection(socket: AsyncSocket) -> HTTPConnection {
         HTTPConnection(
             socket: socket,
-            decoder: HTTPDecoder(sharedRequestReplaySize: config.sharedRequestReplaySize),
+            decoder: HTTPDecoder(sharedRequestBufferSize: config.sharedRequestBufferSize, sharedRequestReplaySize: config.sharedRequestReplaySize),
             logger: config.logger
         )
     }

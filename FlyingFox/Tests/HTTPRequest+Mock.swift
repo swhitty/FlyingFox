@@ -50,7 +50,7 @@ extension HTTPRequest {
     }
 
     static func make(method: HTTPMethod = .GET, _ url: String, headers: [HTTPHeader: String] = [:]) -> Self {
-        let (path, query) = HTTPDecoder(sharedRequestReplaySize: 0).readComponents(from: url.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!)
+        let (path, query) = HTTPDecoder.make().readComponents(from: url.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!)
         return HTTPRequest.make(
             method: method,
             path: path,
@@ -63,5 +63,14 @@ extension HTTPRequest {
         get async throws {
             try await String(decoding: bodyData, as: UTF8.self)
         }
+    }
+}
+
+extension HTTPDecoder {
+    static func make(sharedRequestBufferSize: Int = 128, sharedRequestReplaySize: Int = 1024) -> HTTPDecoder {
+        HTTPDecoder(
+            sharedRequestBufferSize: sharedRequestBufferSize,
+            sharedRequestReplaySize: sharedRequestReplaySize
+        )
     }
 }

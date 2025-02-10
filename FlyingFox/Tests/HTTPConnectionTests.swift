@@ -149,7 +149,7 @@ private extension HTTPConnection {
     init(socket: AsyncSocket) {
         self.init(
             socket: socket,
-            decoder: HTTPDecoder(sharedRequestReplaySize: 1024),
+            decoder: HTTPDecoder.make(),
             logger: .disabled
         )
     }

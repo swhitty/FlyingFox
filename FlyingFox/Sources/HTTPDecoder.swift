@@ -34,6 +34,7 @@ import Foundation
 
 struct HTTPDecoder {
 
+    var sharedRequestBufferSize: Int
     var sharedRequestReplaySize: Int
 
     func decodeRequest(from bytes: some AsyncBufferedSequence<UInt8>) async throws -> HTTPRequest {
@@ -115,16 +116,27 @@ struct HTTPDecoder {
     }
 
     func readBody(from bytes: some AsyncBufferedSequence<UInt8>, length: String?) async throws -> HTTPBodySequence {
-        guard let length = length.flatMap(Int.init) else {
-            return HTTPBodySequence(data: Data())
+        let length = length.flatMap(Int.init) ?? 0
+        guard sharedRequestBufferSize > 0 else {
+            throw SocketError.disconnected
         }
-
-        if length <= sharedRequestReplaySize {
-            return HTTPBodySequence(shared: bytes, count: length, suggestedBufferSize: 4096)
+        if length <= sharedRequestBufferSize {
+            return try await HTTPBodySequence(data: readData(from: bytes, length: length), suggestedBufferSize: length)
+        } else if length <= sharedRequestReplaySize {
+            return HTTPBodySequence(shared: bytes, count: length, suggestedBufferSize: sharedRequestBufferSize)
         } else {
             let prefix = AsyncBufferedPrefixSequence(base: bytes, count: length)
-            return HTTPBodySequence(from: prefix, count: length, suggestedBufferSize: 4096)
+            return HTTPBodySequence(from: prefix, count: length, suggestedBufferSize: sharedRequestBufferSize)
         }
+    }
+
+    private func readData(from bytes: some AsyncBufferedSequence<UInt8>, length: Int) async throws -> Data {
+        var iterator = bytes.makeAsyncIterator()
+        guard let buffer = try await iterator.nextBuffer(count: length),
+              buffer.count == length else {
+            throw SocketError.disconnected
+        }
+        return Data(buffer)
     }
 }
 
