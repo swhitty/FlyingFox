@@ -8,13 +8,11 @@ on:
 jobs:
   xcode_16:
     runs-on: macos-15
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_16.2.app/Contents/Developer
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: 🔍 Xcode Select
-        run: |
-          XCODE_PATH=`mdfind "kMDItemCFBundleIdentifier == 'com.apple.dt.Xcode' && kMDItemVersion = '16.*'" -onlyin /Applications | head -1`
-          echo "DEVELOPER_DIR=$XCODE_PATH/Contents/Developer" >> $GITHUB_ENV
       - name: Version
         run: swift --version
       - name: Build
@@ -110,7 +108,7 @@ jobs:
 
   linux_swift_6_0_musl:
     runs-on: ubuntu-latest
-    container: swift:6.0.2
+    container: swift:6.0.3
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -119,7 +117,7 @@ jobs:
       - name: SDK List Pre
         run: swift sdk list
       - name: Install SDK
-        run: swift sdk install https://download.swift.org/swift-6.0.2-release/static-sdk/swift-6.0.2-RELEASE/swift-6.0.2-RELEASE_static-linux-0.0.1.artifactbundle.tar.gz --checksum aa5515476a403797223fc2aad4ca0c3bf83995d5427fb297cab1d93c68cee075
+        run: swift sdk install https://download.swift.org/swift-6.0.3-release/static-sdk/swift-6.0.3-RELEASE/swift-6.0.3-RELEASE_static-linux-0.0.1.artifactbundle.tar.gz --checksum 67f765e0030e661a7450f7e4877cfe008db4f57f177d5a08a6e26fd661cdd0bd
       - name: SDK List Post
         run: swift sdk list
       - name: Build
@@ -127,13 +125,13 @@ jobs:
 
   linux_swift_6_0_android:
     runs-on: ubuntu-latest
-    container: swift:6.0.2
+    container: swift:6.0.3
     steps:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Version
         run: swift --version
       - name: Install SDK
-        run: swift sdk install https://github.com/finagolfin/swift-android-sdk/releases/download/6.0.2/swift-6.0.2-RELEASE-android-24-0.1.artifactbundle.tar.gz --checksum  d75615eac3e614131133c7cc2076b0b8fb4327d89dce802c25cd53e75e1881f4
+        run: swift sdk install https://github.com/finagolfin/swift-android-sdk/releases/download/6.0.3/swift-6.0.3-RELEASE-android-24-0.1.artifactbundle.tar.gz --checksum 4566f23ae2d36dc5c02e915cd67d83b2af971faca4b2595fdd75cf0286acfac1
       - name: Build
         run: swift build --swift-sdk aarch64-unknown-linux-android24
