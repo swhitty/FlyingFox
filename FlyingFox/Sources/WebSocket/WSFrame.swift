@@ -91,16 +91,24 @@ public struct WSFrame: Sendable, Hashable {
 }
 
 public extension WSFrame {
-    static func close(message: String? = nil, mask: Mask? = nil) -> Self {
-        var payload = message == nil ? Data([0x03, 0xE8]) : Data([0x03, 0xEA])
-        if let data = message?.data(using: .utf8) {
+    static func close(message: String = "", mask: Mask? = nil) -> Self {
+        close(
+            code: message.isEmpty ? .normalClosure : .protocolError,
+            message: message,
+            mask: mask
+        )
+    }
+
+    static func close(code: WSCloseCode, message: String, mask: Mask? = nil) -> Self {
+        var payload = Data([UInt8(code.rawValue >> 8), UInt8(code.rawValue & 0xFF)])
+        if let data = message.data(using: .utf8) {
             payload.append(contentsOf: data)
         }
         return WSFrame(
             fin: true,
             opcode: .close,
             mask: mask,
-            payload: Data(payload)
+            payload: payload
         )
     }
 }

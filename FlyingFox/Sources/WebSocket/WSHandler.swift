@@ -106,10 +106,13 @@ public struct MessageFrameWSHandler: WSHandler {
                         } else if let frame = try makeResponseFrames(for: frame) {
                             framesOut.yield(frame)
                         }
+                        if frame.opcode == .close {
+                            throw FrameError.closed(frame)
+                        }
                     }
                     framesOut.finish(throwing: nil)
-                } catch FrameError.closed {
-                    framesOut.yield(.close(message: "Goodbye"))
+                } catch FrameError.closed(let frame) {
+                    framesOut.yield(frame)
                     framesOut.finish(throwing: nil)
                 } catch {
                     framesOut.finish(throwing: error)
@@ -136,9 +139,24 @@ public struct MessageFrameWSHandler: WSHandler {
             return .text(string)
         case .binary:
             return .data(frame.payload)
+        case .close:
+            let (code, reason) = try makeCloseCode(from: frame.payload)
+            return .close(code: code, reason: reason)
         default:
             return nil
         }
+    }
+
+    func makeCloseCode(from payload: Data) throws -> (WSCloseCode, String) {
+        guard payload.count >= 2 else {
+            return (.noStatusReceived, "")
+        }
+
+        let statusCode = payload.withUnsafeBytes { $0.load(as: UInt16.self).bigEndian }
+        guard let reason = String(data: payload.dropFirst(2), encoding: .utf8) else {
+            throw FrameError.invalid("Invalid UTF8 Sequence")
+        }
+        return (WSCloseCode(statusCode), reason)
     }
 
     func makeResponseFrames(for frame: WSFrame) throws -> WSFrame? {
@@ -149,8 +167,6 @@ public struct MessageFrameWSHandler: WSHandler {
             return response
         case .pong:
             return nil
-        case .close:
-            throw FrameError.closed
         default:
             throw FrameError.invalid("Unexpected Frame")
         }
@@ -158,10 +174,12 @@ public struct MessageFrameWSHandler: WSHandler {
 
     func makeFrames(for message: WSMessage) -> [WSFrame] {
         switch message {
-        case .text(let string):
+        case let .text(string):
             return Self.makeFrames(opcode: .text, payload: string.data(using: .utf8)!, size: frameSize)
-        case .data(let data):
+        case let .data(data):
             return Self.makeFrames(opcode: .binary, payload: data, size: frameSize)
+        case let .close(code: code, reason: message):
+            return [WSFrame.close(code: code, message: message)]
         }
     }
 
@@ -179,7 +197,7 @@ public struct MessageFrameWSHandler: WSHandler {
 extension MessageFrameWSHandler {
 
     enum FrameError: Error {
-        case closed
+        case closed(WSFrame)
         case invalid(String)
     }
 }

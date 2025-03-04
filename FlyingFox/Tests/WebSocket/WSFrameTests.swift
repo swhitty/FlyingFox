@@ -61,13 +61,28 @@ struct WSFrameTests {
                 payload: Data([0x03, 0xEA, .ascii("E"), .ascii("r"), .ascii("r")])
             )
         )
-
         #expect(
             WSFrame.close(message: "Err", mask: .mock) == .make(
                 fin: true,
                 opcode: .close,
                 mask: .mock,
                 payload: Data([0x03, 0xEA, .ascii("E"), .ascii("r"), .ascii("r")])
+            )
+        )
+        #expect(
+            WSFrame.close(code: WSCloseCode(4999), message: "Err") == .make(
+                fin: true,
+                opcode: .close,
+                mask: nil,
+                payload: Data([0x13, 0x87, .ascii("E"), .ascii("r"), .ascii("r")])
+            )
+        )
+        #expect(
+            WSFrame.close(code: WSCloseCode(4999), message: "Err", mask: .mock) == .make(
+                fin: true,
+                opcode: .close,
+                mask: .mock,
+                payload: Data([0x13, 0x87, .ascii("E"), .ascii("r"), .ascii("r")])
             )
         )
     }
