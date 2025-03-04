@@ -119,10 +119,18 @@ public struct MessageFrameWSHandler: WSHandler {
                 }
             }
             group.addTask {
-                for await message in messagesOut {
-                    for frame in makeFrames(for: message) {
-                        framesOut.yield(frame)
+                do {
+                    for await message in messagesOut {
+                        for frame in makeFrames(for: message) {
+                            framesOut.yield(frame)
+                            if frame.opcode == .close {
+                                throw FrameError.closed(frame)
+                            }
+                        }
                     }
+                    framesOut.finish(throwing: nil)
+                } catch {
+                    framesOut.finish(throwing: nil)
                 }
             }
             await group.next()!
@@ -140,23 +148,22 @@ public struct MessageFrameWSHandler: WSHandler {
         case .binary:
             return .data(frame.payload)
         case .close:
-            let (code, reason) = try makeCloseCode(from: frame.payload)
-            return .close(code: code, reason: reason)
+            return try .close(makeCloseCode(from: frame.payload))
         default:
             return nil
         }
     }
 
-    func makeCloseCode(from payload: Data) throws -> (WSCloseCode, String) {
+    func makeCloseCode(from payload: Data) throws -> WSCloseCode {
         guard payload.count >= 2 else {
-            return (.noStatusReceived, "")
+            return .noStatusReceived
         }
 
         let statusCode = payload.withUnsafeBytes { $0.load(as: UInt16.self).bigEndian }
         guard let reason = String(data: payload.dropFirst(2), encoding: .utf8) else {
             throw FrameError.invalid("Invalid UTF8 Sequence")
         }
-        return (WSCloseCode(statusCode), reason)
+        return WSCloseCode(statusCode, reason: reason)
     }
 
     func makeResponseFrames(for frame: WSFrame) throws -> WSFrame? {
@@ -178,8 +185,8 @@ public struct MessageFrameWSHandler: WSHandler {
             return Self.makeFrames(opcode: .text, payload: string.data(using: .utf8)!, size: frameSize)
         case let .data(data):
             return Self.makeFrames(opcode: .binary, payload: data, size: frameSize)
-        case let .close(code: code, reason: message):
-            return [WSFrame.close(code: code, message: message)]
+        case let .close(code):
+            return [WSFrame.close(code: code)]
         }
     }
 
