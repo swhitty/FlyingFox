@@ -119,10 +119,18 @@ public struct MessageFrameWSHandler: WSHandler {
                 }
             }
             group.addTask {
-                for await message in messagesOut {
-                    for frame in makeFrames(for: message) {
-                        framesOut.yield(frame)
+                do {
+                    for await message in messagesOut {
+                        for frame in makeFrames(for: message) {
+                            framesOut.yield(frame)
+                            if frame.opcode == .close {
+                                throw FrameError.closed(frame)
+                            }
+                        }
                     }
+                    framesOut.finish(throwing: nil)
+                } catch {
+                    framesOut.finish(throwing: nil)
                 }
             }
             await group.next()!
