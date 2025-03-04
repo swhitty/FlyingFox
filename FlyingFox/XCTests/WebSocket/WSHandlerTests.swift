@@ -65,11 +65,11 @@ final class WSHandlerTests: XCTestCase {
 
         XCTAssertEqual(
             try handler.makeMessage(for: .make(fin: true, opcode: .close, payload: payload)),
-            .close(code: 4999, reason: "fish")
+            .close(code: WSCloseCode(4999), reason: "fish")
         )
         XCTAssertEqual(
             try handler.makeMessage(for: .make(fin: true, opcode: .close)),
-            .close(code: 1005, reason: "")
+            .close(code: .noStatusReceived, reason: "")
         )
     }
 

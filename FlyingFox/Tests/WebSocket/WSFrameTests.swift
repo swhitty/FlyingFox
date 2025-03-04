@@ -70,7 +70,7 @@ struct WSFrameTests {
             )
         )
         #expect(
-            WSFrame.close(code: 4999, message: "Err") == .make(
+            WSFrame.close(code: WSCloseCode(4999), message: "Err") == .make(
                 fin: true,
                 opcode: .close,
                 mask: nil,
@@ -78,7 +78,7 @@ struct WSFrameTests {
             )
         )
         #expect(
-            WSFrame.close(code: 4999, message: "Err", mask: .mock) == .make(
+            WSFrame.close(code: WSCloseCode(4999), message: "Err", mask: .mock) == .make(
                 fin: true,
                 opcode: .close,
                 mask: .mock,

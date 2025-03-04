@@ -147,16 +147,16 @@ public struct MessageFrameWSHandler: WSHandler {
         }
     }
 
-    func makeCloseCode(from payload: Data) throws -> (UInt16, String) {
+    func makeCloseCode(from payload: Data) throws -> (WSCloseCode, String) {
         guard payload.count >= 2 else {
-            return (1005, "")
+            return (.noStatusReceived, "")
         }
 
-        let code = payload.withUnsafeBytes { $0.load(as: UInt16.self).bigEndian }
+        let statusCode = payload.withUnsafeBytes { $0.load(as: UInt16.self).bigEndian }
         guard let reason = String(data: payload.dropFirst(2), encoding: .utf8) else {
             throw FrameError.invalid("Invalid UTF8 Sequence")
         }
-        return (code, reason)
+        return (WSCloseCode(statusCode), reason)
     }
 
     func makeResponseFrames(for frame: WSFrame) throws -> WSFrame? {
