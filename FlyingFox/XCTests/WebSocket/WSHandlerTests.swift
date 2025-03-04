@@ -57,8 +57,19 @@ final class WSHandlerTests: XCTestCase {
         XCTAssertNil(
             try handler.makeMessage(for: .make(fin: true, opcode: .pong))
         )
-        XCTAssertNil(
-            try handler.makeMessage(for: .make(fin: true, opcode: .close))
+    }
+
+    func testFrames_CreatesCloseMessage() throws {
+        let handler = MessageFrameWSHandler.make()
+        let payload = Data([0x13, 0x87, .ascii("f"), .ascii("i"), .ascii("s"), .ascii("h")])
+
+        XCTAssertEqual(
+            try handler.makeMessage(for: .make(fin: true, opcode: .close, payload: payload)),
+            .close(code: 4999, reason: "fish")
+        )
+        XCTAssertEqual(
+            try handler.makeMessage(for: .make(fin: true, opcode: .close)),
+            .close(code: 1005, reason: "")
         )
     }
 
@@ -112,7 +123,7 @@ final class WSHandlerTests: XCTestCase {
 
         await AsyncAssertEqual(
             try await frames.collectAll(),
-            [.pong, .close(message: "Goodbye")]
+            [.pong, .close]
         )
     }
 

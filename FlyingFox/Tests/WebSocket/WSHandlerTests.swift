@@ -45,19 +45,29 @@ struct WSHandlerTests {
         #expect(throws: (any Error).self) {
             try handler.makeMessage(for: .make(fin: true, opcode: .text, payload: Data([0x03, 0xE8])))
         }
-
         #expect(
             try handler.makeMessage(for: .make(fin: true, opcode: .binary, payload: Data([0x01, 0x02]))) == .data(Data([0x01, 0x02]))
         )
-
         #expect(
             try handler.makeMessage(for: .make(fin: true, opcode: .ping)) == nil
         )
         #expect(
             try handler.makeMessage(for: .make(fin: true, opcode: .pong)) == nil
         )
+    }
+
+    @Test
+    func frames_CreatesCloseMessage() throws {
+        let handler = MessageFrameWSHandler.make()
+        let payload = Data([0x13, 0x87, .ascii("f"), .ascii("i"), .ascii("s"), .ascii("h")])
+
         #expect(
-            try handler.makeMessage(for: .make(fin: true, opcode: .close)) == nil
+            try handler.makeMessage(for: .make(fin: true, opcode: .close, payload: payload)) ==
+                .close(code: 4999, reason: "fish")
+        )
+        #expect(
+            try handler.makeMessage(for: .make(fin: true, opcode: .close)) ==
+                .close(code: 1005, reason: "")
         )
     }
 
@@ -114,7 +124,7 @@ struct WSHandlerTests {
         )
 
         #expect(
-            try await frames.collectAll() == [.pong, .close(message: "Goodbye")]
+            try await frames.collectAll() == [.pong, .close]
         )
     }
 
