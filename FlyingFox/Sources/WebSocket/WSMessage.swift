@@ -34,7 +34,7 @@ import Foundation
 public enum WSMessage: @unchecked Sendable, Hashable {
     case text(String)
     case data(Data)
-    case close(code: WSCloseCode = .normalClosure, reason: String = "")
+    case close(WSCloseCode = .normalClosure)
 }
 
 public protocol WSMessageHandler: Sendable {

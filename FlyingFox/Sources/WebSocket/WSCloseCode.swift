@@ -31,15 +31,17 @@
 
 import Foundation
 
-public struct WSCloseCode: RawRepresentable, Sendable, Hashable {
-    public var rawValue: UInt16
-
-    public init(rawValue: UInt16) {
-        self.rawValue = rawValue
-    }
+public struct WSCloseCode: Sendable, Hashable {
+    public var code: UInt16
+    public var reason: String
 
     public init(_ code: UInt16) {
-        self.rawValue = code
+        self.code = code
+        self.reason = ""
+    }
+    public init(_ code: UInt16, reason: String) {
+        self.code = code
+        self.reason = reason
     }
 }
 
@@ -47,19 +49,19 @@ public extension WSCloseCode {
     // The following codes are based on:
     // https://developer.mozilla.org/en-US/docs/Web/API/CloseEvent/code
 
-    static let normalClosure = WSCloseCode(1000)
-    static let goingAway = WSCloseCode(1001)
-    static let protocolError = WSCloseCode(1002)
-    static let unsupportedData = WSCloseCode(1003)
-    static let noStatusReceived = WSCloseCode(1005)
-    static let abnormalClosure = WSCloseCode(1006)
-    static let invalidFramePayloadData = WSCloseCode(1007)
-    static let policyViolation = WSCloseCode(1008)
-    static let messageTooBig = WSCloseCode(1009)
-    static let mandatoryExtensionMissing = WSCloseCode(1010)
-    static let internalServerError = WSCloseCode(1011)
-    static let serviceRestart = WSCloseCode(1012)
-    static let tryAgainLater = WSCloseCode(1013)
-    static let badGateway = WSCloseCode(1014)
-    static let tlsHandshakeFailure = WSCloseCode(1015)
+    static let normalClosure                = WSCloseCode(1000)
+    static let goingAway                    = WSCloseCode(1001, reason: "Going Away")
+    static let protocolError                = WSCloseCode(1002, reason: "Protocol Error")
+    static let unsupportedData              = WSCloseCode(1003, reason: "Unsupported Data")
+    static let noStatusReceived             = WSCloseCode(1005, reason: "No Status Received")
+    static let abnormalClosure              = WSCloseCode(1006, reason: "Abnormal Closure")
+    static let invalidFramePayload          = WSCloseCode(1007, reason: "Invalid Frame Payload")
+    static let policyViolation              = WSCloseCode(1008, reason: "Policy Violation")
+    static let messageTooBig                = WSCloseCode(1009, reason: "Message Too Big")
+    static let mandatoryExtensionMissing    = WSCloseCode(1010, reason: "Mandatory Extension Missing")
+    static let internalServerError          = WSCloseCode(1011, reason: "Internal Server Error")
+    static let serviceRestart               = WSCloseCode(1012, reason: "Service Restart")
+    static let tryAgainLater                = WSCloseCode(1013, reason: "Try Again Later")
+    static let badGateway                   = WSCloseCode(1014, reason: "Bad Gateway")
+    static let tlsHandshakeFailure          = WSCloseCode(1015, reason: "TLS Handshake Failure")
 }

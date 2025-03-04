@@ -65,7 +65,7 @@ final class WSFrameTests: XCTestCase {
                   payload: Data([0x03, 0xEA, .ascii("E"), .ascii("r"), .ascii("r")]))
         )
         XCTAssertEqual(
-            WSFrame.close(code: WSCloseCode(4999), message: "Err"),
+            WSFrame.close(code: WSCloseCode(4999, reason: "Err")),
             .make(
                 fin: true,
                 opcode: .close,
@@ -74,7 +74,7 @@ final class WSFrameTests: XCTestCase {
             )
         )
         XCTAssertEqual(
-            WSFrame.close(code: WSCloseCode(4999), message: "Err", mask: .mock),
+            WSFrame.close(code: WSCloseCode(4999, reason: "Err"), mask: .mock),
             .make(
                 fin: true,
                 opcode: .close,

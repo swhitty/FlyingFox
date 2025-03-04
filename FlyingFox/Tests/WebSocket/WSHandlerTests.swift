@@ -63,11 +63,11 @@ struct WSHandlerTests {
 
         #expect(
             try handler.makeMessage(for: .make(fin: true, opcode: .close, payload: payload)) ==
-                .close(code: WSCloseCode(4999), reason: "fish")
+                .close(WSCloseCode(4999, reason: "fish"))
         )
         #expect(
             try handler.makeMessage(for: .make(fin: true, opcode: .close)) ==
-                .close(code: .noStatusReceived, reason: "")
+                .close(.noStatusReceived)
         )
     }
 
