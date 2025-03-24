@@ -197,6 +197,13 @@ extension Socket {
         }
     }
 
+    public static func unlink(_ address: sockaddr_un) throws {
+        var address = address
+        guard Socket.unlink(&address.sun_path.0) == 0 else {
+            throw SocketError.makeFailed("unlink")
+        }
+    }
+
     static func makeAddressINET(fromIP4 ip: String, port: UInt16) throws -> sockaddr_in {
         var address = Socket.makeAddressINET(port: port)
         address.sin_addr = try Socket.makeInAddr(fromIP4: ip)
@@ -217,13 +224,6 @@ extension Socket {
             throw SocketError.makeFailed("inet_pton AF_INET6")
         }
         return addr
-    }
-
-    static func unlink(_ address: sockaddr_un) throws {
-        var address = address
-        guard Socket.unlink(&address.sun_path.0) == 0 else {
-            throw SocketError.makeFailed("unlink")
-        }
     }
 }
 
