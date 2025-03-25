@@ -145,7 +145,15 @@ public final actor HTTPServer {
 
     func makeSocketAndListen() throws -> Socket {
         let socket = try Socket(domain: Int32(type(of: config.address).family))
+
+        #if canImport(WinSDK)
+        if config.address.family != AF_UNIX {
+            try socket.setValue(true, for: .exclusiveLocalAddressReuse)
+        }
+        #else
         try socket.setValue(true, for: .localAddressReuse)
+        #endif
+
         #if canImport(Darwin)
         try socket.setValue(true, for: .noSIGPIPE)
         #endif

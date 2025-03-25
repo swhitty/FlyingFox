@@ -568,6 +568,12 @@ public extension SocketOption where Self == BoolSocketOption {
         BoolSocketOption(level: Socket.ipproto_ip, name: Socket.ip_pktinfo)
     }
 
+    #if canImport(WinSDK)
+    static var exclusiveLocalAddressReuse: Self {
+        BoolSocketOption(name: ~SO_REUSEADDR) // SO_EXCLUSIVEADDRUSE macro
+    }
+    #endif
+
     #if !canImport(WinSDK)
     static var packetInfoIPv6: Self {
         BoolSocketOption(level: Socket.ipproto_ipv6, name: Socket.ipv6_recvpktinfo)
