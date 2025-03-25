@@ -38,7 +38,6 @@ let F_SETFL = Int32(1)
 let F_GETFL = Int32(1)
 var errno: Int32 {  WSAGetLastError() }
 let EWOULDBLOCK = WSAEWOULDBLOCK
-let EBADF = WSAENOTSOCK
 let EINPROGRESS = WSAEINPROGRESS
 let EISCONN = WSAEISCONN
 public typealias sa_family_t = ADDRESS_FAMILY
