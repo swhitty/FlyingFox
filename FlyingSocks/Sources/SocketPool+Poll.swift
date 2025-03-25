@@ -198,7 +198,7 @@ private extension Socket.Events {
 
     init(_ events: POLLEvents) {
         self = []
-        if events.contains(.read) {
+        if events.intersects(with: .read) {
             self.insert(.read)
         }
         if events.contains(.write) {
