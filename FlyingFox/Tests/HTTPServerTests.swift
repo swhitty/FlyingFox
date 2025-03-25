@@ -340,8 +340,10 @@ actor HTTPServerTests {
 
     @Test
     func server_StartsOnUnixSocket() async throws {
-        let address = sockaddr_un.unix(path: #function)
+        let tempFile = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString.prefix(8)).sock")
+        let address = sockaddr_un.unix(path: tempFile.path)
         try? Socket.unlink(address)
+        defer { try? Socket.unlink(address) }
         let server = HTTPServer.make(address: address)
         await server.appendRoute("*") { _ in
             return HTTPResponse.make(statusCode: .accepted)
@@ -390,8 +392,8 @@ actor HTTPServerTests {
         try await Task.sleep(seconds: 0.1)
         let taskStop = Task { await server.stop(timeout: 1) }
 
-        #expect(
-            try await socket.readResponse().statusCode == .ok
+        try await #expect(
+            socket.readResponse().statusCode == .ok
         )
         await taskStop.value
     }
