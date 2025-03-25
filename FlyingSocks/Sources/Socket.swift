@@ -635,7 +635,7 @@ package extension Socket {
 
 fileprivate func errnoSignalsDisconnected() -> Bool {
     #if canImport(WinSDK)
-    return errno == WSAENOTSOCK || errno == WSAENOTCONN
+    return errno == WSAENOTSOCK || errno == WSAENOTCONN || errno == WSAECONNRESET
     #else
     return errno == EBADF
     #endif
