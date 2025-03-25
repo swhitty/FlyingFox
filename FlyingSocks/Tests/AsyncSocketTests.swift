@@ -305,10 +305,16 @@ extension AsyncSocket {
     }
 
     static func makeListening(pool: some AsyncSocketPool) throws -> AsyncSocket {
-        let address = sockaddr_un.unix(path: #function)
+        let tempFile = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString.prefix(8)).sock")
+        let address = sockaddr_un.unix(path: tempFile.path)
         try? Socket.unlink(address)
+        defer { try? Socket.unlink(address) }
         let socket = try Socket(domain: AF_UNIX, type: .stream)
-        try socket.setValue(true, for: .localAddressReuse)
+
+        #if !canImport(WinSDK)
+            try socket.setValue(true, for: .localAddressReuse)
+        #endif
+
         try socket.bind(to: address)
         try socket.listen()
         return try AsyncSocket(socket: socket, pool: pool)
