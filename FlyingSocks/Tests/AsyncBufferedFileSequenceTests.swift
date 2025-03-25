@@ -37,9 +37,16 @@ struct AsyncBufferedFileSequenceTests {
 
     @Test
     func fileSize() async throws {
-        #expect(
-            try AsyncBufferedFileSequence.fileSize(at: .jackOfHeartsRecital) == 299
+        #if os(Windows)
+        try #expect(
+            AsyncBufferedFileSequence.fileSize(at: .jackOfHeartsRecital) == 304
         )
+        #else
+        try #expect(
+            AsyncBufferedFileSequence.fileSize(at: .jackOfHeartsRecital) == 299
+        )
+        #endif
+        
         #expect(throws: (any Error).self) {
             try AsyncBufferedFileSequence.fileSize(at: URL(fileURLWithPath: "missing"))
         }
