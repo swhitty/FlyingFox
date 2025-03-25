@@ -221,7 +221,7 @@ public struct Socket: Sendable, Hashable {
             Socket.connect(file.rawValue, $0, address.size)
         }
         guard result >= 0 || errno == EISCONN else {
-            if errno == EINPROGRESS {
+            if errno == EINPROGRESS || errno == EWOULDBLOCK {
                 throw SocketError.blocked
             } else {
                 throw SocketError.makeFailed("Connect")
