@@ -52,7 +52,12 @@ struct SocketErrorTests {
 
     @Test
     func socketError_makeFailed() {
+        #if canImport(WinSDK)
+        WSASetLastError(EIO)
+        #else
         errno = EIO
+        #endif
+
         let socketError = SocketError.makeFailed("unit-test")
         switch socketError {
         case let .failed(type: type, errno: socketErrno, message: message):

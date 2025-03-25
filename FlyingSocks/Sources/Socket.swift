@@ -30,7 +30,7 @@
 //
 
 #if canImport(WinSDK)
-import WinSDK.WinSock2
+@_exported import WinSDK.WinSock2
 #elseif canImport(Android)
 @_exported import Android
 #endif
@@ -126,8 +126,10 @@ public struct Socket: Sendable, Hashable {
         switch domain {
         case AF_INET:
             try setValue(true, for: .packetInfoIP)
+        #if !canImport(WinSDK)
         case AF_INET6:
             try setValue(true, for: .packetInfoIPv6)
+        #endif
         default:
             return
         }
@@ -566,9 +568,11 @@ public extension SocketOption where Self == BoolSocketOption {
         BoolSocketOption(level: Socket.ipproto_ip, name: Socket.ip_pktinfo)
     }
 
+    #if !canImport(WinSDK)
     static var packetInfoIPv6: Self {
         BoolSocketOption(level: Socket.ipproto_ipv6, name: Socket.ipv6_recvpktinfo)
     }
+    #endif
 
     #if canImport(Darwin)
     // Prevents SIG_TRAP when app is paused / running in background.
@@ -597,9 +601,17 @@ package extension Socket {
 
     static func makePair(flags: Flags? = nil, type: SocketType = .stream) throws -> (Socket, Socket) {
         let (file1, file2) = Socket.socketpair(AF_UNIX, type.rawValue, 0)
+
+        #if canImport(WinSDK)
+        guard file1 != INVALID_SOCKET, file2 != INVALID_SOCKET else {
+            throw SocketError.makeFailed("SocketPair")
+        }
+        #else
         guard file1 > -1, file2 > -1 else {
             throw SocketError.makeFailed("SocketPair")
         }
+        #endif
+
         let s1 = Socket(file: .init(rawValue: file1))
         let s2 = Socket(file: .init(rawValue: file2))
 

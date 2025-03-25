@@ -20,7 +20,14 @@ extension FileManager {
         let dirPath = temporaryDirectory.appendingPathComponent("FlyingSocks.XXXXXX")
         return dirPath.withUnsafeFileSystemRepresentation { maybePath in
             guard let path = maybePath else { return nil }
-            var mutablePath = Array(repeating: Int8(0), count: Int(PATH_MAX))
+
+            #if canImport(WinSDK)
+            let pathMax = Int(MAX_PATH)
+            #else
+            let pathMax = Int(PATH_MAX)
+            #endif
+
+            var mutablePath = Array(repeating: Int8(0), count: pathMax)
             mutablePath.withUnsafeMutableBytes { mutablePathBufferPtr in
                 mutablePathBufferPtr.baseAddress!.copyMemory(
                     from: path, byteCount: Int(strlen(path)) + 1)

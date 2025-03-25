@@ -31,16 +31,17 @@
 
 #if canImport(WinSDK)
 import WinSDK.WinSock2
+import Foundation
 
 let O_NONBLOCK = Int32(1)
 let F_SETFL = Int32(1)
 let F_GETFL = Int32(1)
 var errno: Int32 {  WSAGetLastError() }
 let EWOULDBLOCK = WSAEWOULDBLOCK
-let EBADF = WSA_INVALID_HANDLE
+let EBADF = WSAENOTSOCK
 let EINPROGRESS = WSAEINPROGRESS
 let EISCONN = WSAEISCONN
-public typealias sa_family_t = UInt8
+public typealias sa_family_t = ADDRESS_FAMILY
 
 public extension Socket {
     typealias FileDescriptorType = UInt64
@@ -59,10 +60,9 @@ extension Socket {
     static let datagram = Int32(SOCK_DGRAM)
     static let in_addr_any = WinSDK.in_addr()
     static let ipproto_ip = Int32(IPPROTO_IP)
-    static let ipproto_ipv6 = Int32(IPPROTO_IPV6)
+    static let ipproto_ipv6 = Int32(IPPROTO_IPV6.rawValue)
     static let ip_pktinfo = Int32(IP_PKTINFO)
     static let ipv6_pktinfo = Int32(IPV6_PKTINFO)
-    static let ipv6_recvpktinfo = Int32(IPV6_RECVPKTINFO)
 
     static func makeAddressINET(port: UInt16) -> WinSDK.sockaddr_in {
         WinSDK.sockaddr_in(
@@ -107,6 +107,7 @@ extension Socket {
     }
 
     static func fcntl(_ fd: FileDescriptorType, _ cmd: Int32) -> Int32 {
+        guard fd != INVALID_SOCKET else { return -1 }
         return 0
     }
 
@@ -123,7 +124,110 @@ extension Socket {
     }
 
     static func socketpair(_ domain: Int32, _ type: Int32, _ protocol: Int32) -> (FileDescriptorType, FileDescriptorType) {
-        (-1, -1) // no supported
+        guard domain == AF_UNIX else { return (INVALID_SOCKET, INVALID_SOCKET) }
+        func makeTempUnixPath() -> URL {
+            let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("socketpair_\(UUID().uuidString.prefix(8)).sock", isDirectory: false)
+            try? FileManager.default.removeItem(at: tempURL)
+            return tempURL
+        }
+
+        if type == SOCK_STREAM {
+            let tempURL = makeTempUnixPath()
+            defer { try? FileManager.default.removeItem(at: tempURL) }
+
+            let listener = socket(domain, type, `protocol`)
+
+            guard listener != INVALID_SOCKET else { return (INVALID_SOCKET, INVALID_SOCKET) }
+
+            let addr = makeAddressUnix(path: tempURL.path)
+
+            let bindListenerResult = addr.withSockAddr {
+                bind(listener, $0, addr.size)
+            }
+
+            guard bindListenerResult == 0 else { return (INVALID_SOCKET, INVALID_SOCKET) }
+
+            guard listen(listener, 1) == 0 else {
+                _ = close(listener)
+                return (INVALID_SOCKET, INVALID_SOCKET) 
+            }
+
+            let connector = socket(domain, type, `protocol`)
+
+            guard connector != INVALID_SOCKET else { 
+                _ = close(listener)
+                return (INVALID_SOCKET, INVALID_SOCKET) 
+            }
+
+            let connectResult = addr.withSockAddr { connect(connector, $0, addr.size) == 0 }
+
+            guard connectResult else {
+                _ = close(listener)
+                _ = close(connector)
+                return (INVALID_SOCKET, INVALID_SOCKET)
+            }
+
+            let acceptor = accept(listener, nil, nil)
+            guard acceptor != INVALID_SOCKET else {
+                _ = close(listener)
+                _ = close(connector)
+                return (INVALID_SOCKET, INVALID_SOCKET)
+            }
+
+            _ = close(listener)
+
+            return (connector, acceptor)
+        } else if type == SOCK_DGRAM {
+            return (INVALID_SOCKET, INVALID_SOCKET)
+            // unsupported at this time: https://github.com/microsoft/WSL/issues/5272
+            // let tempURL1 = makeTempUnixPath()
+            // let tempURL2 = makeTempUnixPath()
+            // guard FileManager.default.createFile(atPath: tempURL1.path, contents: nil) else { return (INVALID_SOCKET, INVALID_SOCKET) }
+            // guard FileManager.default.createFile(atPath: tempURL2.path, contents: nil) else { return (INVALID_SOCKET, INVALID_SOCKET) }
+
+            // defer { try? FileManager.default.removeItem(at: tempURL1) }
+            // defer { try? FileManager.default.removeItem(at: tempURL2) }
+
+            // let socket1 = socket(domain, type, `protocol`)
+            // let socket2 = socket(domain, type, `protocol`)
+
+            // guard socket1 != INVALID_SOCKET, socket2 != INVALID_SOCKET else { 
+            //     if socket1 != INVALID_SOCKET { _ = close(socket1) }
+            //     if socket2 != INVALID_SOCKET { _ = close(socket2) }
+            //     return (INVALID_SOCKET, INVALID_SOCKET) 
+            // }
+
+            // let addr1 = makeAddressUnix(path: tempURL1.path)
+            // let addr2 = makeAddressUnix(path: tempURL2.path)
+
+            // guard addr1.withSockAddr({ bind(socket1, $0, addr1.size) }) == 0 else { 
+            //     _ = close(socket1)
+            //     _ = close(socket2)
+            //     return (INVALID_SOCKET, INVALID_SOCKET) 
+            // }
+
+            // guard addr2.withSockAddr({ bind(socket2, $0, addr2.size) }) == 0 else {
+            //     _ = close(socket1)
+            //     _ = close(socket2)
+            //     return (INVALID_SOCKET, INVALID_SOCKET)
+            // }
+
+            // guard addr2.withSockAddr({ connect(socket1, $0, addr2.size) }) == 0 else {
+            //     _ = close(socket1)
+            //     _ = close(socket2)
+            //     return (INVALID_SOCKET, INVALID_SOCKET)
+            // }
+
+            // guard addr1.withSockAddr({ connect(socket2, $0, addr1.size) }) == 0 else {
+            //     _ = close(socket1)
+            //     _ = close(socket2)
+            //     return (INVALID_SOCKET, INVALID_SOCKET)
+            // }
+
+            // return (socket1, socket2)
+        } else {
+            return (INVALID_SOCKET, INVALID_SOCKET)
+        }
     }
 
     static func setsockopt(_ fd: FileDescriptorType, _ level: Int32, _ name: Int32,
@@ -196,19 +300,29 @@ extension Socket {
     }
 
     static func recvfrom(_ fd: FileDescriptorType, _ buffer: UnsafeMutableRawPointer!, _ nbyte: Int, _ flags: Int32, _ addr: UnsafeMutablePointer<sockaddr>!, _ len: UnsafeMutablePointer<socklen_t>!) -> Int {
-        WinSDK.recvfrom(fd, buffer, nbyte, flags, addr, len)
+        Int(WinSDK.recvfrom(fd, buffer, Int32(nbyte), flags, addr, len))
     }
 
     static func sendto(_ fd: FileDescriptorType, _ buffer: UnsafeRawPointer!, _ nbyte: Int, _ flags: Int32, _ destaddr: UnsafePointer<sockaddr>!, _ destlen: socklen_t) -> Int {
-        WinSDK.sendto(fd, buffer, nbyte, flags, destaddr, destlen)
+        Int(WinSDK.sendto(fd, buffer, Int32(nbyte), flags, destaddr, destlen))
     }
+}
 
-    static func recvmsg(_ fd: FileDescriptorType, _ message: UnsafeMutablePointer<msghdr>, _ flags: Int32) -> Int {
-        WinSDK.recvmsg(fd, message, flags)
+public extension in_addr {
+    var s_addr: UInt32 {
+        get {
+            S_un.S_addr
+        } set {
+            S_un.S_addr = newValue
+        }
     }
+}
 
-    static func sendmsg(_ fd: FileDescriptorType, _ message: UnsafePointer<msghdr>, _ flags: Int32) -> Int {
-        WinSDK.sendmsg(fd, message, flags)
+private extension URL {
+    var fileSystemRepresentation: String {
+        withUnsafeFileSystemRepresentation {
+            String(cString: $0!)
+        }
     }
 }
 
