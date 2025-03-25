@@ -248,7 +248,7 @@ public struct Socket: Sendable, Hashable {
         guard count > 0 else {
             if errno == EWOULDBLOCK {
                 throw SocketError.blocked
-            } else if errnoSignalsDisconnected() || count == 0 {
+            } else if errno == EBADF || count == 0 {
                 throw SocketError.disconnected
             } else {
                 throw SocketError.makeFailed("Read")
@@ -275,7 +275,7 @@ public struct Socket: Sendable, Hashable {
         guard count > 0 else {
             if errno == EWOULDBLOCK {
                 throw SocketError.blocked
-            } else if errnoSignalsDisconnected() || count == 0 {
+            } else if errno == EBADF || count == 0 {
                 throw SocketError.disconnected
             } else {
                 throw SocketError.makeFailed("RecvFrom")
@@ -340,7 +340,7 @@ public struct Socket: Sendable, Hashable {
         guard count > 0 else {
             if errno == EWOULDBLOCK || errno == EAGAIN {
                 throw SocketError.blocked
-            } else if errnoSignalsDisconnected() || count == 0 {
+            } else if errno == EBADF || count == 0 {
                 throw SocketError.disconnected
             } else {
                 throw SocketError.makeFailed("RecvMsg")
@@ -365,7 +365,7 @@ public struct Socket: Sendable, Hashable {
         guard sent > 0 else {
             if errno == EWOULDBLOCK {
                 throw SocketError.blocked
-            } else if errnoSignalsDisconnected() {
+            } else if errno == EBADF {
                 throw SocketError.disconnected
             } else {
                 throw SocketError.makeFailed("Write")
@@ -631,14 +631,6 @@ package extension Socket {
     static func makeNonBlockingPair(type: SocketType = .stream) throws -> (Socket, Socket) {
         try Socket.makePair(flags: .nonBlocking, type: type)
     }
-}
-
-fileprivate func errnoSignalsDisconnected() -> Bool {
-    #if canImport(WinSDK)
-    return errno == WSAENOTSOCK || errno == WSAENOTCONN || errno == WSAECONNRESET
-    #else
-    return errno == EBADF
-    #endif
 }
 
 #if !canImport(WinSDK)
