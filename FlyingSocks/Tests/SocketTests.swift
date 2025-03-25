@@ -161,7 +161,7 @@ struct SocketTests {
         let socket = try Socket(domain: AF_UNIX, type: .stream)
 
         try socket.setValue(2048, for: .receiveBufferSize)
-#if canImport(Darwin)
+#if canImport(Darwin) || canImport(WinSDK)
         #expect(try socket.getValue(for: .receiveBufferSize) == Int32(2048))
 #else
         // Linux kernel doubles this value (to allow space for bookkeeping overhead)
@@ -174,7 +174,7 @@ struct SocketTests {
         let socket = try Socket(domain: AF_UNIX, type: .stream)
 
         try socket.setValue(2048, for: .sendBufferSize)
-#if canImport(Darwin)
+#if canImport(Darwin) || canImport(WinSDK)
         #expect(try socket.getValue(for: .sendBufferSize) == Int32(2048))
 #else
         // Linux kernel doubles this value (to allow space for bookkeeping overhead)
@@ -204,7 +204,7 @@ struct SocketTests {
 
     @Test
     func socketAccept_ThrowsError_WhenInvalid() {
-        let socket = Socket(file: -1)
+        let socket = Socket.invalid()
         #expect(throws: SocketError.self) {
             try socket.accept()
         }
@@ -212,7 +212,7 @@ struct SocketTests {
 
     @Test
     func socketConnect_ThrowsError_WhenInvalid() {
-        let socket = Socket(file: -1)
+        let socket = Socket.invalid()
         #expect(throws: SocketError.self) {
             try socket.connect(to: .unix(path: "test"))
         }
@@ -220,7 +220,7 @@ struct SocketTests {
 
     @Test
     func socketClose_ThrowsError_WhenInvalid() {
-        let socket = Socket(file: -1)
+        let socket = Socket.invalid()
         #expect(throws: SocketError.self) {
             try socket.close()
         }
@@ -228,7 +228,7 @@ struct SocketTests {
 
     @Test
     func socketListen_ThrowsError_WhenInvalid() {
-        let socket = Socket(file: -1)
+        let socket = Socket.invalid()
         #expect(throws: SocketError.self) {
             try socket.listen()
         }
@@ -248,7 +248,7 @@ struct SocketTests {
 
     @Test
     func socketBind_ToINET6_ThrowsError_WhenInvalid() {
-        let socket = Socket(file: -1)
+        let socket = Socket.invalid()
         let address = Socket.makeAddressINET6(port: 8080)
         #expect(throws: SocketError.self) {
             try socket.bind(to: address)
@@ -257,7 +257,7 @@ struct SocketTests {
 
     @Test
     func socketBind_ToStorage_ThrowsError_WhenInvalid() {
-        let socket = Socket(file: -1)
+        let socket = Socket.invalid()
         let address = Socket.makeAddressINET6(port: 8080)
         #expect(throws: SocketError.self) {
             try socket.bind(to: address)
@@ -266,7 +266,7 @@ struct SocketTests {
 
     @Test
     func socketGetOption_ThrowsError_WhenInvalid() {
-        let socket = Socket(file: -1)
+        let socket = Socket.invalid()
         #expect(throws: SocketError.self) {
             _ = try socket.getValue(for: .localAddressReuse)
         }
@@ -274,7 +274,7 @@ struct SocketTests {
 
     @Test
     func socketSetOption_ThrowsError_WhenInvalid() {
-        let socket = Socket(file: -1)
+        let socket = Socket.invalid()
         #expect(throws: SocketError.self) {
             try socket.setValue(true, for: .localAddressReuse)
         }
@@ -282,7 +282,7 @@ struct SocketTests {
 
     @Test
     func socketGetFlags_ThrowsError_WhenInvalid() {
-        let socket = Socket(file: -1)
+        let socket = Socket.invalid()
         #expect(throws: SocketError.self) {
             _ = try socket.flags
         }
@@ -290,7 +290,7 @@ struct SocketTests {
 
     @Test
     func socketSetFlags_ThrowsError_WhenInvalid() {
-        let socket = Socket(file: -1)
+        let socket = Socket.invalid()
         #expect(throws: SocketError.self) {
             try socket.setFlags(.nonBlocking)
         }
@@ -298,7 +298,7 @@ struct SocketTests {
 
     @Test
     func socketRemotePeer_ThrowsError_WhenInvalid() {
-        let socket = Socket(file: -1)
+        let socket = Socket.invalid()
         #expect(throws: SocketError.self) {
             try socket.remotePeer()
         }
@@ -306,7 +306,7 @@ struct SocketTests {
 
     @Test
     func socket_sockname_ThrowsError_WhenInvalid() {
-        let socket = Socket(file: -1)
+        let socket = Socket.invalid()
         #expect(throws: SocketError.self) {
             try socket.sockname()
         }
@@ -331,6 +331,7 @@ struct SocketTests {
         )
     }
 
+    #if !canImport(WinSDK)
     @Test
     func makes_datagram_ip6() throws {
         let socket = try Socket(domain: Int32(sa_family_t(AF_INET6)), type: .datagram)
@@ -339,6 +340,7 @@ struct SocketTests {
             try socket.getValue(for: .packetInfoIPv6) == true
         )
     }
+    #endif
 }
 
 extension Socket.Flags {
@@ -346,7 +348,15 @@ extension Socket.Flags {
 }
 
 private extension Socket {
-    init(file: Int32) {
+    init(file: FileDescriptorType) {
         self.init(file: .init(rawValue: file))
+    }
+
+    static func invalid() -> Socket {
+        #if canImport(WinSDK)
+        self.init(file: .init(rawValue: INVALID_SOCKET))
+        #else
+        self.init(file: .init(rawValue: -1))
+        #endif
     }
 }

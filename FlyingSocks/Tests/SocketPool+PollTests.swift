@@ -254,7 +254,7 @@ private extension Poll {
 }
 
 private extension pollfd {
-    static func make(fd: Int32 = 0,
+    static func make(fd: Socket.FileDescriptorType = 0,
                      events: Int32 = POLLIN,
                      revents: Int32 = POLLIN) -> Self {
         .init(fd: fd, events: Int16(events), revents: Int16(revents))
