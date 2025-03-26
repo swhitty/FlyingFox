@@ -188,7 +188,14 @@ struct AsyncSocketTests {
         )
     }
 
-#if !canImport(WinSDK)
+    #if canImport(WinSDK)
+    @Test
+    func datagramPairCreation_Throws() async throws {
+        await #expect(throws: SocketError.self) {
+            _ = try await AsyncSocket.makeDatagramPair()
+        }
+    }
+    #else
     @Test
     func datagramSocketReceivesChunk_WhenAvailable() async throws {
         let (s1, s2, addr) = try await AsyncSocket.makeDatagramPair()
@@ -208,7 +215,9 @@ struct AsyncSocketTests {
         try s2.close()
         try? Socket.unlink(addr)
     }
+    #endif
 
+#if !canImport(WinSDK)
     #if canImport(Darwin)
     @Test
     func messageSequence_sendsMessage_receivesTuple() async throws {

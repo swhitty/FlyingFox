@@ -199,8 +199,16 @@ struct SocketTests {
         #expect(try socket.getValue(for: .localAddressReuse) == false)
     }
 
-    #if !canImport(WinSDK)
+    #if canImport(WinSDK)
     // Windows only supports setting O_NONBLOCK, and currently can't retrieve whether it's been set :)
+    @Test
+    func socket_Throws_On_Get_Flags() throws {
+        let socket = try Socket(domain: AF_UNIX, type: .stream)
+
+        try socket.setFlags(.append) // this is "OK", but actually won't set the flag
+        #expect(throws: SocketError.self) { try socket.flags.contains(.append) }
+    }
+    #else
     @Test
     func socket_Sets_And_Gets_Flags() throws {
         let socket = try Socket(domain: AF_UNIX, type: .stream)
