@@ -123,7 +123,9 @@ extension EventNotification {
         let revents = POLLEvents(poll.revents)
         let errors = Set<EventNotification.Error>.make(from: revents)
 
-        if events.contains(.write) && !errors.isEmpty {
+        let shouldSendErrors = !errors.isEmpty && (events.contains(.write) || (events.contains(.read) && !revents.intersects(with: .read)))
+
+        if shouldSendErrors {
             return EventNotification(
                 file: .init(rawValue: poll.fd),
                 events: .init(events),
@@ -198,7 +200,7 @@ private extension Socket.Events {
 
     init(_ events: POLLEvents) {
         self = []
-        if events.contains(.read) {
+        if events.intersects(with: .read) {
             self.insert(.read)
         }
         if events.contains(.write) {

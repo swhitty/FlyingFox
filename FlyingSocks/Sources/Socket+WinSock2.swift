@@ -38,7 +38,6 @@ let F_SETFL = Int32(1)
 let F_GETFL = Int32(1)
 var errno: Int32 {  WSAGetLastError() }
 let EWOULDBLOCK = WSAEWOULDBLOCK
-let EBADF = WSAENOTSOCK
 let EINPROGRESS = WSAEINPROGRESS
 let EISCONN = WSAEISCONN
 public typealias sa_family_t = ADDRESS_FAMILY
@@ -63,6 +62,7 @@ extension Socket {
     static let ipproto_ipv6 = Int32(IPPROTO_IPV6.rawValue)
     static let ip_pktinfo = Int32(IP_PKTINFO)
     static let ipv6_pktinfo = Int32(IPV6_PKTINFO)
+    static let ipv6_recvpktinfo = Int32(IPV6_PKTINFO)
 
     static func makeAddressINET(port: UInt16) -> WinSDK.sockaddr_in {
         WinSDK.sockaddr_in(
@@ -107,8 +107,7 @@ extension Socket {
     }
 
     static func fcntl(_ fd: FileDescriptorType, _ cmd: Int32) -> Int32 {
-        guard fd != INVALID_SOCKET else { return -1 }
-        return 0
+        return -1
     }
 
     static func fcntl(_ fd: FileDescriptorType, _ cmd: Int32, _ value: Int32) -> Int32 {

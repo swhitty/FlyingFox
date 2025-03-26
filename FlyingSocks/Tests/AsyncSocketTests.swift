@@ -188,6 +188,14 @@ struct AsyncSocketTests {
         )
     }
 
+    #if canImport(WinSDK)
+    @Test
+    func datagramPairCreation_Throws() async throws {
+        await #expect(throws: SocketError.self) {
+            _ = try await AsyncSocket.makeDatagramPair()
+        }
+    }
+    #else
     @Test
     func datagramSocketReceivesChunk_WhenAvailable() async throws {
         let (s1, s2, addr) = try await AsyncSocket.makeDatagramPair()
@@ -195,11 +203,11 @@ struct AsyncSocketTests {
         async let d2: (any SocketAddress, [UInt8]) = s2.receive(atMost: 100)
         // TODO: calling send() on Darwin to an unconnected datagram domain
         // socket returns EISCONN
-#if canImport(Darwin)
+        #if canImport(Darwin)
         try await s1.write("Swift".data(using: .utf8)!)
-#else
+        #else
         try await s1.send("Swift".data(using: .utf8)!, to: addr)
-#endif
+        #endif
         let v2 = try await d2
         #expect(String(data: Data(v2.1), encoding: .utf8) == "Swift")
 
@@ -207,6 +215,7 @@ struct AsyncSocketTests {
         try s2.close()
         try? Socket.unlink(addr)
     }
+    #endif
 
 #if !canImport(WinSDK)
     #if canImport(Darwin)
@@ -305,10 +314,16 @@ extension AsyncSocket {
     }
 
     static func makeListening(pool: some AsyncSocketPool) throws -> AsyncSocket {
-        let address = sockaddr_un.unix(path: #function)
+        let tempFile = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString.prefix(8)).sock")
+        let address = sockaddr_un.unix(path: tempFile.path)
         try? Socket.unlink(address)
+        defer { try? Socket.unlink(address) }
         let socket = try Socket(domain: AF_UNIX, type: .stream)
-        try socket.setValue(true, for: .localAddressReuse)
+
+        #if !canImport(WinSDK)
+            try socket.setValue(true, for: .localAddressReuse)
+        #endif
+
         try socket.bind(to: address)
         try socket.listen()
         return try AsyncSocket(socket: socket, pool: pool)

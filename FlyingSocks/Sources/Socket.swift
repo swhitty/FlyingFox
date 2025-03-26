@@ -126,10 +126,8 @@ public struct Socket: Sendable, Hashable {
         switch domain {
         case AF_INET:
             try setValue(true, for: .packetInfoIP)
-        #if !canImport(WinSDK)
         case AF_INET6:
             try setValue(true, for: .packetInfoIPv6)
-        #endif
         default:
             return
         }
@@ -221,7 +219,7 @@ public struct Socket: Sendable, Hashable {
             Socket.connect(file.rawValue, $0, address.size)
         }
         guard result >= 0 || errno == EISCONN else {
-            if errno == EINPROGRESS {
+            if errno == EINPROGRESS || errno == EWOULDBLOCK {
                 throw SocketError.blocked
             } else {
                 throw SocketError.makeFailed("Connect")
@@ -248,7 +246,7 @@ public struct Socket: Sendable, Hashable {
         guard count > 0 else {
             if errno == EWOULDBLOCK {
                 throw SocketError.blocked
-            } else if errno == EBADF || count == 0 {
+            } else if errnoSignalsDisconnected() || count == 0 {
                 throw SocketError.disconnected
             } else {
                 throw SocketError.makeFailed("Read")
@@ -275,7 +273,7 @@ public struct Socket: Sendable, Hashable {
         guard count > 0 else {
             if errno == EWOULDBLOCK {
                 throw SocketError.blocked
-            } else if errno == EBADF || count == 0 {
+            } else if errnoSignalsDisconnected() || count == 0 {
                 throw SocketError.disconnected
             } else {
                 throw SocketError.makeFailed("RecvFrom")
@@ -340,7 +338,7 @@ public struct Socket: Sendable, Hashable {
         guard count > 0 else {
             if errno == EWOULDBLOCK || errno == EAGAIN {
                 throw SocketError.blocked
-            } else if errno == EBADF || count == 0 {
+            } else if errnoSignalsDisconnected() || count == 0 {
                 throw SocketError.disconnected
             } else {
                 throw SocketError.makeFailed("RecvMsg")
@@ -365,7 +363,7 @@ public struct Socket: Sendable, Hashable {
         guard sent > 0 else {
             if errno == EWOULDBLOCK {
                 throw SocketError.blocked
-            } else if errno == EBADF {
+            } else if errnoSignalsDisconnected() {
                 throw SocketError.disconnected
             } else {
                 throw SocketError.makeFailed("Write")
@@ -568,9 +566,13 @@ public extension SocketOption where Self == BoolSocketOption {
         BoolSocketOption(level: Socket.ipproto_ip, name: Socket.ip_pktinfo)
     }
 
-    #if !canImport(WinSDK)
     static var packetInfoIPv6: Self {
         BoolSocketOption(level: Socket.ipproto_ipv6, name: Socket.ipv6_recvpktinfo)
+    }
+
+    #if canImport(WinSDK)
+    static var exclusiveLocalAddressReuse: Self {
+        BoolSocketOption(name: ~SO_REUSEADDR) // SO_EXCLUSIVEADDRUSE macro
     }
     #endif
 
@@ -625,6 +627,14 @@ package extension Socket {
     static func makeNonBlockingPair(type: SocketType = .stream) throws -> (Socket, Socket) {
         try Socket.makePair(flags: .nonBlocking, type: type)
     }
+}
+
+fileprivate func errnoSignalsDisconnected() -> Bool {
+    #if canImport(WinSDK)
+    return errno == WSAENOTSOCK || errno == WSAENOTCONN || errno == WSAECONNRESET
+    #else
+    return errno == EBADF
+    #endif
 }
 
 #if !canImport(WinSDK)
