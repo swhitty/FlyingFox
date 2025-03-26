@@ -107,8 +107,7 @@ extension Socket {
     }
 
     static func fcntl(_ fd: FileDescriptorType, _ cmd: Int32) -> Int32 {
-        guard fd != INVALID_SOCKET else { return -1 }
-        return 0
+        return -1
     }
 
     static func fcntl(_ fd: FileDescriptorType, _ cmd: Int32, _ value: Int32) -> Int32 {
