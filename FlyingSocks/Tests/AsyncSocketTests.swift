@@ -188,6 +188,7 @@ struct AsyncSocketTests {
         )
     }
 
+#if !canImport(WinSDK)
     @Test
     func datagramSocketReceivesChunk_WhenAvailable() async throws {
         let (s1, s2, addr) = try await AsyncSocket.makeDatagramPair()
@@ -195,11 +196,11 @@ struct AsyncSocketTests {
         async let d2: (any SocketAddress, [UInt8]) = s2.receive(atMost: 100)
         // TODO: calling send() on Darwin to an unconnected datagram domain
         // socket returns EISCONN
-#if canImport(Darwin)
+        #if canImport(Darwin)
         try await s1.write("Swift".data(using: .utf8)!)
-#else
+        #else
         try await s1.send("Swift".data(using: .utf8)!, to: addr)
-#endif
+        #endif
         let v2 = try await d2
         #expect(String(data: Data(v2.1), encoding: .utf8) == "Swift")
 
@@ -208,7 +209,6 @@ struct AsyncSocketTests {
         try? Socket.unlink(addr)
     }
 
-#if !canImport(WinSDK)
     #if canImport(Darwin)
     @Test
     func messageSequence_sendsMessage_receivesTuple() async throws {

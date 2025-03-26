@@ -131,6 +131,11 @@ struct SocketTests {
         }
     }
 
+    #if !canImport(WinSDK)
+    // Not a good test on Windows, unfortunately:
+    // https://groups.google.com/g/microsoft.public.win32.programmer.networks/c/rBg0a8oERGQ/m/AvVOd-BIHhMJ
+    // "If necessary, Winsock can buffer significantly more than the SO_SNDBUF buffer size."
+
     @Test
     func socketWrite_ThrowsBlocked_WhenBufferIsFull() throws {
         let (s1, s2) = try Socket.makeNonBlockingPair()
@@ -145,6 +150,7 @@ struct SocketTests {
         try s1.close()
         try s2.close()
     }
+    #endif
 
     @Test
     func socketWrite_Throws_WhenSocketIsNotConnected() async throws {
@@ -193,6 +199,8 @@ struct SocketTests {
         #expect(try socket.getValue(for: .localAddressReuse) == false)
     }
 
+    #if !canImport(WinSDK)
+    // Windows only supports setting O_NONBLOCK, and currently can't retrieve whether it's been set :)
     @Test
     func socket_Sets_And_Gets_Flags() throws {
         let socket = try Socket(domain: AF_UNIX, type: .stream)
@@ -201,6 +209,7 @@ struct SocketTests {
         try socket.setFlags(.append)
         #expect(try socket.flags.contains(.append))
     }
+    #endif
 
     @Test
     func socketAccept_ThrowsError_WhenInvalid() {
