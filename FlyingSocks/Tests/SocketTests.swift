@@ -331,7 +331,6 @@ struct SocketTests {
         )
     }
 
-    #if !canImport(WinSDK)
     @Test
     func makes_datagram_ip6() throws {
         let socket = try Socket(domain: Int32(sa_family_t(AF_INET6)), type: .datagram)
@@ -340,7 +339,6 @@ struct SocketTests {
             try socket.getValue(for: .packetInfoIPv6) == true
         )
     }
-    #endif
 }
 
 extension Socket.Flags {

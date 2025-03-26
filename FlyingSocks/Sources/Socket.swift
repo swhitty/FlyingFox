@@ -126,10 +126,8 @@ public struct Socket: Sendable, Hashable {
         switch domain {
         case AF_INET:
             try setValue(true, for: .packetInfoIP)
-        #if !canImport(WinSDK)
         case AF_INET6:
             try setValue(true, for: .packetInfoIPv6)
-        #endif
         default:
             return
         }
@@ -568,15 +566,13 @@ public extension SocketOption where Self == BoolSocketOption {
         BoolSocketOption(level: Socket.ipproto_ip, name: Socket.ip_pktinfo)
     }
 
+    static var packetInfoIPv6: Self {
+        BoolSocketOption(level: Socket.ipproto_ipv6, name: Socket.ipv6_recvpktinfo)
+    }
+
     #if canImport(WinSDK)
     static var exclusiveLocalAddressReuse: Self {
         BoolSocketOption(name: ~SO_REUSEADDR) // SO_EXCLUSIVEADDRUSE macro
-    }
-    #endif
-
-    #if !canImport(WinSDK)
-    static var packetInfoIPv6: Self {
-        BoolSocketOption(level: Socket.ipproto_ipv6, name: Socket.ipv6_recvpktinfo)
     }
     #endif
 

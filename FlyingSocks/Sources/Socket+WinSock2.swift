@@ -62,6 +62,7 @@ extension Socket {
     static let ipproto_ipv6 = Int32(IPPROTO_IPV6.rawValue)
     static let ip_pktinfo = Int32(IP_PKTINFO)
     static let ipv6_pktinfo = Int32(IPV6_PKTINFO)
+    static let ipv6_recvpktinfo = Int32(IPV6_PKTINFO)
 
     static func makeAddressINET(port: UInt16) -> WinSDK.sockaddr_in {
         WinSDK.sockaddr_in(
