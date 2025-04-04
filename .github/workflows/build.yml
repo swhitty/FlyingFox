@@ -106,9 +106,22 @@ jobs:
       - name: Test
         run: swift test --skip-build
 
-  linux_swift_6_0_musl:
+  linux_swift_6_1:
     runs-on: ubuntu-latest
-    container: swift:6.0.3
+    container: swift:6.1
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Version
+        run: swift --version
+      - name: Build
+        run: swift build --build-tests
+      - name: Test
+        run: swift test --skip-build
+
+  linux_swift_6_1_musl:
+    runs-on: ubuntu-latest
+    container: swift:6.1
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -117,26 +130,26 @@ jobs:
       - name: SDK List Pre
         run: swift sdk list
       - name: Install SDK
-        run: swift sdk install https://download.swift.org/swift-6.0.3-release/static-sdk/swift-6.0.3-RELEASE/swift-6.0.3-RELEASE_static-linux-0.0.1.artifactbundle.tar.gz --checksum 67f765e0030e661a7450f7e4877cfe008db4f57f177d5a08a6e26fd661cdd0bd
+        run: swift sdk install https://download.swift.org/swift-6.1-release/static-sdk/swift-6.1-RELEASE/swift-6.1-RELEASE_static-linux-0.0.1.artifactbundle.tar.gz --checksum 111c6f7d280a651208b8c74c0521dd99365d785c1976a6e23162f55f65379ac6
       - name: SDK List Post
         run: swift sdk list
       - name: Build
         run: swift build --swift-sdk x86_64-swift-linux-musl
 
-  linux_swift_6_0_android:
+  linux_swift_6_1_android:
     runs-on: ubuntu-latest
-    container: swift:6.0.3
+    container: swift:6.1
     steps:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Version
         run: swift --version
       - name: Install SDK
-        run: swift sdk install https://github.com/finagolfin/swift-android-sdk/releases/download/6.0.3/swift-6.0.3-RELEASE-android-24-0.1.artifactbundle.tar.gz --checksum 4566f23ae2d36dc5c02e915cd67d83b2af971faca4b2595fdd75cf0286acfac1
+        run: swift sdk install https://github.com/finagolfin/swift-android-sdk/releases/download/6.1/swift-6.1-RELEASE-android-24-0.1.artifactbundle.tar.gz --checksum 971f3b1fd03c059803d625f0a412d7e8c4c6f34440f5216ceaf13e886e8e706f
       - name: Build
         run: swift build --swift-sdk aarch64-unknown-linux-android24
 
-  windows_swift_6_0:
+  windows_swift_6_1:
     runs-on: windows-latest
     steps:
       - name: Checkout
@@ -144,7 +157,7 @@ jobs:
       - name: Install Swift
         uses: SwiftyLab/setup-swift@latest
         with:
-          swift-version: "6.0.3"
+          swift-version: "6.1.0"
       - name: Version
         run: swift --version
       - name: Build
