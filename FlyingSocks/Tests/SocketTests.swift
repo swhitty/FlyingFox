@@ -200,6 +200,14 @@ struct SocketTests {
     }
 
     #if canImport(WinSDK)
+    @Test
+    func windows_wsa_startup_succeeds() {
+        let status = WSALifecycle.startup()
+        #expect(status.isStarted)
+        #expect(status.acceptedVersion == WSALifecycle.requiredVersion)
+        #expect(status == WSALifecycle.status)
+    }
+
     // Windows only supports setting O_NONBLOCK, and currently can't retrieve whether it's been set :)
     @Test
     func socket_Throws_On_Get_Flags() throws {
