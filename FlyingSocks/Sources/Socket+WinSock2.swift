@@ -32,6 +32,7 @@
 #if canImport(WinSDK)
 import WinSDK.WinSock2
 import Foundation
+import Synchronization
 
 let O_NONBLOCK = Int32(1)
 let F_SETFL = Int32(1)
@@ -119,7 +120,8 @@ extension Socket {
     }
 
     static func socket(_ domain: Int32, _ type: Int32, _ protocol: Int32) -> FileDescriptorType {
-        WinSDK.socket(domain, type, `protocol`)
+        WSALifecycle.startup()
+        return WinSDK.socket(domain, type, `protocol`)
     }
 
     static func socketpair(_ domain: Int32, _ type: Int32, _ protocol: Int32) -> (FileDescriptorType, FileDescriptorType) {
@@ -321,6 +323,105 @@ private extension URL {
     var fileSystemRepresentation: String {
         withUnsafeFileSystemRepresentation {
             String(cString: $0!)
+        }
+    }
+}
+
+
+struct WSAVersion: Equatable, CustomStringConvertible {
+    let major: UInt8
+    let minor: UInt8
+
+    init(_ major: UInt8, _ minor: UInt8) {
+        self.major = major
+        self.minor = minor
+    }
+
+    init(word: UInt16) {
+        self.init(UInt8(word & 0x00FF), UInt8((word & 0xFF00) >> 8))
+    }
+
+    var word: UInt16 {
+        UInt16(major) | (UInt16(minor) << 8)
+    }
+
+    var description: String {
+        "\(major).\(minor)"
+    }
+}
+
+enum WSALifecycle {
+    enum Status: Equatable {
+        case notStarted
+        case failed(Int32)
+        case incompatible(highestVersionSupported: WSAVersion)
+        case started(acceptedVersion: WSAVersion, highestVersionSupported: WSAVersion)
+
+        var acceptedVersion: WSAVersion? {
+            switch self {
+                case .started(let version, _):
+                    version
+                default:
+                    nil
+            }
+        }
+
+        var isStarted: Bool {
+            switch self {
+                case .started:
+                    true
+                default:
+                    false
+            }
+        }
+    }
+
+    static let minimumRequiredVersion = WSAVersion(2, 2)
+    private static let _status: Mutex<Status> = .init(.notStarted)
+
+    static var status: Status {
+        _status.withLock { $0 }
+    }
+
+    @discardableResult
+    static func startup() -> Status {
+        Self._status.withLock { status in
+            guard status == .notStarted else {
+                return status
+            }
+
+            var wsaData = WSADATA()
+            let startupResult = WSAStartup(Self.minimumRequiredVersion.word, &wsaData)
+
+            if startupResult == 0 {
+                let version = WSAVersion(word: wsaData.wVersion)
+                if version != minimumRequiredVersion {
+                    WSACleanup()
+                    status = .incompatible(highestVersionSupported: version)
+                } else {
+                    status = .started(acceptedVersion: version,
+                                      highestVersionSupported: .init(word: wsaData.wHighVersion))
+                }
+            } else {
+                status = .failed(startupResult)
+            }
+
+            return status
+        }
+    }
+
+    @discardableResult
+    static func cleanup() -> Status {
+        Self._status.withLock { status in
+            guard status.isStarted else {
+                return status
+            }
+
+            if WSACleanup() == 0 {
+                status = .notStarted
+            }
+
+            return status
         }
     }
 }
