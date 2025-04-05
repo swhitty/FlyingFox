@@ -204,7 +204,7 @@ struct SocketTests {
     func windows_wsa_startup_succeeds() {
         let status = WSALifecycle.startup()
         #expect(status.isStarted)
-        #expect(status.acceptedVersion == WSALifecycle.requiredVersion)
+        #expect(status.acceptedVersion == WSALifecycle.minimumRequiredVersion)
         #expect(status == WSALifecycle.status)
     }
 

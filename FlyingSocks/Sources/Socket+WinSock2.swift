@@ -376,7 +376,7 @@ enum WSALifecycle {
         }
     }
 
-    static let requiredVersion = WSAVersion(2, 2)
+    static let minimumRequiredVersion = WSAVersion(2, 2)
     private static let _status: Mutex<Status> = .init(.notStarted)
 
     static var status: Status {
@@ -391,11 +391,11 @@ enum WSALifecycle {
             }
 
             var wsaData = WSADATA()
-            let startupResult = WSAStartup(Self.requiredVersion.word, &wsaData)
+            let startupResult = WSAStartup(Self.minimumRequiredVersion.word, &wsaData)
 
             if startupResult == 0 {
                 let version = WSAVersion(word: wsaData.wVersion)
-                if version != requiredVersion {
+                if version != minimumRequiredVersion {
                     WSACleanup()
                     status = .incompatible(highestVersionSupported: version)
                 } else {
