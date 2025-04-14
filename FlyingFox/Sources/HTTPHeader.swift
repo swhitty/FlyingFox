@@ -63,6 +63,7 @@ public extension HTTPHeader {
     static let transferEncoding = HTTPHeader("Transfer-Encoding")
     static let upgrade          = HTTPHeader("Upgrade")
     static let xForwardedFor    = HTTPHeader("X-Forwarded-For")
+    static let contentDisposition = HTTPHeader("Content-Disposition")
 }
 
 public extension [HTTPHeader: String] {
