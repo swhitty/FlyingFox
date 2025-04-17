@@ -6,10 +6,10 @@ on:
   workflow_dispatch:
 
 jobs:
-  xcode_16:
+  xcode_16_3:
     runs-on: macos-15
     env:
-      DEVELOPER_DIR: /Applications/Xcode_16.2.app/Contents/Developer
+      DEVELOPER_DIR: /Applications/Xcode_16.3.app/Contents/Developer
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -38,6 +38,20 @@ jobs:
         with:
           junit: result-swift-testing.xml
           coverage: .build/debug/codecov/FlyingFox.json
+
+  xcode_16_2:
+    runs-on: macos-15
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_16.2.app/Contents/Developer
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Version
+        run: swift --version
+      - name: Build
+        run: swift build --build-tests
+      - name: Test
+        run: swift test --skip-build
 
   xcode_15_4:
     runs-on: macos-14
