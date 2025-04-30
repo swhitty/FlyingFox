@@ -64,6 +64,9 @@ public extension HTTPHeader {
     static let upgrade          = HTTPHeader("Upgrade")
     static let xForwardedFor    = HTTPHeader("X-Forwarded-For")
     static let contentDisposition = HTTPHeader("Content-Disposition")
+    static let contentRange = HTTPHeader("Content-Range")
+    static let acceptRanges = HTTPHeader("Accept-Ranges")
+    static let range = HTTPHeader("Range")
 }
 
 public extension [HTTPHeader: String] {
