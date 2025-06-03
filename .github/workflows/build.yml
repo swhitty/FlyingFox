@@ -159,7 +159,7 @@ jobs:
       - name: Version
         run: swift --version
       - name: Install SDK
-        run: swift sdk install https://github.com/finagolfin/swift-android-sdk/releases/download/6.1/swift-6.1-RELEASE-android-24-0.1.artifactbundle.tar.gz --checksum 971f3b1fd03c059803d625f0a412d7e8c4c6f34440f5216ceaf13e886e8e706f
+        run: swift sdk install https://github.com/finagolfin/swift-android-sdk/releases/download/6.1.2/swift-6.1.2-RELEASE-android-24-0.1.artifactbundle.tar.gz --checksum 6d817c947870e8c85e6cab9a6ab6d7313b50fa5a20b890c396723c0b16ab32d9
       - name: Build
         run: swift build --swift-sdk aarch64-unknown-linux-android24
 
