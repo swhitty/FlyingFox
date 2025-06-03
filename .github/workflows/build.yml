@@ -122,7 +122,7 @@ jobs:
 
   linux_swift_6_1:
     runs-on: ubuntu-latest
-    container: swift:6.1
+    container: swift:6.1.2
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -135,7 +135,7 @@ jobs:
 
   linux_swift_6_1_musl:
     runs-on: ubuntu-latest
-    container: swift:6.1
+    container: swift:6.1.2
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -144,7 +144,7 @@ jobs:
       - name: SDK List Pre
         run: swift sdk list
       - name: Install SDK
-        run: swift sdk install https://download.swift.org/swift-6.1-release/static-sdk/swift-6.1-RELEASE/swift-6.1-RELEASE_static-linux-0.0.1.artifactbundle.tar.gz --checksum 111c6f7d280a651208b8c74c0521dd99365d785c1976a6e23162f55f65379ac6
+        run: swift sdk install https://download.swift.org/swift-6.1.2-release/static-sdk/swift-6.1.2-RELEASE/swift-6.1.2-RELEASE_static-linux-0.0.1.artifactbundle.tar.gz --checksum df0b40b9b582598e7e3d70c82ab503fd6fbfdff71fd17e7f1ab37115a0665b3b
       - name: SDK List Post
         run: swift sdk list
       - name: Build
@@ -152,7 +152,7 @@ jobs:
 
   linux_swift_6_1_android:
     runs-on: ubuntu-latest
-    container: swift:6.1
+    container: swift:6.1.2
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -171,7 +171,7 @@ jobs:
       - name: Install Swift
         uses: SwiftyLab/setup-swift@latest
         with:
-          swift-version: "6.1.0"
+          swift-version: "6.1.2"
       - name: Version
         run: swift --version
       - name: Build
