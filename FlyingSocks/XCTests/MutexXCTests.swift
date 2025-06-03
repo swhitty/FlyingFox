@@ -1,5 +1,5 @@
 //
-//  MutexTests.swift
+//  MutexXCTests.swift
 //  swift-mutex
 //
 //  Created by Simon Whitty on 07/09/2024.
@@ -29,10 +29,11 @@
 //  SOFTWARE.
 //
 
+#if !canImport(Testing)
 @testable import FlyingSocks
 import XCTest
 
-final class MutexTests: XCTestCase {
+final class MutexXCTests: XCTestCase {
 
     func testWithLock_ReturnsValue() {
         let mutex = Mutex("fish")
@@ -51,11 +52,11 @@ final class MutexTests: XCTestCase {
 
     func testLockIfAvailable_ReturnsValue() {
         let mutex = Mutex("fish")
-        mutex.storage.lock()
+        mutex.unsafeLock()
         XCTAssertNil(
             mutex.withLockIfAvailable { _ in "chips" }
         )
-        mutex.storage.unlock()
+        mutex.unsafeUnlock()
         XCTAssertEqual(
             mutex.withLockIfAvailable { _ in "chips" },
             "chips"
@@ -69,3 +70,9 @@ final class MutexTests: XCTestCase {
         }
     }
 }
+
+extension Mutex {
+    func unsafeLock() { storage.lock() }
+    func unsafeUnlock() { storage.unlock() }
+}
+#endif

@@ -1,9 +1,9 @@
 //
-//  Mutex.swift
+//  MutexSwift5.swift
 //  swift-mutex
 //
-//  Created by Simon Whitty on 07/09/2024.
-//  Copyright 2024 Simon Whitty
+//  Created by Simon Whitty on 03/06/2025.
+//  Copyright 2025 Simon Whitty
 //
 //  Distributed under the permissive MIT license
 //  Get the latest version from here:
@@ -29,74 +29,37 @@
 //  SOFTWARE.
 //
 
-#if compiler(>=6)
+#if compiler(<6.0)
 
-#if !canImport(WinSDK)
-
-// Backports the Swift 6 type Mutex<Value> to all Darwin platforms
-@usableFromInline
-package struct Mutex<Value: ~Copyable>: ~Copyable {
-    let storage: Storage<Value>
-
-    @usableFromInline
-    package init(_ initialValue: consuming sending Value) {
-        self.storage = Storage(initialValue)
-    }
-
-    @usableFromInline
-    package borrowing func withLock<Result, E: Error>(
-        _ body: (inout sending Value) throws(E) -> sending Result
-    ) throws(E) -> sending Result {
-        storage.lock()
-        defer { storage.unlock() }
-        return try body(&storage.value)
-    }
-
-    @usableFromInline
-    package borrowing func withLockIfAvailable<Result, E: Error>(
-        _ body: (inout sending Value) throws(E) -> sending Result
-    ) throws(E) -> sending Result? {
-        guard storage.tryLock() else { return nil }
-        defer { storage.unlock() }
-        return try body(&storage.value)
-    }
-}
-
-extension Mutex: @unchecked Sendable where Value: ~Copyable { }
-
-#else
-
-// Windows doesn't support ~Copyable yet
+// Backports the Swift 6 type Mutex<Value> to Swift 5
 
 @usableFromInline
 package struct Mutex<Value>: @unchecked Sendable {
     let storage: Storage<Value>
 
     @usableFromInline
-    package init(_ initialValue: consuming sending Value) {
+    package init(_ initialValue: Value) {
         self.storage = Storage(initialValue)
     }
 
     @usableFromInline
-    package borrowing func withLock<Result, E: Error>(
-        _ body: (inout sending Value) throws(E) -> sending Result
-    ) throws(E) -> sending Result {
+    package borrowing func withLock<Result>(
+        _ body: (inout Value) throws -> Result
+    ) rethrows -> Result {
         storage.lock()
         defer { storage.unlock() }
         return try body(&storage.value)
     }
 
     @usableFromInline
-    package borrowing func withLockIfAvailable<Result, E: Error>(
-        _ body: (inout sending Value) throws(E) -> sending Result
-    ) throws(E) -> sending Result? {
+    package borrowing func withLockIfAvailable<Result>(
+        _ body: (inout Value) throws -> Result
+    ) rethrows -> Result? {
         guard storage.tryLock() else { return nil }
         defer { storage.unlock() }
         return try body(&storage.value)
     }
 }
-
-#endif
 
 #if canImport(Darwin)
 
@@ -106,7 +69,7 @@ import func os.os_unfair_lock_lock
 import func os.os_unfair_lock_unlock
 import func os.os_unfair_lock_trylock
 
-final class Storage<Value: ~Copyable> {
+final class Storage<Value> {
     private let _lock: os_unfair_lock_t
     var value: Value
 
@@ -133,7 +96,6 @@ final class Storage<Value: ~Copyable> {
         self._lock.deallocate()
     }
 }
-
 #elseif canImport(Glibc) || canImport(Musl) || canImport(Bionic)
 
 #if canImport(Musl)
@@ -144,9 +106,8 @@ import Android
 import Glibc
 #endif
 
-final class Storage<Value: ~Copyable> {
+final class Storage<Value> {
     private let _lock: UnsafeMutablePointer<pthread_mutex_t>
-
     var value: Value
 
     init(_ initialValue: consuming Value) {
@@ -178,7 +139,6 @@ final class Storage<Value: ~Copyable> {
         self._lock.deallocate()
     }
 }
-
 #elseif canImport(WinSDK)
 
 import ucrt
@@ -210,7 +170,7 @@ final class Storage<Value> {
 
 #endif
 
-package extension Mutex where Value: Sendable & Copyable {
+package extension Mutex where Value: Sendable {
     func copy() -> Value {
         withLock { $0 }
     }

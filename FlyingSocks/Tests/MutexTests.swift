@@ -29,6 +29,7 @@
 //  SOFTWARE.
 //
 
+#if canImport(Testing)
 @testable import FlyingSocks
 import Testing
 
@@ -54,11 +55,11 @@ struct MutexTests {
     @Test
     func lockIfAvailable_ReturnsValue() {
         let mutex = Mutex("fish")
-        mutex.storage.lock()
+        mutex.unsafeLock()
         #expect(
             mutex.withLockIfAvailable { _ in "chips" } == nil
         )
-        mutex.storage.unlock()
+        mutex.unsafeUnlock()
         #expect(
             mutex.withLockIfAvailable { _ in "chips" } == "chips"
         )
@@ -72,3 +73,9 @@ struct MutexTests {
         }
     }
 }
+
+extension Mutex {
+    func unsafeLock() { storage.lock() }
+    func unsafeUnlock() { storage.unlock() }
+}
+#endif
