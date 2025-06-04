@@ -29,6 +29,7 @@
 //  SOFTWARE.
 //
 
+import FlyingSocks
 import Foundation
 
 public struct FileHTTPHandler: HTTPHandler {
@@ -62,10 +63,14 @@ public struct FileHTTPHandler: HTTPHandler {
             return "image/png"
         case "jpeg", "jpg":
             return "image/jpeg"
+        case "m4v", "mp4":
+            return "video/mp4"
         case "pdf":
             return "application/pdf"
         case "svg":
             return "image/svg+xml"
+        case "txt":
+            return "text/plain"
         case "ico":
             return "image/x-icon"
         case "wasm":
@@ -85,13 +90,51 @@ public struct FileHTTPHandler: HTTPHandler {
         }
 
         do {
-            return try HTTPResponse(
-                statusCode: .ok,
-                headers: [.contentType: contentType],
-                body: HTTPBodySequence(file: path)
-            )
+            var headers: [HTTPHeader: String] = [
+                .contentType: contentType,
+                .acceptRanges: "bytes"
+            ]
+
+            let fileSize = try AsyncBufferedFileSequence.fileSize(at: path)
+
+            if request.method == .HEAD {
+                headers[.contentLength] = String(fileSize)
+                return HTTPResponse(
+                    statusCode: .ok,
+                    headers: headers
+                )
+            }
+
+            if let range = Self.makePartialRange(for: request.headers) {
+                headers[.contentRange] = "bytes \(range.lowerBound)-\(range.upperBound)/\(fileSize)"
+                return try HTTPResponse(
+                    statusCode: .partialContent,
+                    headers: headers,
+                    body: HTTPBodySequence(file: path, range: range.lowerBound..<range.upperBound + 1)
+                )
+            } else {
+                return try HTTPResponse(
+                    statusCode: .ok,
+                    headers: headers,
+                    body: HTTPBodySequence(file: path)
+                )
+            }
         } catch {
             return HTTPResponse(statusCode: .notFound)
         }
+    }
+
+    static func makePartialRange(for headers: [HTTPHeader: String]) -> ClosedRange<Int>? {
+        guard let headerValue = headers[.range] else { return nil }
+        let scanner = Scanner(string: headerValue)
+        guard scanner.scanString("bytes") != nil,
+              scanner.scanString("=") != nil,
+              let start = scanner.scanInt(),
+              scanner.scanString("-") != nil,
+              let end = scanner.scanInt(),
+              start <= end else {
+            return nil
+        }
+        return start...end
     }
 }

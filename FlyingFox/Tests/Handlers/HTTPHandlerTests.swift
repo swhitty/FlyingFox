@@ -156,6 +156,15 @@ struct HTTPHandlerTests {
             FileHTTPHandler.makeContentType(for: "fish.svg") == "image/svg+xml"
         )
         #expect(
+            FileHTTPHandler.makeContentType(for: "fish.txt") == "text/plain"
+        )
+        #expect(
+            FileHTTPHandler.makeContentType(for: "fish.mp4") == "video/mp4"
+        )
+        #expect(
+            FileHTTPHandler.makeContentType(for: "fish.m4v") == "video/mp4"
+        )
+        #expect(
             FileHTTPHandler.makeContentType(for: "fish.ico") == "image/x-icon"
         )
         #expect(
@@ -170,6 +179,46 @@ struct HTTPHandlerTests {
         #expect(
             FileHTTPHandler.makeContentType(for: "fish.somefile") == "application/octet-stream"
         )
+    }
+
+    @Test
+    func fileHandler_DetectsPartialRange() {
+        #expect(
+            FileHTTPHandler.makePartialRange(for: [.range: "bytes=1-5"]) == 1...5
+        )
+        #expect(
+            FileHTTPHandler.makePartialRange(for: [.range: "bytes = 8 - 10"]) == 8...10
+        )
+        #expect(
+            FileHTTPHandler.makePartialRange(for: [.range: "bytes=5-1"]) == nil
+        )
+        #expect(
+            FileHTTPHandler.makePartialRange(for: [.range: "byte=1-5"]) == nil
+        )
+        #expect(
+            FileHTTPHandler.makePartialRange(for: [.range: ""]) == nil
+        )
+    }
+
+    @Test
+    func fileHandler_ReturnsHeaders_WhenMethodIsHEAD() async throws {
+        let handler = FileHTTPHandler(named: "Stubs/fish.json", in: .module)
+
+        let response = try await handler.handleRequest(.make(method: .HEAD))
+        #expect(response.statusCode == .ok)
+        #expect(response.headers[.contentLength] == "17")
+        #expect(response.headers[.acceptRanges] == "bytes")
+        try await #expect(response.bodyData.isEmpty)
+    }
+
+    @Test
+    func fileHandler_Returns206WhenPartialRangeRequested() async throws {
+        let handler = FileHTTPHandler(named: "Stubs/fish.json", in: .module)
+
+        let response = try await handler.handleRequest(.make(headers: [.range: "bytes=10-14"]))
+        #expect(response.statusCode == .partialContent)
+        #expect(response.headers[.contentRange] == "bytes 10-14/17")
+        try await #expect(response.bodyString == "cakes")
     }
 
     //MARK: - ProxyHTTPHandler

@@ -61,8 +61,8 @@ final class AsyncBufferedFileSequenceTests: XCTestCase {
         )
     }
 
-    func testReadsEntireFile() async {
-        let sequence = AsyncBufferedFileSequence(contentsOf: .jackOfHeartsRecital)
+    func testReadsEntireFile() async throws {
+        let sequence = try AsyncBufferedFileSequence(contentsOf: .jackOfHeartsRecital)
 
         await AsyncAssertEqual(
             try await sequence.getAllData(),
