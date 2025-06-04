@@ -35,27 +35,46 @@ package struct AsyncBufferedFileSequence: AsyncBufferedSequence {
     package typealias Element = UInt8
 
     private let fileURL: URL
+    private let range: Range<Int>
 
-    package init(contentsOf fileURL: URL) {
+    package let fileSize: Int
+    package var count: Int { range.count }
+
+    package init(contentsOf fileURL: URL, range: Range<Int>? = nil) throws {
         self.fileURL = fileURL
+        self.fileSize = try Self.fileSize(at: fileURL)
+
+        if let range {
+            self.range = range
+            guard range.lowerBound >= 0, range.upperBound <= fileSize else {
+                throw FileSizeError("Invalid range \(range) for file size \(fileSize)")
+            }
+        } else {
+            self.range = 0..<fileSize
+        }
     }
 
     package func makeAsyncIterator() -> Iterator {
-        Iterator(fileURL: fileURL)
+        Iterator(fileURL: fileURL, range: range)
     }
 
     package struct Iterator: AsyncBufferedIteratorProtocol {
 
         private let fileURL: URL
+        private let range: Range<Int>
         private var fileHandle: FileHandle?
+        private var offset: Int = 0
 
-        init(fileURL: URL) {
+        init(fileURL: URL, range: Range<Int>) {
             self.fileURL = fileURL
+            self.range = range
+            self.offset = range.lowerBound
         }
 
         private mutating func makeOrGetFileHandle() throws -> FileHandle {
             guard let fileHandle else {
                 let handle = try FileHandle(forReadingFrom: fileURL)
+                try handle.seek(toOffset: UInt64(offset))
                 self.fileHandle = handle
                 return handle
             }
@@ -67,7 +86,16 @@ package struct AsyncBufferedFileSequence: AsyncBufferedSequence {
         }
 
         package mutating func nextBuffer(suggested count: Int) async throws -> Data? {
-            try makeOrGetFileHandle().read(suggestedCount: count)
+            let endIndex = Swift.min(offset + count, range.upperBound)
+            guard endIndex <= range.upperBound else {
+                return nil
+            }
+            guard let data = try makeOrGetFileHandle().read(suggestedCount: endIndex - offset) else {
+                return nil
+            }
+
+            offset += data.count
+            return data
         }
     }
 }
@@ -85,20 +113,24 @@ extension FileHandle {
     }
 }
 
-package extension AsyncBufferedFileSequence {
+extension AsyncBufferedFileSequence {
 
-    static func fileSize(at url: URL) throws -> Int {
+    package static func fileSize(at url: URL) throws -> Int {
         try fileSize(from: FileManager.default.attributesOfItem(atPath: url.path))
     }
 
-    internal static func fileSize(from att: [FileAttributeKey: Any]) throws -> Int {
+    static func fileSize(from att: [FileAttributeKey: Any]) throws -> Int {
         guard let size = att[.size] as? UInt64 else {
-            throw FileSizeError()
+            throw FileSizeError("File size not found")
         }
         return Int(size)
     }
 
-    internal struct FileSizeError: LocalizedError {
-        package var errorDescription: String? = "File size not found"
+    struct FileSizeError: LocalizedError {
+        package var errorDescription: String?
+
+        init(_ message: String) {
+            self.errorDescription = message
+        }
     }
 }

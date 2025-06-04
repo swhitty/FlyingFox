@@ -39,7 +39,8 @@ struct HTTPEncoder {
                       response.statusCode.phrase].joined(separator: " ")
 
         var httpHeaders = response.headers
-        if let contentLength = makeContentLength(from: response.payload) {
+        if let contentLength = makeContentLength(from: response.payload),
+           httpHeaders[.contentLength] == nil {
             httpHeaders[.contentLength] = String(contentLength)
         } else if let encoding = makeTransferEncoding(from: response.payload) {
             httpHeaders.addValue(encoding, for: .transferEncoding)

@@ -39,11 +39,11 @@ struct AsyncBufferedFileSequenceTests {
     func fileSize() async throws {
         #if os(Windows)
         try #expect(
-            AsyncBufferedFileSequence.fileSize(at: .jackOfHeartsRecital) == 304
+            AsyncBufferedFileSequence(contentsOf: .jackOfHeartsRecital).fileSize == 304
         )
         #else
         try #expect(
-            AsyncBufferedFileSequence.fileSize(at: .jackOfHeartsRecital) == 299
+            AsyncBufferedFileSequence(contentsOf: .jackOfHeartsRecital).fileSize == 299
         )
         #endif
         
@@ -53,6 +53,28 @@ struct AsyncBufferedFileSequenceTests {
         #expect(throws: (any Error).self) {
             try AsyncBufferedFileSequence.fileSize(from: [:])
         }
+        #expect(throws: (any Error).self) {
+            try AsyncBufferedFileSequence(contentsOf: .jackOfHeartsRecital, range: 0..<1000)
+        }
+    }
+
+    @Test
+    func count() async throws {
+        #if os(Windows)
+        try #expect(
+            AsyncBufferedFileSequence(contentsOf: .jackOfHeartsRecital).count == 304
+        )
+        #else
+        try #expect(
+            AsyncBufferedFileSequence(contentsOf: .jackOfHeartsRecital).count == 299
+        )
+        #endif
+        try #expect(
+            AsyncBufferedFileSequence(contentsOf: .jackOfHeartsRecital, range: 0..<10).count == 10
+        )
+        try #expect(
+            AsyncBufferedFileSequence(contentsOf: .jackOfHeartsRecital, range: 20..<25).count == 5
+        )
     }
 
     @Test
@@ -68,10 +90,23 @@ struct AsyncBufferedFileSequenceTests {
 
     @Test
     func readsEntireFile() async throws {
-        let sequence = AsyncBufferedFileSequence(contentsOf: .jackOfHeartsRecital)
+        let sequence = try AsyncBufferedFileSequence(contentsOf: .jackOfHeartsRecital)
 
         #expect(
             try await sequence.getAllData() == Data(contentsOf: .jackOfHeartsRecital)
+        )
+    }
+
+    @Test
+    func readsPartialFile() async throws {
+        let sequence = try AsyncBufferedFileSequence(contentsOf: .jackOfHeartsRecital, range: 4..<9)
+        #expect(
+            try await sequence.readAllToString() == "doors"
+        )
+
+        let another = try AsyncBufferedFileSequence(contentsOf: .jackOfHeartsRecital, range: 15..<31)
+        #expect(
+            try await another.readAllToString() == "the boys finally"
         )
     }
 }
@@ -82,3 +117,15 @@ private extension URL {
             .appendingPathComponent("JackOfHeartsRecital.txt")
     }
 }
+
+private extension AsyncBufferedSequence where Element == UInt8 {
+
+    func readAllToString(suggestedBuffer count: Int = 4096) async throws -> String {
+        let data = try await getAllData()
+        guard let string = String(data: data, encoding: .utf8) else {
+            throw SocketError.disconnected
+        }
+        return string
+    }
+}
+

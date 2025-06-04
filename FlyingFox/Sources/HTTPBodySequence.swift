@@ -69,8 +69,12 @@ public struct HTTPBodySequence: Sendable, AsyncSequence {
         )
     }
 
-    public init(file url: URL, suggestedBufferSize: Int = 4096) throws {
-        self.storage = try Storage(fileURL: url, bufferSize: suggestedBufferSize)
+    public init(file url: URL, range: Range<Int>? = nil, suggestedBufferSize: Int = 4096) throws {
+        self.storage = try Storage(
+            fileURL: url,
+            range: range,
+            bufferSize: suggestedBufferSize
+        )
     }
 
     public func makeAsyncIterator() -> Iterator {
@@ -91,9 +95,10 @@ public struct HTTPBodySequence: Sendable, AsyncSequence {
             self.canReplay = true
         }
 
-        init(fileURL: URL, bufferSize: Int) throws {
-            self.sequence = AsyncBufferedFileSequence(contentsOf: fileURL)
-            self.count =  try AsyncBufferedFileSequence.fileSize(at: fileURL)
+        init(fileURL: URL, range: Range<Int>?, bufferSize: Int) throws {
+            let fileSequence = try AsyncBufferedFileSequence(contentsOf: fileURL, range: range)
+            self.sequence = fileSequence
+            self.count = fileSequence.count
             self.bufferSize = bufferSize
             self.canReplay = true
         }
