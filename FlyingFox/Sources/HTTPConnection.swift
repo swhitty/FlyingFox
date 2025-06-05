@@ -60,8 +60,15 @@ struct HTTPConnection: Sendable {
         switch response.payload {
         case .httpBody(let sequence):
             try await socket.write(header)
+            var sent = 0
             for try await chunk in sequence {
-                try await socket.write(chunk)
+                do {
+                    try await socket.write(chunk)
+                    sent += chunk.count
+                } catch {
+                    let total = sequence.count.map(String.init) ?? "unknown"
+                    throw Error("\(error.localizedDescription), sent: \(sent)/\(total).")
+                }
             }
         case .webSocket(let handler):
             try await switchToWebSocket(with: handler, response: header)
@@ -81,6 +88,14 @@ struct HTTPConnection: Sendable {
 
     func close() throws {
         try socket.close()
+    }
+
+    struct Error: LocalizedError {
+        var errorDescription: String?
+
+        init(_ description: String) {
+            self.errorDescription = description
+        }
     }
 }
 

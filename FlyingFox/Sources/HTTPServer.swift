@@ -352,7 +352,8 @@ extension Logging {
     }
 
     func logRequest(_ request: HTTPRequest, on connection: HTTPConnection) {
-        logInfo("\(connection.identifer) request: \(request.method.rawValue) \(request.path)")
+        let suffix = request.headers[.range] != nil ? " <ranged>" : ""
+        logInfo("\(connection.identifer) request: \(request.method.rawValue) \(request.path)\(suffix)")
     }
 
     func logError(_ error: any Error, on connection: HTTPConnection) {

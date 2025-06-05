@@ -187,6 +187,15 @@ struct HTTPHandlerTests {
             FileHTTPHandler.makePartialRange(for: [.range: "bytes=1-5"]) == 1...5
         )
         #expect(
+            FileHTTPHandler.makePartialRange(for: [.range: "bytes=0-5100"]) == 0...5100
+        )
+        #expect(
+            FileHTTPHandler.makePartialRange(for: [.range: "bytes=0-"], fileSize: 10) == 0...9
+        )
+        #expect(
+            FileHTTPHandler.makePartialRange(for: [.range: "bytes=2-"], fileSize: 10) == 2...9
+        )
+        #expect(
             FileHTTPHandler.makePartialRange(for: [.range: "bytes = 8 - 10"]) == 8...10
         )
         #expect(
@@ -311,5 +320,11 @@ struct HTTPHandlerTests {
 
         let response = try await handler.handleRequest(.make(path: "/hello"))
         #expect(response.statusCode == .ok)
+    }
+}
+
+private extension FileHTTPHandler {
+    static func makePartialRange(for headers: [HTTPHeader: String]) -> ClosedRange<Int>? {
+        makePartialRange(for: headers, fileSize: 10000)
     }
 }
