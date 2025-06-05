@@ -105,7 +105,7 @@ public struct FileHTTPHandler: HTTPHandler {
                 )
             }
 
-            if let range = Self.makePartialRange(for: request.headers) {
+            if let range = Self.makePartialRange(for: request.headers, fileSize: fileSize) {
                 headers[.contentRange] = "bytes \(range.lowerBound)-\(range.upperBound)/\(fileSize)"
                 return try HTTPResponse(
                     statusCode: .partialContent,
@@ -124,17 +124,19 @@ public struct FileHTTPHandler: HTTPHandler {
         }
     }
 
-    static func makePartialRange(for headers: [HTTPHeader: String]) -> ClosedRange<Int>? {
+    static func makePartialRange(for headers: [HTTPHeader: String], fileSize: Int) -> ClosedRange<Int>? {
         guard let headerValue = headers[.range] else { return nil }
         let scanner = Scanner(string: headerValue)
         guard scanner.scanString("bytes") != nil,
               scanner.scanString("=") != nil,
               let start = scanner.scanInt(),
-              scanner.scanString("-") != nil,
-              let end = scanner.scanInt(),
-              start <= end else {
+              scanner.scanString("-") != nil else {
             return nil
         }
+
+        // if no end clamp at 10MB
+        let end = scanner.scanInt() ?? min(start + 10_000_000, fileSize) - 1
+        guard start <= end else { return nil }
         return start...end
     }
 }
