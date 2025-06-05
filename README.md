@@ -114,6 +114,13 @@ await server.appendRoute("GET /mock", to: .file(named: "mock.json"))
 
 `FileHTTPHandler` will return `HTTP 404` if the file does not exist.
 
+
+[Range requests](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Range_requests) are supported, responding with `HTTP 206 Partial Content` allowing for efficient streaming of media content:
+
+```swift
+await server.appendRoute("GET,HEAD /jaws", to: .file(named: "jaws.m4v"))
+```
+
 ### DirectoryHTTPHandler
 
 Requests can be routed to static files within a directory with `DirectoryHTTPHandler`:
