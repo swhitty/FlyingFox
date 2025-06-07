@@ -31,13 +31,8 @@
 
 import Foundation
 
-public struct TimeoutError: LocalizedError {
-    public var errorDescription: String?
-
-    init(_ description: String) {
-        self.errorDescription = description
-    }
-}
+@available(*, unavailable, renamed: "SocketError.timeout")
+public typealias TimeoutError = SocketError
 
 #if compiler(>=6.0)
 package func withThrowingTimeout<T>(
@@ -53,7 +48,7 @@ package func withThrowingTimeout<T>(
         let timeoutTask = Task {
             defer { bodyTask.cancel() }
             try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
-            throw TimeoutError("Task timed out before completion. Timeout: \(seconds) seconds.")
+            throw SocketError.makeTaskTimeout(seconds: seconds)
         }
 
         let bodyResult = await withTaskCancellationHandler {
@@ -63,9 +58,8 @@ package func withThrowingTimeout<T>(
         }
         timeoutTask.cancel()
 
-        if case .failure(let timeoutError) = await timeoutTask.result,
-           timeoutError is TimeoutError {
-            throw timeoutError
+        if case let .failure(SocketError.timeout(message: message)) = await timeoutTask.result {
+            throw SocketError.timeout(message: message)
         } else {
             return try bodyResult.get()
         }
@@ -97,7 +91,7 @@ private func _withThrowingTimeout<T: Sendable>(
         }
         group.addTask {
             try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
-            throw TimeoutError("Task timed out before completion. Timeout: \(seconds) seconds.")
+            throw SocketError.makeTaskTimeout(seconds: seconds)
         }
         let success = try await group.next()!
         group.cancelAll()
@@ -137,5 +131,11 @@ package extension Task {
                 return try await value
             }
         }
+    }
+}
+
+package extension SocketError {
+    static func makeTaskTimeout(seconds timeout: TimeInterval) -> SocketError {
+        .timeout(message: "Task timed out before completion. Timeout: \(timeout) seconds.")
     }
 }

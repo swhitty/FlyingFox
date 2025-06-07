@@ -53,9 +53,9 @@ final class TaskTimeoutTests: XCTestCase {
         // then
         do {
             _ = try await task.value
-            XCTFail("Expected TimeoutError")
+            XCTFail("Expected SocketError.timeout")
         } catch {
-            XCTAssertTrue(error is TimeoutError)
+            XCTAssertEqual(error as? SocketError, .makeTaskTimeout(seconds: 0.5))
         }
     }
 
@@ -110,10 +110,13 @@ final class TaskTimeoutTests: XCTestCase {
             try await Task.sleep(seconds: 10)
         }
 
-        await AsyncAssertThrowsError(
-            try await task.getValue(cancelling: .afterTimeout(seconds: 0.1)),
-            of: TimeoutError.self
-        )
+        // then
+        do {
+            try await task.getValue(cancelling: .afterTimeout(seconds: 0.1))
+            XCTFail("Expected SocketError.timeout")
+        } catch {
+            XCTAssertEqual(error as? SocketError, .makeTaskTimeout(seconds: 0.1))
+        }
     }
 
     func testTaskTimeoutParentReturnsSuccess() async {
@@ -164,7 +167,7 @@ final class TaskTimeoutTests: XCTestCase {
             }
             XCTFail("Expected Error")
         } catch {
-            XCTAssertTrue(error is TimeoutError)
+            XCTAssertEqual(error as? SocketError, .makeTaskTimeout(seconds: 0.05))
         }
     }
 
@@ -196,7 +199,7 @@ final class TaskTimeoutTests: XCTestCase {
             )
             XCTFail("Expected Error")
         } catch {
-            XCTAssertTrue(error is TimeoutError)
+            XCTAssertEqual(error as? SocketError, .makeTaskTimeout(seconds: 0.05))
         }
     }
 

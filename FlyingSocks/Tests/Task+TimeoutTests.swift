@@ -54,7 +54,7 @@ struct TaskTimeoutTests {
         }
 
         // then
-        await #expect(throws: TimeoutError.self) {
+        await #expect(throws: SocketError.makeTaskTimeout(seconds: 0.01)) {
             _ = try await task.value
         }
     }
@@ -109,7 +109,7 @@ struct TaskTimeoutTests {
             try await Task.sleep(seconds: 10)
         }
 
-        await #expect(throws: TimeoutError.self) {
+        await #expect(throws: SocketError.makeTaskTimeout(seconds: 0.1)) {
             try await task.getValue(cancelling: .afterTimeout(seconds: 0.1))
         }
     }
@@ -154,7 +154,7 @@ struct TaskTimeoutTests {
 
     @Test
     func mainActorThrowsError_WhenTimeoutExpires() async {
-        await #expect(throws: TimeoutError.self) { @MainActor in
+        await #expect(throws: SocketError.makeTaskTimeout(seconds: 0.05)) { @MainActor in
             try await withThrowingTimeout(seconds: 0.05) {
                 MainActor.assertIsolated()
                 defer { MainActor.assertIsolated() }
@@ -189,7 +189,7 @@ struct TaskTimeoutTests {
 
     @Test
     func actorThrowsError_WhenTimeoutExpires() async {
-        await #expect(throws: TimeoutError.self) {
+        await #expect(throws: SocketError.makeTaskTimeout(seconds: 0.05)) {
             try await withThrowingTimeout(seconds: 0.05) {
                 try await TestActor().returningValue(after: 60, timeout: 0.05)
             }

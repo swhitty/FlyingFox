@@ -48,6 +48,7 @@ struct SocketErrorTests {
         #expect(SocketError.blocked.errorDescription == "SocketError. Blocked")
         #expect(SocketError.disconnected.errorDescription == "SocketError. Disconnected")
         #expect(SocketError.unsupportedAddress.errorDescription == "SocketError. UnsupportedAddress")
+        #expect(SocketError.timeout(message: "fish").errorDescription == "SocketError. Timeout: fish")
     }
 
     @Test
