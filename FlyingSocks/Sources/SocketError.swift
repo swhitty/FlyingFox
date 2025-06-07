@@ -39,6 +39,7 @@ public enum SocketError: LocalizedError, Equatable {
     case blocked
     case disconnected
     case unsupportedAddress
+    case timeout(message: String)
 
     public var errorDescription: String? {
         switch self {
@@ -50,6 +51,8 @@ public enum SocketError: LocalizedError, Equatable {
             return "SocketError. Disconnected"
         case .unsupportedAddress:
             return "SocketError. UnsupportedAddress"
+        case .timeout(message: let message):
+            return "SocketError. Timeout: \(message)"
         }
     }
 
