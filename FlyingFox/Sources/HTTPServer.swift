@@ -199,7 +199,7 @@ public final actor HTTPServer {
         throw SocketError.disconnected
     }
 
-    @available(macOS, deprecated: 17.0, renamed: "listenForConnectionsDiscarding(on:)")
+    @available(macOS, deprecated: 14.0, renamed: "listenForConnectionsDiscarding(on:)")
     @available(iOS, deprecated: 17.0, renamed: "listenForConnectionsDiscarding(on:)")
     @available(tvOS, deprecated: 17.0, renamed: "listenForConnectionsDiscarding(on:)")
     private func listenForConnectionsFallback(on socket: AsyncSocket) async throws {
