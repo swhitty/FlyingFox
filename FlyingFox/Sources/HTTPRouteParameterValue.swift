@@ -32,7 +32,7 @@
 import Foundation
 
 /// Converts values from `HTTPRoute.Parameter` with `HTTPRequest`
-public protocol HTTPRouteParameterValue {
+public protocol HTTPRouteParameterValue: Sendable {
     init(parameter: String) throws
 }
 
