@@ -99,7 +99,7 @@ extension Socket {
         return addr
     }
 
-    static func makeAbstractNamespaceUnix(name: String) -> WinSDK.sockaddr_un {
+    static func makeAbstractNamespaceUnix(name: String) -> Android.sockaddr_un {
         var addr: sockaddr_un = Android.sockaddr_un()
         addr.sun_family = sa_family_t(AF_UNIX)
 
