@@ -96,6 +96,24 @@ extension Socket {
         return addr
     }
 
+    static func makeAbstractNamespaceUnix(name: String) -> Musl.sockaddr_un {
+        var addr: sockaddr_un = Musl.sockaddr_un()
+        addr.sun_family = sa_family_t(AF_UNIX)
+
+        _ = withUnsafeMutableBytes(of: &addr.sun_path) { raw in
+            raw.initializeMemory(as: CChar.self, repeating: 0)
+        }
+
+        let nameBytes = Array(name.utf8.prefix(107))
+        nameBytes.withUnsafeBytes { src in
+            withUnsafeMutableBytes(of: &addr.sun_path) { dst in
+                dst[1 ..< 1 + src.count].copyBytes(from: src)
+            }
+        }
+
+        return addr
+    }
+
     static func socket(_ domain: Int32, _ type: Int32, _ protocol: Int32) -> FileDescriptorType {
         Musl.socket(domain, type, `protocol`)
     }
