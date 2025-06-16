@@ -107,10 +107,15 @@ public extension SocketAddress where Self == sockaddr_in6 {
 }
 
 public extension SocketAddress where Self == sockaddr_un {
-
     static func unix(path: String) -> Self {
         Socket.makeAddressUnix(path: path)
     }
+
+    #if canImport(Glibc) || canImport(Musl) || canImport(Android) || canImport(WinSDK)
+    static func unix(abstractNamespace: String) -> Self {
+        Socket.makeAbstractNamespaceUnix(name: abstractNamespace)
+    }
+    #endif
 }
 
 #if compiler(>=6.0)

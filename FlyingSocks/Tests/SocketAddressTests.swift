@@ -148,6 +148,23 @@ struct SocketAddressTests {
         )
     }
 
+    #if canImport(Glibc) || canImport(Musl) || canImport(Android) || canImport(WinSDK)
+    @Test
+    func unixAbstractNamespace_IsCorrectlyDecodedFromStorage() throws {
+        let storage = sockaddr_un
+            .unix(abstractNamespace: "mygreatnamespace")
+            .makeStorage()
+
+        var unix = try sockaddr_un.make(from: storage)
+        let path = withUnsafePointer(to: &unix.sun_path.1) {
+            return String(cString: $0)
+        }
+        #expect(
+            path == "mygreatnamespace"
+        )
+    }
+    #endif
+
     @Test
     func unix_ThrowsInvalidAddress_WhenFamilyIncorrect() {
         let storage = sockaddr_in6
@@ -182,6 +199,16 @@ struct SocketAddressTests {
             sun.size == socklen_t(MemoryLayout<sockaddr_un>.size)
         )
     }
+
+    #if canImport(Glibc) || canImport(Musl) || canImport(Android) || canImport(WinSDK)
+    @Test
+    func unixAbstractNamespace_CheckSize() throws {
+        let sun = sockaddr_un.unix(abstractNamespace: "some_great_namespace")
+        #expect(
+            sun.size == socklen_t(MemoryLayout<sockaddr_un>.size)
+        )
+    }
+    #endif
 
     @Test
     func unknown_CheckSize() throws {
