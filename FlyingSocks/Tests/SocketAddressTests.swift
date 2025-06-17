@@ -148,7 +148,7 @@ struct SocketAddressTests {
         )
     }
 
-    #if canImport(Glibc) || canImport(Musl) || canImport(Android) || canImport(WinSDK)
+    #if canImport(Glibc) || canImport(Musl) || canImport(Android)
     @Test
     func unixAbstractNamespace_IsCorrectlyDecodedFromStorage() throws {
         let storage = sockaddr_un
@@ -200,7 +200,7 @@ struct SocketAddressTests {
         )
     }
 
-    #if canImport(Glibc) || canImport(Musl) || canImport(Android) || canImport(WinSDK)
+    #if canImport(Glibc) || canImport(Musl) || canImport(Android)
     @Test
     func unixAbstractNamespace_CheckSize() throws {
         let sun = sockaddr_un.unix(abstractNamespace: "some_great_namespace")

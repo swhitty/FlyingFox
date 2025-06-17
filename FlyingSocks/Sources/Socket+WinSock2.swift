@@ -107,24 +107,6 @@ extension Socket {
         return addr
     }
 
-    static func makeAbstractNamespaceUnix(name: String) -> WinSDK.sockaddr_un {
-        var addr: sockaddr_un = WinSDK.sockaddr_un()
-        addr.sun_family = ADDRESS_FAMILY(AF_UNIX)
-
-        _ = withUnsafeMutableBytes(of: &addr.sun_path) { raw in
-            raw.initializeMemory(as: CChar.self, repeating: 0)
-        }
-
-        let nameBytes = Array(name.utf8.prefix(107))
-        nameBytes.withUnsafeBytes { src in
-            withUnsafeMutableBytes(of: &addr.sun_path) { dst in
-                dst[1 ..< 1 + src.count].copyBytes(from: src)
-            }
-        }
-
-        return addr
-    }
-
     static func fcntl(_ fd: FileDescriptorType, _ cmd: Int32) -> Int32 {
         return -1
     }

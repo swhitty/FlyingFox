@@ -111,7 +111,7 @@ public extension SocketAddress where Self == sockaddr_un {
         Socket.makeAddressUnix(path: path)
     }
 
-    #if canImport(Glibc) || canImport(Musl) || canImport(Android) || canImport(WinSDK)
+    #if canImport(Glibc) || canImport(Musl) || canImport(Android)
     static func unix(abstractNamespace: String) -> Self {
         Socket.makeAbstractNamespaceUnix(name: abstractNamespace)
     }
