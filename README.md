@@ -396,6 +396,7 @@ public enum SocketError: LocalizedError {
   case disconnected
   case unsupportedAddress
   case failed(type: String, errno: Int32, message: String)
+  case timeout(message: String)
 }
 ```
 
