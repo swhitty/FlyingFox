@@ -164,6 +164,7 @@ protocol WSMessageHandler {
 enum WSMessage {
   case text(String)
   case data(Data)
+  case close(WSCloseCode)
 }
 ```
 
