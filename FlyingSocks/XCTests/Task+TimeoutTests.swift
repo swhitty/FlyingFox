@@ -149,9 +149,9 @@ final class TaskTimeoutTests: XCTestCase {
     @MainActor
     func testMainActor_ReturnsValue() async throws {
         let val = try await withThrowingTimeout(seconds: 1) {
-            MainActor.safeAssertIsolated()
+            MainActor.assertIsolated()
             try await Task.sleep(nanoseconds: 1_000)
-            MainActor.safeAssertIsolated()
+            MainActor.assertIsolated()
             return "Fish"
         }
         XCTAssertEqual(val, "Fish")
@@ -161,8 +161,8 @@ final class TaskTimeoutTests: XCTestCase {
     func testMainActorThrowsError_WhenTimeoutExpires() async {
         do {
             try await withThrowingTimeout(seconds: 0.05) {
-                MainActor.safeAssertIsolated()
-                defer { MainActor.safeAssertIsolated() }
+                MainActor.assertIsolated()
+                defer { MainActor.assertIsolated() }
                 try await Task.sleep(nanoseconds: 60_000_000_000)
             }
             XCTFail("Expected Error")
@@ -262,21 +262,8 @@ private final actor TestActor<T: Sendable> {
     func returningValue(after sleep: TimeInterval = 0, timeout: TimeInterval = 1) async throws -> T {
         try await withThrowingTimeout(seconds: timeout) {
             try await Task.sleep(nanoseconds: UInt64(sleep * 1_000_000_000))
-            #if compiler(>=5.10)
             self.assertIsolated()
-            #endif
             return self.value
         }
-    }
-}
-
-private extension MainActor {
-
-    static func safeAssertIsolated() {
-    #if compiler(>=5.10)
-        assertIsolated()
-    #else
-        precondition(Thread.isMainThread)
-    #endif
     }
 }

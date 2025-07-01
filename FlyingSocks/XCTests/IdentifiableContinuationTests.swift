@@ -202,39 +202,29 @@ private actor Waiter<T: Sendable, E: Error> {
     }
 
     private func addContinuation(_ continuation: Continuation) {
-        safeAssertIsolated()
+        assertIsolated()
         waiting[continuation.id] = continuation
     }
 
     private func resumeID(_ id: Continuation.ID, returning value: T) {
-        safeAssertIsolated()
+        assertIsolated()
         if let continuation = waiting.removeValue(forKey: id) {
             continuation.resume(returning: value)
         }
     }
 
     private func resumeID(_ id: Continuation.ID, throwing error: E) {
-        safeAssertIsolated()
+        assertIsolated()
         if let continuation = waiting.removeValue(forKey: id) {
             continuation.resume(throwing: error)
         }
     }
 
     private func resumeID(_ id: Continuation.ID, with result: Result<T, E>) {
-        safeAssertIsolated()
+        assertIsolated()
         if let continuation = waiting.removeValue(forKey: id) {
             continuation.resume(with: result)
         }
-    }
-
-    private func safeAssertIsolated() {
-#if compiler(>=5.10)
-        assertIsolated()
-#elseif compiler(>=5.9)
-        if #available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *) {
-            assertIsolated()
-        }
-#endif
     }
 }
 
