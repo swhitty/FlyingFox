@@ -60,6 +60,7 @@ extension Array where Element == SwiftSetting {
     static var upcomingFeatures: [SwiftSetting] {
         [
             .enableUpcomingFeature("ExistentialAny"),
+            .enableExperimentalFeature("NonisolatedNonsendingByDefault"),
             .swiftLanguageMode(.v6)
         ]
     }
