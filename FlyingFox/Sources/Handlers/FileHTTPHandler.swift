@@ -50,7 +50,14 @@ public struct FileHTTPHandler: HTTPHandler {
 
     static func makeContentType(for filename: String) -> String {
         let pathExtension = (filename.lowercased() as NSString).pathExtension
-        return UTType(filenameExtension: pathExtension)?.preferredMIMEType ?? "application/octet-stream"
+        switch pathExtension {
+        case "wasm":
+            return "application/wasm"
+        case "properties":
+            return "text/plain"
+        default:
+            return UTType(filenameExtension: pathExtension)?.preferredMIMEType ?? "application/octet-stream"
+        }
     }
 
     public func handleRequest(_ request: HTTPRequest) async throws -> HTTPResponse {
