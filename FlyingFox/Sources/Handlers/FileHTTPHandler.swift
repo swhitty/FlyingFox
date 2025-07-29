@@ -31,6 +31,7 @@
 
 import FlyingSocks
 import Foundation
+import UniformTypeIdentifiers
 
 public struct FileHTTPHandler: HTTPHandler {
 
@@ -48,40 +49,8 @@ public struct FileHTTPHandler: HTTPHandler {
     }
 
     static func makeContentType(for filename: String) -> String {
-        // TODO: UTTypeCreatePreferredIdentifierForTag / UTTypeCopyPreferredTagWithClass
         let pathExtension = (filename.lowercased() as NSString).pathExtension
-        switch pathExtension {
-        case "json":
-            return "application/json"
-        case "html", "htm":
-            return "text/html"
-        case "css":
-            return "text/css"
-        case "js", "javascript":
-            return "application/javascript"
-        case "png":
-            return "image/png"
-        case "jpeg", "jpg":
-            return "image/jpeg"
-        case "m4v", "mp4":
-            return "video/mp4"
-        case "pdf":
-            return "application/pdf"
-        case "svg":
-            return "image/svg+xml"
-        case "txt":
-            return "text/plain"
-        case "ico":
-            return "image/x-icon"
-        case "wasm":
-            return "application/wasm"
-        case "webp":
-            return "image/webp"
-        case "jp2":
-            return "image/jp2"
-        default:
-            return "application/octet-stream"
-        }
+        return UTType(filenameExtension: pathExtension)?.preferredMIMEType ?? "application/octet-stream"
     }
 
     public func handleRequest(_ request: HTTPRequest) async throws -> HTTPResponse {
