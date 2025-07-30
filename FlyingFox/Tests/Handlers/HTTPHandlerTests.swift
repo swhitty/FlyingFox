@@ -180,6 +180,9 @@ struct HTTPHandlerTests {
             FileHTTPHandler.makeContentType(for: "fish.properties") == "text/plain"
         )
         #expect(
+            FileHTTPHandler.makeContentType(for: "fish.xml") == "application/xml"
+        )
+        #expect(
             FileHTTPHandler.makeContentType(for: "fish.somefile") == "application/octet-stream"
         )
     }
