@@ -126,11 +126,11 @@ final class HTTPHandlerTests: XCTestCase {
         )
         XCTAssertEqual(
             FileHTTPHandler.makeContentType(for: "fish.js"),
-            "application/javascript"
+            "text/javascript"
         )
         XCTAssertEqual(
             FileHTTPHandler.makeContentType(for: "fish.javascript"),
-            "application/javascript"
+            "text/javascript"
         )
         XCTAssertEqual(
             FileHTTPHandler.makeContentType(for: "fish.png"),
@@ -154,7 +154,7 @@ final class HTTPHandlerTests: XCTestCase {
         )
         XCTAssertEqual(
             FileHTTPHandler.makeContentType(for: "fish.ico"),
-            "image/x-icon"
+            "image/vnd.microsoft.icon"
         )
         XCTAssertEqual(
             FileHTTPHandler.makeContentType(for: "fish.wasm"),
@@ -167,6 +167,18 @@ final class HTTPHandlerTests: XCTestCase {
         XCTAssertEqual(
             FileHTTPHandler.makeContentType(for: "fish.jp2"),
             "image/jp2"
+        )
+        XCTAssertEqual(
+            FileHTTPHandler.makeContentType(for: "fish.m4v"),
+            "video/x-m4v"
+        )
+        XCTAssertEqual(
+            FileHTTPHandler.makeContentType(for: "fish.properties"),
+            "text/plain"
+        )
+        XCTAssertEqual(
+            FileHTTPHandler.makeContentType(for: "fish.xml"),
+            "application/xml"
         )
         XCTAssertEqual(
             FileHTTPHandler.makeContentType(for: "fish.somefile"),
