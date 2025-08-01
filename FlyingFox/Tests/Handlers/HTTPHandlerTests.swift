@@ -135,10 +135,10 @@ struct HTTPHandlerTests {
             FileHTTPHandler.makeContentType(for: "fish.css") == "text/css"
         )
         #expect(
-            FileHTTPHandler.makeContentType(for: "fish.js") == "application/javascript"
+            FileHTTPHandler.makeContentType(for: "fish.js") == "text/javascript"
         )
         #expect(
-            FileHTTPHandler.makeContentType(for: "fish.javascript") == "application/javascript"
+            FileHTTPHandler.makeContentType(for: "fish.javascript") == "text/javascript"
         )
         #expect(
             FileHTTPHandler.makeContentType(for: "fish.png") == "image/png"
@@ -162,10 +162,10 @@ struct HTTPHandlerTests {
             FileHTTPHandler.makeContentType(for: "fish.mp4") == "video/mp4"
         )
         #expect(
-            FileHTTPHandler.makeContentType(for: "fish.m4v") == "video/mp4"
+            FileHTTPHandler.makeContentType(for: "fish.m4v") == "video/x-m4v"
         )
         #expect(
-            FileHTTPHandler.makeContentType(for: "fish.ico") == "image/x-icon"
+            FileHTTPHandler.makeContentType(for: "fish.ico") == "image/vnd.microsoft.icon"
         )
         #expect(
             FileHTTPHandler.makeContentType(for: "fish.wasm") == "application/wasm"
@@ -175,6 +175,12 @@ struct HTTPHandlerTests {
         )
         #expect(
             FileHTTPHandler.makeContentType(for: "fish.jp2") == "image/jp2"
+        )
+        #expect(
+            FileHTTPHandler.makeContentType(for: "fish.properties") == "text/plain"
+        )
+        #expect(
+            FileHTTPHandler.makeContentType(for: "fish.xml") == "application/xml"
         )
         #expect(
             FileHTTPHandler.makeContentType(for: "fish.somefile") == "application/octet-stream"

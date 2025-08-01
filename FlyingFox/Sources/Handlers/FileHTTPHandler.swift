@@ -31,6 +31,9 @@
 
 import FlyingSocks
 import Foundation
+#if canImport(UniformTypeIdentifiers)
+import UniformTypeIdentifiers
+#endif
 
 public struct FileHTTPHandler: HTTPHandler {
 
@@ -48,8 +51,26 @@ public struct FileHTTPHandler: HTTPHandler {
     }
 
     static func makeContentType(for filename: String) -> String {
-        // TODO: UTTypeCreatePreferredIdentifierForTag / UTTypeCopyPreferredTagWithClass
         let pathExtension = (filename.lowercased() as NSString).pathExtension
+#if canImport(UniformTypeIdentifiers)
+        if #available(macOS 11.0, iOS 14.0, tvOS 14.0, watchOS 7.0, *) {
+            switch pathExtension {
+            case "wasm":
+                return "application/wasm"
+            case "properties":
+                return "text/plain"
+            default:
+                return UTType(filenameExtension: pathExtension)?.preferredMIMEType ?? legacyMakeContentType(for: pathExtension)
+            }
+        } else {
+            return legacyMakeContentType(for: pathExtension)
+        }
+#else
+        return legacyMakeContentType(for: pathExtension)
+#endif
+    }
+    
+    private static func legacyMakeContentType(for pathExtension: String) -> String {
         switch pathExtension {
         case "json":
             return "application/json"
@@ -58,13 +79,15 @@ public struct FileHTTPHandler: HTTPHandler {
         case "css":
             return "text/css"
         case "js", "javascript":
-            return "application/javascript"
+            return "text/javascript"
         case "png":
             return "image/png"
         case "jpeg", "jpg":
             return "image/jpeg"
-        case "m4v", "mp4":
+        case "mp4":
             return "video/mp4"
+        case "m4v":
+            return "video/x-m4v"
         case "pdf":
             return "application/pdf"
         case "svg":
@@ -72,13 +95,17 @@ public struct FileHTTPHandler: HTTPHandler {
         case "txt":
             return "text/plain"
         case "ico":
-            return "image/x-icon"
+            return "image/vnd.microsoft.icon"
         case "wasm":
             return "application/wasm"
         case "webp":
             return "image/webp"
         case "jp2":
             return "image/jp2"
+        case "properties":
+            return "text/plain"
+        case "xml":
+            return "application/xml"
         default:
             return "application/octet-stream"
         }
