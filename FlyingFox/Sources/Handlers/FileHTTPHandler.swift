@@ -53,15 +53,24 @@ public struct FileHTTPHandler: HTTPHandler {
     static func makeContentType(for filename: String) -> String {
         let pathExtension = (filename.lowercased() as NSString).pathExtension
 #if canImport(UniformTypeIdentifiers)
-        switch pathExtension {
-        case "wasm":
-            return "application/wasm"
-        case "properties":
-            return "text/plain"
-        default:
-            return UTType(filenameExtension: pathExtension)?.preferredMIMEType ?? "application/octet-stream"
+        if #available(macOS 11.0, iOS 14.0, tvOS 14.0, watchOS 7.0, *) {
+            switch pathExtension {
+            case "wasm":
+                return "application/wasm"
+            case "properties":
+                return "text/plain"
+            default:
+                return UTType(filenameExtension: pathExtension)?.preferredMIMEType ?? "application/octet-stream"
+            }
+        } else {
+            return legacyMakeContentType(for: pathExtension)
         }
 #else
+        return legacyMakeContentType(for: pathExtension)
+#endif
+    }
+    
+    private static func legacyMakeContentType(for pathExtension: String) -> String {
         switch pathExtension {
         case "json":
             return "application/json"
@@ -100,7 +109,6 @@ public struct FileHTTPHandler: HTTPHandler {
         default:
             return "application/octet-stream"
         }
-#endif
     }
 
     public func handleRequest(_ request: HTTPRequest) async throws -> HTTPResponse {
