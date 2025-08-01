@@ -60,7 +60,7 @@ public struct FileHTTPHandler: HTTPHandler {
             case "properties":
                 return "text/plain"
             default:
-                return UTType(filenameExtension: pathExtension)?.preferredMIMEType ?? "application/octet-stream"
+                return UTType(filenameExtension: pathExtension)?.preferredMIMEType ?? legacyMakeContentType(for: pathExtension)
             }
         } else {
             return legacyMakeContentType(for: pathExtension)
