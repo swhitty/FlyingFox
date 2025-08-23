@@ -126,11 +126,11 @@ final class HTTPHandlerTests: XCTestCase {
         )
         XCTAssertEqual(
             FileHTTPHandler.makeContentType(for: "fish.js"),
-            "text/javascript"
+            "application/javascript"
         )
         XCTAssertEqual(
             FileHTTPHandler.makeContentType(for: "fish.javascript"),
-            "text/javascript"
+            "application/javascript"
         )
         XCTAssertEqual(
             FileHTTPHandler.makeContentType(for: "fish.png"),

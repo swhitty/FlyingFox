@@ -1,3 +1,4 @@
 ignore:
+  - FlyingFox/Sources/HTTPDecoder+StandardizePath.swift
   - FlyingFox/Tests
   - FlyingSocks/Tests

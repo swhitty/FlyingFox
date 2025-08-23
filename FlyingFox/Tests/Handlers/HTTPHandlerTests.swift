@@ -135,10 +135,10 @@ struct HTTPHandlerTests {
             FileHTTPHandler.makeContentType(for: "fish.css") == "text/css"
         )
         #expect(
-            FileHTTPHandler.makeContentType(for: "fish.js") == "text/javascript"
+            FileHTTPHandler.makeContentType(for: "fish.js") == "application/javascript"
         )
         #expect(
-            FileHTTPHandler.makeContentType(for: "fish.javascript") == "text/javascript"
+            FileHTTPHandler.makeContentType(for: "fish.javascript") == "application/javascript"
         )
         #expect(
             FileHTTPHandler.makeContentType(for: "fish.png") == "image/png"

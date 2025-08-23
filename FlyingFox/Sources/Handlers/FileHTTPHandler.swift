@@ -57,6 +57,8 @@ public struct FileHTTPHandler: HTTPHandler {
             switch pathExtension {
             case "wasm":
                 return "application/wasm"
+            case "js", "javascript":
+                return "application/javascript"
             case "properties":
                 return "text/plain"
             default:
@@ -79,7 +81,7 @@ public struct FileHTTPHandler: HTTPHandler {
         case "css":
             return "text/css"
         case "js", "javascript":
-            return "text/javascript"
+            return "application/javascript"
         case "png":
             return "image/png"
         case "jpeg", "jpg":
