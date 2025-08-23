@@ -91,7 +91,7 @@ struct HTTPDecoder {
     }
 
     func makeComponents(from comps: URLComponents?) -> (path: String, query: [HTTPRequest.QueryItem]) {
-        let path = (comps?.percentEncodedPath).flatMap { URL(string: $0)?.standardized.path } ?? ""
+        let path = (comps?.percentEncodedPath).flatMap(HTTPDecoder.standardizePath) ?? ""
         let query = comps?.queryItems?.map {
             HTTPRequest.QueryItem(name: $0.name, value: $0.value ?? "")
         }

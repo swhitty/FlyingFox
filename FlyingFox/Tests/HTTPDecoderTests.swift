@@ -108,15 +108,9 @@ struct HTTPDecoderTests {
             """
         )
 
-#if canImport(Darwin)
-        #expect(
-            request.path == "a/c/d.html"
-        )
-#else
         #expect(
             request.path == "/a/c/d.html"
         )
-#endif
 
         #expect(
             request.query == [
