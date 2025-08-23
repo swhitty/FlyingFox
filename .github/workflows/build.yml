@@ -172,6 +172,7 @@ jobs:
         uses: SwiftyLab/setup-swift@latest
         with:
           swift-version: "6.1.2"
+          visual-studio-components: Microsoft.VisualStudio.Component.Windows11SDK.22621
       - name: Version
         run: swift --version
       - name: Build
