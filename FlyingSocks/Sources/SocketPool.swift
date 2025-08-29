@@ -32,6 +32,17 @@
 import Dispatch
 import Foundation
 
+#if compiler(>=6.2)
+public protocol EventQueue: SendableMetatype {
+    mutating func open() throws
+    mutating func stop() throws
+    mutating func close() throws
+
+    mutating func addEvents(_ events: Socket.Events, for socket: Socket.FileDescriptor) throws
+    mutating func removeEvents(_ events: Socket.Events, for socket: Socket.FileDescriptor) throws
+    func getNotifications() throws -> [EventNotification]
+}
+#else
 public protocol EventQueue {
     mutating func open() throws
     mutating func stop() throws
@@ -41,6 +52,7 @@ public protocol EventQueue {
     mutating func removeEvents(_ events: Socket.Events, for socket: Socket.FileDescriptor) throws
     func getNotifications() throws -> [EventNotification]
 }
+#endif
 
 public struct EventNotification: Equatable, Sendable {
     public var file: Socket.FileDescriptor
