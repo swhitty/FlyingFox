@@ -48,7 +48,11 @@ extension AsyncThrowingStream<WSFrame, any Error> {
 
 extension AsyncStream<WSFrame> {
 
-    static func protocolFrames<S: AsyncSequence>(from frames: S) -> Self where S.Element == WSFrame {
+#if compiler(<6.2)
+    typealias SendableMetatype = Any
+#endif
+
+    static func protocolFrames<S: AsyncSequence & SendableMetatype>(from frames: S) -> Self where S.Element == WSFrame {
         let iterator = Iterator(from: frames)
         return AsyncStream<WSFrame> {
             do {
