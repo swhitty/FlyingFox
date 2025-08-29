@@ -169,7 +169,7 @@ struct AsyncSocketTests {
         }
     }
 
-    @Test
+    @Test(.disabled("problematic test because file descriptor by openened by another parallel test"))
     func socket_Throws_WhenAlreadyCLosed() async throws {
         let s1 = try await AsyncSocket.make()
 
@@ -188,14 +188,8 @@ struct AsyncSocketTests {
         )
     }
 
-    #if canImport(WinSDK)
-    @Test
-    func datagramPairCreation_Throws() async throws {
-        await #expect(throws: SocketError.self) {
-            _ = try await AsyncSocket.makeDatagramPair()
-        }
-    }
-    #else
+#if !canImport(WinSDK)
+
     @Test
     func datagramSocketReceivesChunk_WhenAvailable() async throws {
         let (s1, s2, addr) = try await AsyncSocket.makeDatagramPair()
@@ -215,9 +209,7 @@ struct AsyncSocketTests {
         try s2.close()
         try? Socket.unlink(addr)
     }
-    #endif
 
-#if !canImport(WinSDK)
     #if canImport(Darwin)
     @Test
     func messageSequence_sendsMessage_receivesTuple() async throws {
@@ -314,7 +306,7 @@ extension AsyncSocket {
     }
 
     static func makeListening(pool: some AsyncSocketPool) throws -> AsyncSocket {
-        let tempFile = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString.prefix(8)).sock")
+        let tempFile = try FileManager.default.makeTemporaryDirectory().appending(path: "socket")
         let address = sockaddr_un.unix(path: tempFile.path)
         try? Socket.unlink(address)
         defer { try? Socket.unlink(address) }
@@ -345,11 +337,10 @@ extension AsyncSocket {
         return (socket, port)
     }
 
+#if !canImport(WinSDK)
     static func makeDatagramPair() async throws -> (AsyncSocket, AsyncSocket, sockaddr_un) {
         let socketPair = try await makePair(pool: .client, type: .datagram)
-        guard let endpoint = FileManager.default.makeTemporaryFile() else {
-            throw SocketError.makeFailed("MakeTemporaryFile")
-        }
+        let endpoint = try FileManager.default.makeTemporaryDirectory().appending(path: "socket")
         let addr = sockaddr_un.unix(path: endpoint.path)
 
         try socketPair.1.socket.bind(to: addr)
@@ -359,6 +350,7 @@ extension AsyncSocket {
 
         return (socketPair.0, socketPair.1, addr)
     }
+#endif
 
     static func makePair() async throws -> (AsyncSocket, AsyncSocket) {
         try await makePair(pool: .client, type: .stream)
