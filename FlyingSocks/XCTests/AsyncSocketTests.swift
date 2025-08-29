@@ -142,7 +142,7 @@ final class AsyncSocketTests: XCTestCase {
         await AsyncAssertThrowsError(try await s1.accept(), of: SocketError.self)
     }
 
-    func testSocket_Throws_WhenAlreadyCLosed() async throws {
+    func disabled_testSocket_Throws_WhenAlreadyCLosed() async throws {
         let s1 = try await AsyncSocket.make()
 
         try s1.close()

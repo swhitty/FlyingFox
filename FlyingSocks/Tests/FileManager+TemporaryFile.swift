@@ -15,35 +15,33 @@
 @testable import FlyingSocks
 import Foundation
 
+
 extension FileManager {
-    func makeTemporaryFile() -> URL? {
-        let dirPath = temporaryDirectory.appendingPathComponent("FlyingSocks.XXXXXX")
-        return dirPath.withUnsafeFileSystemRepresentation { maybePath in
-            guard let path = maybePath else { return nil }
 
-            #if canImport(WinSDK)
-            let pathMax = Int(MAX_PATH)
-            #else
-            let pathMax = Int(PATH_MAX)
-            #endif
+#if canImport(WinSDK)
+    func makeTemporaryDirectory(template: String = "FlyingSocks.XXXXXX") throws -> URL {
+        let suffix = UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(6)
+        let url = temporaryDirectory.appendingPathComponent("FlyingSocks.\(suffix)", isDirectory: true)
+        try createDirectory(at: url, withIntermediateDirectories: true, attributes: nil)
+        return url
+    }
+    #else
+    func makeTemporaryDirectory(template: String = "FlyingSocks.XXXXXX") throws -> URL {
+        let base = temporaryDirectory.path
+        let needsSlash = base.hasSuffix("/") ? "" : "/"
+        var tmpl = Array((base + needsSlash + template).utf8CString)
 
-            var mutablePath = Array(repeating: Int8(0), count: pathMax)
-            mutablePath.withUnsafeMutableBytes { mutablePathBufferPtr in
-                mutablePathBufferPtr.baseAddress!.copyMemory(
-                    from: path, byteCount: Int(strlen(path)) + 1)
-            }
-            guard mktemp(&mutablePath) != nil else { return nil }
-            return URL(
-                fileURLWithFileSystemRepresentation: mutablePath, isDirectory: false,
-                relativeTo: nil)
+        let url = tmpl.withUnsafeMutableBufferPointer { buf -> URL? in
+            guard let p = buf.baseAddress, mkdtemp(p) != nil else { return nil }
+            let path = String(cString: p)
+            return URL(fileURLWithPath: path, isDirectory: true)
         }
+
+        guard let url = url else {
+            throw SocketError.makeFailed("makeTemporaryDirectory()")
+        }
+        return url
     }
+#endif
 }
 
-func withTemporaryFile(f: (URL) -> ()) throws {
-    guard let tmp = FileManager.default.makeTemporaryFile() else {
-        throw SocketError.makeFailed("MakeTemporaryFile")
-    }
-    defer { try? FileManager.default.removeItem(atPath: tmp.path) }
-    f(tmp)
-}
