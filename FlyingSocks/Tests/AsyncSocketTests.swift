@@ -120,7 +120,7 @@ struct AsyncSocketTests {
         }
     }
 
-    @Test
+    @Test(.disabled("problematic test as file descriptor can be re-opened by another parallel test"))
     func socketBytesReadChunk_Throws_WhenSocketIsClosed() async throws {
         let s1 = try await AsyncSocket.make()
         try s1.close()
@@ -169,7 +169,7 @@ struct AsyncSocketTests {
         }
     }
 
-    @Test(.disabled("problematic test because file descriptor by openened by another parallel test"))
+    @Test(.disabled("problematic test as file descriptor can be re-opened by another parallel test"))
     func socket_Throws_WhenAlreadyCLosed() async throws {
         let s1 = try await AsyncSocket.make()
 

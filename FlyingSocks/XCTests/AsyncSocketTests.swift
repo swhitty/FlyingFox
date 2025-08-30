@@ -107,7 +107,7 @@ final class AsyncSocketTests: XCTestCase {
         await AsyncAssertThrowsError(try await s1.read(bytes: 5), of: SocketError.self)
     }
 
-    func testSocketBytesReadChunk_Throws_WhenSocketIsClosed() async throws {
+    func disabled_testSocketBytesReadChunk_Throws_WhenSocketIsClosed() async throws {
         let s1 = try await AsyncSocket.make()
         try s1.close()
 
