@@ -229,10 +229,14 @@ private extension HTTPRoute {
               patternMatch(headers: request.headers),
               await patternMatch(body: request.bodySequence) else { return false }
 
-        let nodes = request.path.split(separator: "/", omittingEmptySubsequences: true)
-        guard self.methods.contains(request.method) else {
+        return patternMatch(method: request.method, path: request.path)
+    }
+
+    func patternMatch(method: HTTPMethod, path: String) -> Bool {
+        guard self.methods.contains(method) else {
             return false
         }
+        let nodes = path.split(separator: "/", omittingEmptySubsequences: true)
         guard nodes.count >= self.path.count else {
             return nodes.isEmpty && self.path.first == .wildcard
         }
