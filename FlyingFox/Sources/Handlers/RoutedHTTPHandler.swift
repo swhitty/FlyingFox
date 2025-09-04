@@ -136,6 +136,26 @@ public extension RoutedHTTPHandler {
     }
 }
 
+#if compiler(>=6.0)
+public extension RoutedHTTPHandler {
+
+    static func handleMatchedRequest(
+        isolation: isolated (any Actor)? = #isolation,
+        _ request: HTTPRequest,
+        to route: HTTPRoute,
+        handler: (HTTPRequest) async throws -> HTTPResponse
+    ) async throws -> HTTPResponse? {
+        if await route ~= request {
+            return try await HTTPRequest.$matchedRoute.withValue(route) {
+                _ = isolation
+                return try await handler(request)
+            }
+        }
+        return nil
+    }
+}
+#endif
+
 extension RoutedHTTPHandler: RangeReplaceableCollection {
     public typealias Index = Array<Element>.Index
     public typealias Element = (route: HTTPRoute, handler: any HTTPHandler)
