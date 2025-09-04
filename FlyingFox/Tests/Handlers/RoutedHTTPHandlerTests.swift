@@ -124,6 +124,39 @@ struct RoutedHTTPHandlerTests {
             try await handler.handleRequest(.make("/450/hello?food=shrimp&qty=🍤")).bodyString == "900 shrimp 🍤"
         )
     }
+
+    @Test
+    func handleMatchedRequest_matches() async throws {
+        // given
+        let request = HTTPRequest.make("/10/hello?food=fish&qty=🐟")
+        let route = HTTPRoute("GET /:id/hello?food=:food&qty=:qty")
+
+        // when
+        let response = try await RoutedHTTPHandler.handleMatchedRequest(request, to: route) {
+            #expect($0.routeParameters["id"] == "10")
+            #expect($0.routeParameters["food"] == "fish")
+            #expect($0.routeParameters["qty"] == "🐟")
+            return HTTPResponse(statusCode: .ok)
+        }
+
+        // then
+        #expect(response?.statusCode == .ok)
+    }
+
+    @Test
+    func handleMatchedRequest_skips() async throws {
+        // given
+        let request = HTTPRequest.make("/chips")
+        let route = HTTPRoute("GET /fish")
+
+        // when
+        let response = try await RoutedHTTPHandler.handleMatchedRequest(request, to: route) { _ in
+            return HTTPResponse(statusCode: .ok)
+        }
+
+        // then
+        #expect(response?.statusCode == nil)
+    }
 }
 
 private struct MockHandler: HTTPHandler {
