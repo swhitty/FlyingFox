@@ -259,7 +259,7 @@ private extension HTTPRoute {
         return true
     }
 
-    func patternMatch(headers request: [HTTPHeader: String]) -> Bool {
+    func patternMatch(headers request: HTTPHeaders) -> Bool {
         return headers.allSatisfy { header, value in
             value ~= request.values(for: header)
         }

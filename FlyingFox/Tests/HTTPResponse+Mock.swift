@@ -37,7 +37,7 @@ extension HTTPResponse {
 
     static func make(version: HTTPVersion = .http11,
                      statusCode: HTTPStatusCode  = .ok,
-                     headers: [HTTPHeader: String] = [:],
+                     headers: HTTPHeaders = [:],
                      body: Data = Data()) -> Self {
         HTTPResponse(version: version,
                      statusCode: statusCode,
@@ -47,7 +47,7 @@ extension HTTPResponse {
 
     static func makeChunked(version: HTTPVersion = .http11,
                             statusCode: HTTPStatusCode  = .ok,
-                            headers: [HTTPHeader: String] = [:],
+                            headers: HTTPHeaders = [:],
                             body: Data = Data(),
                             chunkSize: Int = 5) -> Self {
         let consuming = ConsumingAsyncSequence(body)
@@ -61,7 +61,7 @@ extension HTTPResponse {
 
     static func make(version: HTTPVersion = .http11,
                      statusCode: HTTPStatusCode  = .ok,
-                     headers: [HTTPHeader: String] = [:],
+                     headers: HTTPHeaders = [:],
                      body: HTTPBodySequence) -> Self {
         HTTPResponse(version: version,
                      statusCode: statusCode,

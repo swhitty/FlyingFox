@@ -36,7 +36,7 @@ public struct HTTPRequest: Sendable {
     public var version: HTTPVersion
     public var path: String
     public var query: [QueryItem]
-    public var headers: [HTTPHeader: String]
+    public var headers: HTTPHeaders
     public var bodySequence: HTTPBodySequence
     public var remoteAddress: Address?
 
@@ -62,7 +62,7 @@ public struct HTTPRequest: Sendable {
                 version: HTTPVersion,
                 path: String,
                 query: [QueryItem],
-                headers: [HTTPHeader: String],
+                headers: HTTPHeaders,
                 body: HTTPBodySequence,
                 remoteAddress: Address? = nil) {
         self.method = method
@@ -84,9 +84,30 @@ public struct HTTPRequest: Sendable {
         self.version = version
         self.path = path
         self.query = query
-        self.headers = headers
+        self.headers = HTTPHeaders(headers)
         self.bodySequence = HTTPBodySequence(data: body)
         self.remoteAddress = nil
+    }
+}
+
+@available(*, deprecated, message: "Use ``HTTPHeaders`` instead of [HTTPHeader: String]")
+public extension HTTPRequest {
+
+    init(method: HTTPMethod,
+         version: HTTPVersion,
+         path: String,
+         query: [QueryItem],
+         headers: [HTTPHeader: String],
+         body: HTTPBodySequence
+    ) {
+        self.init(
+            method: method,
+            version: version,
+            path: path,
+            query: query,
+            headers: HTTPHeaders(headers),
+            body: body
+        )
     }
 }
 

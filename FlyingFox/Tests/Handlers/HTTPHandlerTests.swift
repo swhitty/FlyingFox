@@ -330,7 +330,7 @@ struct HTTPHandlerTests {
 }
 
 private extension FileHTTPHandler {
-    static func makePartialRange(for headers: [HTTPHeader: String]) -> ClosedRange<Int>? {
+    static func makePartialRange(for headers: HTTPHeaders) -> ClosedRange<Int>? {
         makePartialRange(for: headers, fileSize: 10000)
     }
 }

@@ -359,31 +359,26 @@ struct HTTPRouteTests {
 
     @Test
     func header_MatchesRoute() async {
-        let route = HTTPRoute("GET /mock", headers: [.contentType: "json"])
+        let route = HTTPRoute("GET /mock", headers: [.contentEncoding: "json"])
+
 
         #expect(
             await route ~= HTTPRequest.make(method: .GET,
                                       path: "/mock",
-                                      headers: [.contentType: "json"])
+                                      headers: [.contentEncoding: "xml, json"])
         )
 
         #expect(
             await route ~= HTTPRequest.make(method: .GET,
                                       path: "/mock",
-                                      headers: [.contentType: "xml, json"])
-        )
-
-        #expect(
-            await route ~= HTTPRequest.make(method: .GET,
-                                      path: "/mock",
-                                      headers: [.contentEncoding: "xml",
-                                                .contentType: "json"])
+                                      headers: [.contentType: "xml",
+                                                .contentEncoding: "json"])
         )
 
         #expect(
             !(await route ~= HTTPRequest.make(method: .GET,
                                               path: "/mock",
-                                              headers: [.contentType: "xml"]))
+                                              headers: [.contentEncoding: "xml"]))
         )
     }
 

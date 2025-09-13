@@ -52,37 +52,23 @@ public struct HTTPHeader: Sendable, RawRepresentable, Hashable {
 public extension HTTPHeader {
     static let acceptRanges        = HTTPHeader("Accept-Ranges")
     static let authorization       = HTTPHeader("Authorization")
+    static let cookie              = HTTPHeader("Cookie")
     static let connection          = HTTPHeader("Connection")
     static let contentDisposition  = HTTPHeader("Content-Disposition")
     static let contentEncoding     = HTTPHeader("Content-Encoding")
     static let contentLength       = HTTPHeader("Content-Length")
     static let contentRange        = HTTPHeader("Content-Range")
     static let contentType         = HTTPHeader("Content-Type")
+    static let date                = HTTPHeader("Date")
+    static let eTag                = HTTPHeader("ETag")
     static let host                = HTTPHeader("Host")
     static let location            = HTTPHeader("Location")
     static let range               = HTTPHeader("Range")
+    static let setCookie           = HTTPHeader("Set-Cookie")
     static let transferEncoding    = HTTPHeader("Transfer-Encoding")
     static let upgrade             = HTTPHeader("Upgrade")
     static let webSocketAccept     = HTTPHeader("Sec-WebSocket-Accept")
     static let webSocketKey        = HTTPHeader("Sec-WebSocket-Key")
     static let webSocketVersion    = HTTPHeader("Sec-WebSocket-Version")
     static let xForwardedFor       = HTTPHeader("X-Forwarded-For")
-}
-
-public extension [HTTPHeader: String] {
-
-    func values(for header: HTTPHeader) -> [String] {
-        let value = self[header] ?? ""
-        return value
-            .split(separator: ",", omittingEmptySubsequences: true)
-            .map { String($0.trimmingCharacters(in: .whitespaces)) }
-    }
-
-    mutating func setValues(_ values: [String], for header: HTTPHeader) {
-        self[header] = values.joined(separator: ", ")
-    }
-
-    mutating func addValue(_ value: String, for header: HTTPHeader) {
-        setValues(values(for: header) + [value], for: header)
-    }
 }

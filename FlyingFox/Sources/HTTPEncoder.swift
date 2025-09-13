@@ -46,8 +46,19 @@ struct HTTPEncoder {
             httpHeaders.addValue(encoding, for: .transferEncoding)
         }
 
-        let headers = httpHeaders.map { "\($0.key.rawValue): \($0.value)" }
+        var headers = [String]()
 
+        for header in httpHeaders.storage.keys.sorted(by: { $0.rawValue < $1.rawValue }) {
+            let values = httpHeaders.storage[header]!
+            if HTTPHeaders.canCombineValues(for: header) {
+                let joinedValues = values.joined(separator: ", ")
+                headers.append("\(header.rawValue): \(joinedValues)")
+            } else {
+                headers.append(
+                    contentsOf: values.map { "\(header.rawValue): \($0)" }
+                )
+            }
+        }
         return [status] + headers + ["\r\n"]
     }
 

@@ -151,6 +151,28 @@ struct HTTPEncoderTests {
     }
 
     @Test
+    func encodesMultipleCookiesHeaders() async throws {
+        var headers = HTTPHeaders()
+        headers.addValue("Fish", for: .setCookie)
+        headers.addValue("Chips", for: .setCookie)
+        let data = try await HTTPEncoder.encodeResponse(
+            .make(headers: headers, body: Data())
+        )
+
+        print(String(data: data, encoding: .utf8)!)
+        #expect(
+            String(data: data, encoding: .utf8) == """
+            HTTP/1.1 200 OK\r
+            Content-Length: 0\r
+            Set-Cookie: Fish\r
+            Set-Cookie: Chips\r
+            \r
+
+            """
+        )
+    }
+
+    @Test
     func encodesRequest() async throws {
         #expect(
             try await HTTPEncoder.encodeRequest(

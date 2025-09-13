@@ -70,7 +70,7 @@ final class WebSocketHTTPHandlerTests: XCTestCase {
 
         let handler = WebSocketHTTPHandler.make()
 
-        let headers: [HTTPHeader: String] = [
+        let headers: HTTPHeaders = [
             .host: "localhost",
             .connection: "Upgrade",
             .upgrade: "websocket",
@@ -180,14 +180,14 @@ final class WebSocketHTTPHandlerTests: XCTestCase {
     }
 }
 
-private extension Dictionary where Key == HTTPHeader, Value == String {
+private extension HTTPHeaders {
 
     static func makeWSHeaders(host: String? = "localhost",
                               connection: String? = "Upgrade",
                               upgrade: String? = "websocket",
                               webSocketKey: String? = "ABCDEFGHIJKLMNOP",
                               webSocketVersion: String? = "13") -> Self {
-        var headers = [HTTPHeader: String] ()
+        var headers = HTTPHeaders()
         headers[.host] = host
         headers[.connection] = connection
         headers[.upgrade] = upgrade

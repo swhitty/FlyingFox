@@ -328,31 +328,31 @@ final class HTTPRouteTests: XCTestCase {
     }
 
     func testHeader_MatchesRoute() async {
-        let route = HTTPRoute("GET /mock", headers: [.contentType: "json"])
+        let route = HTTPRoute("GET /mock", headers: [.contentEncoding: "json"])
 
         await AsyncAssertTrue(
             await route ~= HTTPRequest.make(method: .GET,
                                       path: "/mock",
-                                      headers: [.contentType: "json"])
+                                      headers: [.contentEncoding: "json"])
         )
 
         await AsyncAssertTrue(
             await route ~= HTTPRequest.make(method: .GET,
                                       path: "/mock",
-                                      headers: [.contentType: "xml, json"])
+                                      headers: [.contentEncoding: "xml, json"])
         )
 
         await AsyncAssertTrue(
             await route ~= HTTPRequest.make(method: .GET,
                                       path: "/mock",
-                                      headers: [.contentEncoding: "xml",
-                                                .contentType: "json"])
+                                      headers: [.contentEncoding: "json",
+                                                .contentType: "xml"])
         )
 
         await AsyncAssertFalse(
             await route ~= HTTPRequest.make(method: .GET,
                                       path: "/mock",
-                                      headers: [.contentType: "xml"])
+                                      headers: [.contentEncoding: "xml"])
         )
     }
 
