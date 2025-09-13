@@ -56,6 +56,10 @@ public extension HTTPHandler where Self == RedirectHTTPHandler {
     static func redirect(to location: String) -> RedirectHTTPHandler {
         RedirectHTTPHandler(location: location)
     }
+
+    static func redirect(via base: String, serverPath: String? = nil) -> RedirectHTTPHandler {
+        RedirectHTTPHandler(base: base, serverPath: serverPath)
+    }
 }
 
 public extension HTTPHandler where Self == ProxyHTTPHandler {

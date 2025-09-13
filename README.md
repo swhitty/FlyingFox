@@ -151,6 +151,22 @@ await server.appendRoute("GET /fish/*", to: .redirect(to: "https://pie.dev/get")
 //                        Location: https://pie.dev/get
 ```
 
+Or dynamically redirected via a base URL:
+
+```swift
+await server.appendRoute("GET /fish/*", to: .redirect(via: "https://pie.dev"))
+// GET /fish/chips  --->  HTTP 301
+//                        Location: https://pie.dev/fish/chips
+```
+
+Providing a serverPath allows for the removal of a prefix before redirecting:
+
+```swift
+await server.appendRoute("GET /fish/*", to: .redirect(via: "https://pie.dev", serverPath: "/fish"))
+// GET /fish/chips  --->  HTTP 301
+//                        Location: https://pie.dev/chips
+```
+
 ### WebSocketHTTPHandler
 
 Requests can be routed to a websocket by providing a `WSMessageHandler` where a pair of `AsyncStream<WSMessage>` are exchanged:
