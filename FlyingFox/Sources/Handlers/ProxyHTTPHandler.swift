@@ -85,10 +85,11 @@ public struct ProxyHTTPHandler: HTTPHandler, Sendable {
     }
 
     func makeResponse(for response: HTTPURLResponse, data: Data) -> HTTPResponse {
-        var headers = [HTTPHeader: String]()
+        var headers = HTTPHeaders()
         for (name, value) in response.allHeaderFields {
-            if let name = name as? String {
-                headers[HTTPHeader(name)] = value as? String
+            if let name = name as? String,
+               let value = value as? String {
+                headers.addValue(value, for: HTTPHeader(name))
             }
         }
         headers[.contentEncoding] = nil

@@ -58,7 +58,7 @@ struct HTTPDecoder {
             version: version,
             path: path,
             query: query,
-            headers: headers,
+            headers: HTTPHeaders(headers),
             body: body
         )
     }
@@ -81,7 +81,7 @@ struct HTTPDecoder {
         return HTTPResponse(
             version: version,
             statusCode: statusCode,
-            headers: headers,
+            headers: HTTPHeaders(headers),
             body: try await body.get()
         )
     }

@@ -95,6 +95,7 @@ public struct HTTPResponse: Sendable {
 @available(*, deprecated, message: "Use ``HTTPHeaders`` instead of [HTTPHeader: String]")
 public extension HTTPResponse {
 
+    @_disfavoredOverload
     init(
         version: HTTPVersion = .http11,
         statusCode: HTTPStatusCode,
@@ -109,6 +110,7 @@ public extension HTTPResponse {
         )
     }
 
+    @_disfavoredOverload
     init(
         version: HTTPVersion = .http11,
         statusCode: HTTPStatusCode,
@@ -122,7 +124,8 @@ public extension HTTPResponse {
             body: body
         )
     }
-
+    
+    @_disfavoredOverload
     init(headers: [HTTPHeader: String], webSocket handler: some WSHandler) {
         self.init(headers: HTTPHeaders(headers), webSocket: handler)
     }

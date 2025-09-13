@@ -119,7 +119,7 @@ public struct FileHTTPHandler: HTTPHandler {
         }
 
         do {
-            var headers: [HTTPHeader: String] = [
+            var headers: HTTPHeaders = [
                 .contentType: contentType,
                 .acceptRanges: "bytes"
             ]
