@@ -37,7 +37,7 @@ final class HTTPHeaderTests: XCTestCase {
 
     func testStringValue() {
         // given
-        var headers = [HTTPHeader: String]()
+        var headers = HTTPHeaders()
         headers[.transferEncoding] = "Identity"
 
         XCTAssertEqual(

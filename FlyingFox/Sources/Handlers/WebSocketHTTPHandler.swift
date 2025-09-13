@@ -77,7 +77,7 @@ public struct WebSocketHTTPHandler: HTTPHandler, Sendable {
     /// - Parameter headers: The headers of the request to verify.
     /// - Returns: The request's key.
     /// - Throws: An ``WSInvalidHandshakeError`` if the headers are invalid.
-    static func verifyHandshakeRequestHeaders(_ headers: [HTTPHeader: String]) throws -> String {
+    static func verifyHandshakeRequestHeaders(_ headers: HTTPHeaders) throws -> String {
         // Verify the headers according to RFC 6455 section 4.2.1 (https://datatracker.ietf.org/doc/html/rfc6455#section-4.2.1)
         // Rule 1 isn't verified because the socket method is specified elsewhere
 

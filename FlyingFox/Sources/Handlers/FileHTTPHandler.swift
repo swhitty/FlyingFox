@@ -153,7 +153,7 @@ public struct FileHTTPHandler: HTTPHandler {
         }
     }
 
-    static func makePartialRange(for headers: [HTTPHeader: String], fileSize: Int) -> ClosedRange<Int>? {
+    static func makePartialRange(for headers: HTTPHeaders, fileSize: Int) -> ClosedRange<Int>? {
         guard let headerValue = headers[.range] else { return nil }
         let scanner = Scanner(string: headerValue)
         guard scanner.scanString("bytes") != nil,

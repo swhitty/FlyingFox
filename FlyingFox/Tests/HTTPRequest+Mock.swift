@@ -37,7 +37,7 @@ extension HTTPRequest {
                      version: HTTPVersion = .http11,
                      path: String = "/",
                      query: [QueryItem] = [],
-                     headers: [HTTPHeader: String] = [:],
+                     headers: HTTPHeaders = [:],
                      body: Data = Data(),
                      remoteAddress: Address? = nil) -> Self {
         HTTPRequest(method: method,
@@ -49,7 +49,7 @@ extension HTTPRequest {
                     remoteAddress: remoteAddress)
     }
 
-    static func make(method: HTTPMethod = .GET, _ url: String, headers: [HTTPHeader: String] = [:]) -> Self {
+    static func make(method: HTTPMethod = .GET, _ url: String, headers: HTTPHeaders = [:]) -> Self {
         let (path, query) = HTTPDecoder.make().readComponents(from: url.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!)
         return HTTPRequest.make(
             method: method,

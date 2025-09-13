@@ -34,7 +34,7 @@ import Foundation
 public struct HTTPResponse: Sendable {
     public var version: HTTPVersion
     public var statusCode: HTTPStatusCode
-    public var headers: [HTTPHeader: String]
+    public var headers: HTTPHeaders
     public var payload: Payload
 
     public enum Payload: @unchecked Sendable {
@@ -65,7 +65,7 @@ public struct HTTPResponse: Sendable {
 
     public init(version: HTTPVersion = .http11,
                 statusCode: HTTPStatusCode,
-                headers: [HTTPHeader: String] = [:],
+                headers: HTTPHeaders = [:],
                 body: Data = Data()) {
         self.version = version
         self.statusCode = statusCode
@@ -75,7 +75,7 @@ public struct HTTPResponse: Sendable {
 
     public init(version: HTTPVersion = .http11,
                 statusCode: HTTPStatusCode,
-                headers: [HTTPHeader: String] = [:],
+                headers: HTTPHeaders = [:],
                 body: HTTPBodySequence) {
         self.version = version
         self.statusCode = statusCode
@@ -83,12 +83,48 @@ public struct HTTPResponse: Sendable {
         self.payload = .httpBody(body)
     }
 
-    public init(headers: [HTTPHeader: String] = [:],
+    public init(headers: HTTPHeaders = [:],
                 webSocket handler: some WSHandler) {
         self.version = .http11
         self.statusCode = .switchingProtocols
         self.headers = headers
         self.payload = .webSocket(handler)
+    }
+}
+
+@available(*, deprecated, message: "Use ``HTTPHeaders`` instead of [HTTPHeader: String]")
+public extension HTTPResponse {
+
+    init(
+        version: HTTPVersion = .http11,
+        statusCode: HTTPStatusCode,
+        headers: [HTTPHeader: String],
+        body: Data = Data()
+    ) {
+        self.init(
+            version: version,
+            statusCode: statusCode,
+            headers: HTTPHeaders(headers),
+            body: body
+        )
+    }
+
+    init(
+        version: HTTPVersion = .http11,
+        statusCode: HTTPStatusCode,
+        headers: [HTTPHeader: String],
+        body: HTTPBodySequence
+    ) {
+        self.init(
+            version: version,
+            statusCode: statusCode,
+            headers: HTTPHeaders(headers),
+            body: body
+        )
+    }
+
+    init(headers: [HTTPHeader: String], webSocket handler: some WSHandler) {
+        self.init(headers: HTTPHeaders(headers), webSocket: handler)
     }
 }
 

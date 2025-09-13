@@ -1,5 +1,5 @@
 //
-//  HTTPHeaderTests.swift
+//  HTTPHeadersTests.swift
 //  FlyingFox
 //
 //  Created by Simon Whitty on 11/07/2024.
@@ -33,12 +33,12 @@
 import Foundation
 import Testing
 
-struct HTTPHeaderTests {
+struct HTTPHeadersTests {
 
     @Test
     func stringValue() {
         // given
-        var headers = [HTTPHeader: String]()
+        var headers = HTTPHeaders()
         headers[.transferEncoding] = "Identity"
 
         #expect(
@@ -62,5 +62,15 @@ struct HTTPHeaderTests {
         #expect(
             headers.values(for: .transferEncoding) == ["Identity", "chunked"]
         )
+    }
+
+    @Test
+    func values() {
+        var headers = HTTPHeaders()
+        headers.addValue("Fish", for: .setCookie)
+        headers.addValue("Chips", for: .setCookie)
+
+        #expect(headers[.setCookie] == "Fish")
+        #expect(headers.values(for: .setCookie) == ["Fish", "Chips"])
     }
 }
