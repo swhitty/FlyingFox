@@ -163,7 +163,7 @@ jobs:
       - name: Build
         run: swift build --swift-sdk aarch64-unknown-linux-android24
 
-  windows_swift_6_1:
+  windows_swift_6_2:
     runs-on: windows-latest
     steps:
       - name: Checkout
@@ -171,8 +171,7 @@ jobs:
       - name: Install Swift
         uses: SwiftyLab/setup-swift@latest
         with:
-          swift-version: "6.1.2"
-          visual-studio-components: Microsoft.VisualStudio.Component.Windows11SDK.22621
+          swift-version: "6.2"
       - name: Version
         run: swift --version
       - name: Build
