@@ -2,8 +2,8 @@
 
 set -eu
 
-docker run -it \
+container run -it \
   --rm \
   --mount src="$(pwd)",target=/flyingfox,type=bind \
-  swift:latest \
+  swift:6.2 \
   /usr/bin/swift test --package-path /flyingfox
