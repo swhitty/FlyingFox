@@ -1,5 +1,5 @@
 //
-//  JSONValuePatternTests.swift
+//  JSONBodyPatternTests.swift
 //  FlyingFox
 //
 //  Created by Simon Whitty on 15/08/2024.
@@ -33,12 +33,12 @@ import FlyingFox
 import Foundation
 import Testing
 
-struct JSONValuePatternTests {
+struct JSONBodyPatternTests {
 
     @Test
     func pattern_MatchesJSONPath() async throws {
         // given
-        let pattern = JSONValuePattern { try $0.getValue(for: "$.name") == .string("fish") }
+        let pattern = JSONBodyPattern { try $0.getValue(for: "$.name") == "fish" }
 
         // when then
         #expect(pattern.evaluate(json: #"{"name": "fish"}"#))
@@ -53,7 +53,7 @@ struct JSONValuePatternTests {
         // given
         let route = HTTPRoute(
             "POST /fish",
-            jsonBody: { try $0.getValue(for: "$.food") == .string("chips")  }
+            jsonBody: { try $0.getValue(for: "$.food") == "chips"  }
         )
 
         // when
@@ -70,13 +70,12 @@ struct JSONValuePatternTests {
     }
 }
 
-private extension JSONValuePattern {
+private extension JSONBodyPattern {
 
     func evaluate(json: String) -> Bool {
         self.evaluate(Data(json.utf8))
     }
 }
-
 
 private extension HTTPRequest {
     static func make(method: HTTPMethod = .POST,

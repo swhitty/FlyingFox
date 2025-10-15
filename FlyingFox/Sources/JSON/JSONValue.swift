@@ -130,52 +130,22 @@ public extension JSONValue {
             } else {
                 self = .number(nsNumber.doubleValue)
             }
-        } else if let int = any as? Int {
-            self = .number(Double(int))
-        } else if let double = any as? Double {
-            self = .number(double)
-        } else if let bool = any as? Bool {
-            self = .boolean(bool)
         } else if any is NSNull {
+            self = .null
+        } else if case nil as Any? = any {
             self = .null
         } else {
             throw Error("Unsupported Value")
         }
     }
 
-    init?(_ value: JSONValue?) {
-        guard let value else { return nil }
-        self = value
-    }
-
-    init?(_ value: [String: JSONValue]?) {
-        guard let value else { return nil }
-        self = .object(value)
-    }
-
-    init?(_ value: [JSONValue]?) {
-        guard let value else { return nil }
-        self = .array(value)
-    }
-
-    init?(_ value: String?) {
-        guard let value else { return nil }
-        self = .string(value)
-    }
-
-    init?(_ value: Double?) {
-        guard let value else { return nil }
-        self = .number(value)
-    }
-
-    init?(_ value: Int?) {
-        guard let value else { return nil }
-        self = .number(Double(value))
-    }
-
-    init?(_ value: Bool?) {
-        guard let value else { return nil }
-        self = .boolean(value)
+    init<T>(_ any: T?) throws {
+        switch any {
+            case .none:
+                self = .null
+            case .some(let value):
+                self = try JSONValue(value)
+        }
     }
 
     func asAny() -> Any {
@@ -195,52 +165,18 @@ public extension JSONValue {
         }
     }
 
-    func asObject() throws -> [String: JSONValue] {
+    private func asObject() throws -> [String: JSONValue] {
         guard case let .object(val) = self else {
             throw Error("Expected object")
         }
         return val
     }
 
-    func asArray() throws -> [JSONValue] {
+    private func asArray() throws -> [JSONValue] {
         guard case let .array(val) = self else {
             throw Error("Expected array")
         }
         return val
-    }
-
-    func asString() throws -> String {
-        guard case let .string(val) = self else {
-            throw Error("Expected string")
-        }
-        return val
-    }
-
-    func asNumber() throws -> Double {
-        guard case .number(let val) = self else {
-            throw Error("Expected number")
-        }
-        return val
-    }
-
-    func asBool() throws -> Bool {
-        switch self {
-        case .boolean(let val):
-            return val
-        case .number(let val) where val == 0:
-            return false
-        case .number(let val) where val == 1:
-            return true
-        default:
-            throw Error("Expected boolean")
-        }
-    }
-
-    func asNull() throws -> NSNull {
-        guard case .null = self else {
-            throw Error("Expected null")
-        }
-        return NSNull()
     }
 
     private struct Error: LocalizedError {
@@ -261,96 +197,34 @@ public extension JSONValue {
     }
 }
 
-public extension JSONValue {
-
-    mutating func updateValue(parsing text: String) throws {
-        if let null = try? Self.parseNull(string: text) {
-            self = null
-            return
-        }
-        switch self {
-        case .object:
-            self = try Self.parseObject(string: text)
-        case .array:
-            self = try Self.parseArray(string: text)
-        case .string:
-            self = .string(text)
-        case .number:
-            self = try Self.parseNumber(string: text)
-        case .boolean:
-            self = try Self.parseBoolean(string: text)
-        case .null:
-            self = Self.parseAny(string: text)
-        }
-    }
-
-    static func parseObject(string: String) throws -> JSONValue {
-        let data = string.data(using: .utf8)!
-        guard case let .object(object) = try JSONValue(data: data) else {
-            throw Error("Invalid object")
-        }
-        return .object(object)
-    }
-
-    static func parseArray(string: String) throws -> JSONValue {
-        let data = string.data(using: .utf8)!
-        guard case let .array(array) = try JSONValue(data: data) else {
-            throw Error("Invalid array")
-        }
-        return .array(array)
-    }
-
-    static func parseNumber(string: String) throws -> JSONValue {
-        guard let value = JSONValue.numberFormatter.number(from: string)?.doubleValue else {
-            throw Error("Invalid number")
-        }
-        return .number(value)
-    }
-
-    static func parseBoolean(string: String) throws -> JSONValue {
-        switch string.lowercased() {
-        case "true":
-            return .boolean(true)
-        case "false":
-            return .boolean(false)
-        default:
-            throw Error("Invalid boolean")
-        }
-    }
-
-    static func parseNull(string: String) throws -> JSONValue {
-        switch string.lowercased() {
-        case "null", "":
-            return .null
-        default:
-            throw Error("Invalid null")
-        }
-    }
-
-    static func parseAny(string: String) -> JSONValue {
-        if let object = try? parseObject(string: string) {
-            return object
-        } else if let array = try? parseArray(string: string) {
-            return array
-        } else if let number = try? parseNumber(string: string) {
-            return number
-        } else if let bool = try? parseBoolean(string: string) {
-            return bool
-        } else if let null = try? parseNull(string: string) {
-            return null
-        } else {
-            return .string(string)
-        }
-    }
+public func == (lhs: JSONValue, rhs: String) -> Bool {
+    lhs == JSONValue.string(rhs)
 }
 
-public extension JSONValue {
-    static let numberFormatter: NumberFormatter = {
-        let formatter = NumberFormatter()
-        formatter.locale = Locale(identifier: "en_US")
-        formatter.minimumFractionDigits = 0
-        formatter.maximumFractionDigits = 6
-        formatter.roundingMode = .halfUp
-        return formatter
-    }()
+public func != (lhs: JSONValue, rhs: String) -> Bool {
+    !(lhs == rhs)
+}
+
+public func == (lhs: JSONValue, rhs: Double) -> Bool {
+    lhs == JSONValue.number(rhs)
+}
+
+public func != (lhs: JSONValue, rhs: Double) -> Bool {
+    !(lhs == rhs)
+}
+
+public func == (lhs: JSONValue, rhs: Bool) -> Bool {
+    lhs == JSONValue.boolean(rhs)
+}
+
+public func != (lhs: JSONValue, rhs: Bool) -> Bool {
+    !(lhs == rhs)
+}
+
+public func == (lhs: JSONValue, rhs: some BinaryInteger) -> Bool {
+    lhs == JSONValue.number(Double(rhs))
+}
+
+public func != (lhs: JSONValue, rhs: some BinaryInteger) -> Bool {
+    !(lhs == rhs)
 }
