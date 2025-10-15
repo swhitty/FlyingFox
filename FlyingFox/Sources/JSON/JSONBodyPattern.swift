@@ -31,14 +31,14 @@
 
 import Foundation
 
-public extension HTTPBodyPattern where Self == JSONValuePattern {
+public extension HTTPBodyPattern where Self == JSONBodyPattern {
 
-    static func jsonValue(where predicate: @escaping @Sendable (JSONValue) throws -> Bool) -> JSONValuePattern {
-        JSONValuePattern(predicate)
+    static func jsonValue(where predicate: @escaping @Sendable (JSONValue) throws -> Bool) -> JSONBodyPattern {
+        JSONBodyPattern(predicate)
     }
 }
 
-public struct JSONValuePattern: HTTPBodyPattern {
+public struct JSONBodyPattern: HTTPBodyPattern {
 
     private let predicate: @Sendable (JSONValue) throws -> Bool
 

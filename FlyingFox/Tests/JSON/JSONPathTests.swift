@@ -85,16 +85,16 @@ struct JSONPathTests {
         """#)
 
         #expect(
-            try json.getValue(for: "$.owner.age").asNumber() == 7
+            try json.getValue(for: "$.owner.age") == 7
         )
         #expect(
-            try json.getValue(for: "$.owner.isAdmin").asBool()
+            try json.getValue(for: "$.owner.isAdmin") == true
         )
         #expect(
-            try json.getValue(for: "$.users[1].food").asString() == "chips"
+            try json.getValue(for: "$.users[1].food") == "chips"
         )
         #expect(
-            try json.getValue(for: "$.users[2].age").asNumber() == 9
+            try json.getValue(for: "$.users[2].age") == 9
         )
     }
 

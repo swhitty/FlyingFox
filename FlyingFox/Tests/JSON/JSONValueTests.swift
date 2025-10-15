@@ -30,140 +30,96 @@
 //
 
 import FlyingFox
+import Foundation
 import Testing
 
 struct JSONValueTests {
 
     @Test
-    func objects_CanBeUpdated_ToNull() throws {
+    func json_string() throws {
         // given
-        var val = JSONValue.object([:])
+        let val = try JSONValue("fish")
 
-        // when
-        try val.updateValue(parsing: "null")
+        // then
+        #expect(val == "fish")
+        #expect(val != "chips")
+    }
+
+    @Test
+    func json_int() throws {
+        // given
+        let val = try JSONValue(Int(10))
+
+        // then
+        #expect(val == 10)
+        #expect(val != 100)
+    }
+
+    @Test
+    func json_double() throws {
+        // given
+        let val = try JSONValue(10.5)
+
+        // then
+        #expect(val == 10.5)
+        #expect(val != 100.5)
+    }
+
+    @Test
+    func json_bool() throws {
+        // given
+        let val = try JSONValue(true)
+
+        // then
+        #expect(val == true)
+        #expect(val != false)
+    }
+
+    @Test
+    func json_nsnull() throws {
+        // given
+        let val = try JSONValue(NSNull())
 
         // then
         #expect(val == .null)
+        #expect(val != "fish")
     }
 
     @Test
-    func arrays_CanBeUpdated_ToNull() throws {
+    func json_anyNone() throws {
         // given
-        var val = JSONValue.array([])
-
-        // when
-        try val.updateValue(parsing: "null")
+        let val = try JSONValue(String?.none as Any)
 
         // then
         #expect(val == .null)
+        #expect(val != "fish")
     }
 
     @Test
-    func string_CanBeUpdated_ToNull() throws {
+    func json_optionalNone() throws {
         // given
-        var val = JSONValue.string("")
-
-        // when
-        try val.updateValue(parsing: "null")
+        let val = try JSONValue(String?.none)
 
         // then
         #expect(val == .null)
+        #expect(val != "fish")
     }
 
     @Test
-    func number_CanBeUpdated_ToNull() throws {
+    func json_optionalSome() throws {
         // given
-        var val = JSONValue.number(10)
-
-        // when
-        try val.updateValue(parsing: "null")
+        let val = try JSONValue(String?.some("fish"))
 
         // then
-        #expect(val == .null)
+        #expect(val == "fish")
+        #expect(val != .null)
     }
 
     @Test
-    func bool_CanBeUpdated_ToNull() throws {
-        // given
-        var val = JSONValue.boolean(true)
-
-        // when
-        try val.updateValue(parsing: "null")
-
-        // then
-        #expect(val == .null)
-    }
-
-    @Test
-    func null_CanBeUpdated_ToNull() throws {
-        // given
-        var val = JSONValue.null
-
-        // when
-        try val.updateValue(parsing: "null")
-
-        // then
-        #expect(val == .null)
-    }
-
-    @Test
-    func null_CanBeUpdated_ToObject() throws {
-        // given
-        var val = JSONValue.null
-
-        // when
-        try val.updateValue(parsing: "{\"foo\":\"bar\"}")
-
-        // then
-        #expect(val == .object(["foo": .string("bar")]))
-    }
-
-    @Test
-    func null_CanBeUpdated_ToArray() throws {
-        // given
-        var val = JSONValue.null
-
-        // when
-        try val.updateValue(parsing: "[1,2]")
-
-        // then
-        #expect(val == .array([.number(1), .number(2)]))
-    }
-
-    @Test
-    func null_CanBeUpdated_ToNumber() throws {
-        // given
-        var val = JSONValue.null
-
-        // when
-        try val.updateValue(parsing: "1")
-
-        // then
-        #expect(val == .number(1))
-    }
-
-    @Test
-    func null_CanBeUpdated_ToBool() throws {
-        // given
-        var val = JSONValue.null
-
-        // when
-        try val.updateValue(parsing: "true")
-
-        // then
-        #expect(val == .boolean(true))
-    }
-
-    @Test
-    func null_CanBeUpdated_ToString() throws {
-        // given
-        var val = JSONValue.null
-
-        // when
-        try val.updateValue(parsing: "foo")
-
-        // then
-        #expect(val == .string("foo"))
+    func json_invalid() {
+        #expect(throws: (any Error).self) {
+            try JSONValue(HTTPRequest.make())
+        }
     }
 
     #if canImport(Darwin)
