@@ -38,7 +38,7 @@ struct JSONBodyPatternTests {
     @Test
     func pattern_MatchesJSONPath() async throws {
         // given
-        let pattern = JSONBodyPattern { try $0.getValue(for: "$.name") == "fish" }
+        let pattern = JSONBodyPattern { $0["$.name"] == "fish" }
 
         // when then
         #expect(pattern.evaluate(json: #"{"name": "fish"}"#))
@@ -53,7 +53,7 @@ struct JSONBodyPatternTests {
         // given
         let route = HTTPRoute(
             "POST /fish",
-            jsonBody: { try $0.getValue(for: "$.food") == "chips"  }
+            jsonBody: { $0["$.food"] == "chips"  }
         )
 
         // when

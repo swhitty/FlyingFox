@@ -38,7 +38,7 @@ struct JSONValueTests {
     @Test
     func json_string() throws {
         // given
-        let val = try JSONValue("fish")
+        let val = try JSONValue("fish" as Any)
 
         // then
         #expect(val == "fish")
@@ -48,7 +48,7 @@ struct JSONValueTests {
     @Test
     func json_int() throws {
         // given
-        let val = try JSONValue(Int(10))
+        let val = try JSONValue(Int(10) as Any)
 
         // then
         #expect(val == 10)
@@ -58,7 +58,7 @@ struct JSONValueTests {
     @Test
     func json_double() throws {
         // given
-        let val = try JSONValue(10.5)
+        let val = try JSONValue(10.5 as Any)
 
         // then
         #expect(val == 10.5)
@@ -68,7 +68,7 @@ struct JSONValueTests {
     @Test
     func json_bool() throws {
         // given
-        let val = try JSONValue(true)
+        let val = try JSONValue(true as Any)
 
         // then
         #expect(val == true)
@@ -78,7 +78,7 @@ struct JSONValueTests {
     @Test
     func json_nsnull() throws {
         // given
-        let val = try JSONValue(NSNull())
+        let val = try JSONValue(NSNull() as Any)
 
         // then
         #expect(val == .null)

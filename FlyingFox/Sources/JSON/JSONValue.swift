@@ -31,7 +31,7 @@
 
 import Foundation
 
-public indirect enum JSONValue: @unchecked Sendable, Equatable {
+public indirect enum JSONValue: Sendable, Hashable {
     case object([String: JSONValue])
     case array([JSONValue])
     case string(String)
@@ -39,8 +39,12 @@ public indirect enum JSONValue: @unchecked Sendable, Equatable {
     case boolean(Bool)
     case null
 
-    public func getValue(for path: String) throws -> JSONValue {
-        try getValue(for: JSONPath(parsing: path))
+    public subscript(jsonPath: String) -> JSONValue? {
+        get { try? getValue(for: jsonPath) }
+    }
+
+    public func getValue(for jsonPath: String) throws -> JSONValue {
+        try getValue(for: JSONPath(parsing: jsonPath))
     }
 
     public func getValue(for path: JSONPath) throws -> JSONValue {
@@ -197,34 +201,26 @@ public extension JSONValue {
     }
 }
 
-public func == (lhs: JSONValue, rhs: String) -> Bool {
-    lhs == JSONValue.string(rhs)
+extension JSONValue: ExpressibleByStringLiteral {
+    public init(stringLiteral value: String) {
+        self = .string(value)
+    }
 }
 
-public func != (lhs: JSONValue, rhs: String) -> Bool {
-    !(lhs == rhs)
+extension JSONValue: ExpressibleByBooleanLiteral {
+    public init(booleanLiteral value: Bool) {
+        self = .boolean(value)
+    }
 }
 
-public func == (lhs: JSONValue, rhs: Double) -> Bool {
-    lhs == JSONValue.number(rhs)
+extension JSONValue: ExpressibleByIntegerLiteral {
+    public init(integerLiteral value: Int) {
+        self = .number(Double(value))
+    }
 }
 
-public func != (lhs: JSONValue, rhs: Double) -> Bool {
-    !(lhs == rhs)
-}
-
-public func == (lhs: JSONValue, rhs: Bool) -> Bool {
-    lhs == JSONValue.boolean(rhs)
-}
-
-public func != (lhs: JSONValue, rhs: Bool) -> Bool {
-    !(lhs == rhs)
-}
-
-public func == (lhs: JSONValue, rhs: some BinaryInteger) -> Bool {
-    lhs == JSONValue.number(Double(rhs))
-}
-
-public func != (lhs: JSONValue, rhs: some BinaryInteger) -> Bool {
-    !(lhs == rhs)
+extension JSONValue: ExpressibleByFloatLiteral {
+    public init(floatLiteral value: Double) {
+        self = .number(value)
+    }
 }
