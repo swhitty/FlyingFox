@@ -302,10 +302,13 @@ public protocol HTTPBodyPattern: Sendable {
 }
 ```
 
-Darwin platforms can pattern match a JSON body with an [`NSPredicate`](https://developer.apple.com/documentation/foundation/nspredicate):
+JSON request bodies can be matched using a [JSONPath](https://en.wikipedia.org/wiki/JSONPath) expression:
 
 ```swift
-let route = HTTPRoute("POST *", body: .json(where: "food == 'fish'"))
+let route = HTTPRoute(
+  "POST *",
+  jsonBody: { $0["$.food"] == "chips"  }
+)
 ```
 ```json
 {"side": "chips", "food": "fish"}

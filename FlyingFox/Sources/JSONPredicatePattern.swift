@@ -33,6 +33,7 @@
 
 import Foundation
 
+@available(*, deprecated, message: "Use JSONBodyPattern")
 public struct JSONPredicatePattern: HTTPBodyPattern {
 
     #if compiler(>=6)
@@ -55,8 +56,10 @@ public struct JSONPredicatePattern: HTTPBodyPattern {
     }
 }
 
+@available(*, deprecated, message: "Use JSONBodyPattern")
 public extension HTTPBodyPattern where Self == JSONPredicatePattern {
 
+    @available(*, deprecated, message: "Use JSONBodyPattern")
     static func json(where condition: String) -> JSONPredicatePattern {
         JSONPredicatePattern(NSPredicate(format: condition))
     }
