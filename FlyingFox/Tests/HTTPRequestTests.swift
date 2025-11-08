@@ -53,4 +53,39 @@ struct HTTPRequestTests {
             try await request.bodyData == Data([0x05, 0x06])
         )
     }
+
+    @Test
+    func targetIsCreated() {
+        // when
+        let request = HTTPRequest.make(path: "/meal plan/order", query: [
+            .init(name: "food", value: "fish & chips"),
+            .init(name: "qty", value: "15")
+        ])
+
+        // then
+        #expect(request.target.rawValue == "/meal%20plan/order?food=fish%20%26%20chips&qty=15")
+        #expect(request.target.path() == "/meal%20plan/order")
+        #expect(request.target.path(percentEncoded: false) == "/meal plan/order")
+        #expect(request.target.query() == "food=fish%20%26%20chips&qty=15")
+        #expect(request.target.query(percentEncoded: false) == "food=fish & chips&qty=15")
+    }
+
+    @Test
+    func pathIsCreated() {
+        // when
+        let request = HTTPRequest.make(
+            target: "/meal%20plan/order?food=fish%20%26%20chips&qty=15"
+        )
+
+        // then
+        #expect(request.path == "/meal plan/order")
+        #expect(request.query == [
+            .init(name: "food", value: "fish & chips"),
+            .init(name: "qty", value: "15")
+        ])
+        #expect(request.target.path() == "/meal%20plan/order")
+        #expect(request.target.path(percentEncoded: false) == "/meal plan/order")
+        #expect(request.target.query() == "food=fish%20%26%20chips&qty=15")
+        #expect(request.target.query(percentEncoded: false) == "food=fish & chips&qty=15")
+    }
 }

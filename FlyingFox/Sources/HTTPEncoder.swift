@@ -117,4 +117,14 @@ struct HTTPEncoder {
 
         return data
     }
+
+    static func makeTarget(path: String, query: [HTTPRequest.QueryItem]) -> HTTPRequest.Target {
+        var comps = URLComponents()
+        comps.path = path
+        comps.queryItems = query.map { .init(name: $0.name, value: $0.value) }
+        return HTTPRequest.Target(
+            path: comps.percentEncodedPath,
+            query: comps.percentEncodedQuery ?? ""
+        )
+    }
 }
