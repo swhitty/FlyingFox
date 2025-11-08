@@ -34,6 +34,8 @@ import Foundation
 public struct HTTPRequest: Sendable {
     public var method: HTTPMethod
     public var version: HTTPVersion
+    public var target: Target 
+
     public var path: String
     public var query: [QueryItem]
     public var headers: HTTPHeaders
@@ -58,15 +60,35 @@ public struct HTTPRequest: Sendable {
         set { fatalError("unavailable") }
     }
 
-    public init(method: HTTPMethod,
-                version: HTTPVersion,
-                path: String,
-                query: [QueryItem],
-                headers: HTTPHeaders,
-                body: HTTPBodySequence,
-                remoteAddress: Address? = nil) {
+    public init(
+        method: HTTPMethod,
+        version: HTTPVersion,
+        target: Target,
+        headers: HTTPHeaders,
+        body: HTTPBodySequence,
+        remoteAddress: Address? = nil
+    ) {
         self.method = method
         self.version = version
+        self.target = target
+        (self.path, self.query) = HTTPDecoder().makeComponents(from: target)
+        self.headers = headers
+        self.bodySequence = body
+        self.remoteAddress = remoteAddress
+    }
+
+    public init(
+        method: HTTPMethod,
+        version: HTTPVersion,
+        path: String,
+        query: [QueryItem],
+        headers: HTTPHeaders,
+        body: HTTPBodySequence,
+        remoteAddress: Address? = nil
+    ) {
+        self.method = method
+        self.version = version
+        self.target = HTTPEncoder.makeTarget(path: path, query: query)
         self.path = path
         self.query = query
         self.headers = headers
@@ -79,9 +101,11 @@ public struct HTTPRequest: Sendable {
                 path: String,
                 query: [QueryItem],
                 headers: [HTTPHeader: String],
-                body: Data) {
+                body: Data
+    ) {
         self.method = method
         self.version = version
+        self.target = HTTPEncoder.makeTarget(path: path, query: query)
         self.path = path
         self.query = query
         self.headers = HTTPHeaders(headers)
@@ -90,9 +114,9 @@ public struct HTTPRequest: Sendable {
     }
 }
 
-@available(*, deprecated, message: "Use ``HTTPHeaders`` instead of [HTTPHeader: String]")
 public extension HTTPRequest {
 
+    @available(*, unavailable, message: "Use ``HTTPHeaders`` instead of [HTTPHeader: String]")
     init(method: HTTPMethod,
          version: HTTPVersion,
          path: String,
@@ -100,14 +124,7 @@ public extension HTTPRequest {
          headers: [HTTPHeader: String],
          body: HTTPBodySequence
     ) {
-        self.init(
-            method: method,
-            version: version,
-            path: path,
-            query: query,
-            headers: HTTPHeaders(headers),
-            body: body
-        )
+        fatalError("unavailable")
     }
 }
 

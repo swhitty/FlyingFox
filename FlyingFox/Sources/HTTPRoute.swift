@@ -383,9 +383,3 @@ public extension Array where Element == HTTPRoute.Parameter {
         }
     }
 }
-
-private extension HTTPDecoder {
-    init() {
-        self.init(sharedRequestBufferSize: 128, sharedRequestReplaySize: 1024)
-    }
-}

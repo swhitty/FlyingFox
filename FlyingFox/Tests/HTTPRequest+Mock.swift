@@ -33,20 +33,42 @@
 import Foundation
 
 extension HTTPRequest {
-    static func make(method: HTTPMethod = .GET,
-                     version: HTTPVersion = .http11,
-                     path: String = "/",
-                     query: [QueryItem] = [],
-                     headers: HTTPHeaders = [:],
-                     body: Data = Data(),
-                     remoteAddress: Address? = nil) -> Self {
-        HTTPRequest(method: method,
-                    version: version,
-                    path: path,
-                    query: query,
-                    headers: headers,
-                    body:  HTTPBodySequence(data: body),
-                    remoteAddress: remoteAddress)
+    static func make(
+        method: HTTPMethod = .GET,
+        version: HTTPVersion = .http11,
+        target: String = "/",
+        headers: HTTPHeaders = [:],
+        body: Data = Data(),
+        remoteAddress: Address? = nil
+    ) -> Self {
+        HTTPRequest(
+            method: method,
+            version: version,
+            target: HTTPDecoder().makeTarget(from: target),
+            headers: headers,
+            body:  HTTPBodySequence(data: body),
+            remoteAddress: remoteAddress
+        )
+    }
+
+    static func make(
+        method: HTTPMethod = .GET,
+        version: HTTPVersion = .http11,
+        path: String = "/",
+        query: [QueryItem] = [],
+        headers: HTTPHeaders = [:],
+        body: Data = Data(),
+        remoteAddress: Address? = nil
+    ) -> Self {
+        HTTPRequest(
+            method: method,
+            version: version,
+            path: path,
+            query: query,
+            headers: headers,
+            body:  HTTPBodySequence(data: body),
+            remoteAddress: remoteAddress
+        )
     }
 
     static func make(method: HTTPMethod = .GET, _ url: String, headers: HTTPHeaders = [:]) -> Self {

@@ -48,16 +48,14 @@ struct HTTPDecoder {
 
         let method = HTTPMethod(String(comps[0]))
         let version = HTTPVersion(String(comps[2]))
-        let (path, query) = readComponents(from: String(comps[1]))
-
+        let target = makeTarget(from: comps[1])
         let headers = try await readHeaders(from: bytes)
         let body = try await readBody(from: bytes, length: headers[.contentLength])
 
         return HTTPRequest(
             method: method,
             version: version,
-            path: path,
-            query: query,
+            target: target,
             headers: HTTPHeaders(headers),
             body: body
         )
@@ -87,7 +85,21 @@ struct HTTPDecoder {
     }
 
     func readComponents(from target: String) -> (path: String, query: [HTTPRequest.QueryItem]) {
-        makeComponents(from: URLComponents(string: target))
+        makeComponents(from: makeTarget(from: target))
+    }
+
+    func makeTarget(from target: some StringProtocol) -> HTTPRequest.Target {
+        let comps = target.split(separator: "?", maxSplits: 1, omittingEmptySubsequences: false)
+        let path = comps.first ?? ""
+        let query = comps.count > 1 ? comps[1] : ""
+        return HTTPRequest.Target(
+            path: String(path),
+            query: String(query)
+        )
+    }
+
+    func makeComponents(from target: HTTPRequest.Target) -> (path: String, query: [HTTPRequest.QueryItem]) {
+        makeComponents(from: URLComponents(string: target.rawValue))
     }
 
     func makeComponents(from comps: URLComponents?) -> (path: String, query: [HTTPRequest.QueryItem]) {
@@ -141,6 +153,10 @@ struct HTTPDecoder {
 }
 
 extension HTTPDecoder {
+
+    init() {
+        self.init(sharedRequestBufferSize: 128, sharedRequestReplaySize: 1024)
+    }
 
     struct Error: LocalizedError {
         var errorDescription: String?

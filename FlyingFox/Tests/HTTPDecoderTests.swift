@@ -212,7 +212,7 @@ struct HTTPDecoderTests {
 
     @Test
     func invalidPathDecodes() {
-        let comps = HTTPDecoder.make().makeComponents(from: nil)
+        let comps = HTTPDecoder.make().readComponents(from: "")
         #expect(comps.path == "")
         #expect(comps.query == [])
     }
@@ -243,11 +243,8 @@ struct HTTPDecoderTests {
 
     @Test
     func emptyQueryItem_Decodes() {
-        var urlComps = URLComponents()
-        urlComps.queryItems = [.init(name: "name", value: nil)]
-
         #expect(
-            HTTPDecoder.make().makeComponents(from: urlComps).query == [
+            HTTPDecoder.make().readComponents(from: "/?name=").query == [
                 .init(name: "name", value: "")
             ]
         )
