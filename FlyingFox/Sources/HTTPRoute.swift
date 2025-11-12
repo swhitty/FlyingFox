@@ -194,9 +194,15 @@ public extension HTTPRoute {
         fatalError()
     }
 
+#if compiler(>=6.2)
+    nonisolated(nonsending) static func ~= (route: HTTPRoute, request: HTTPRequest) async -> Bool {
+        await route.patternMatch(request: request)
+    }
+#else
     static func ~= (route: HTTPRoute, request: HTTPRequest) async -> Bool {
         await route.patternMatch(request: request)
     }
+#endif
 }
 
 private extension HTTPRoute {
@@ -224,6 +230,15 @@ private extension HTTPRoute {
         return nil
     }
 
+#if compiler(>=6.2)
+    nonisolated(nonsending) func patternMatch(request: HTTPRequest) async -> Bool {
+        guard patternMatch(query: request.query),
+              patternMatch(headers: request.headers),
+              await patternMatch(body: request.bodySequence) else { return false }
+
+        return patternMatch(method: request.method, path: request.path)
+    }
+#else
     func patternMatch(request: HTTPRequest) async -> Bool {
         guard patternMatch(query: request.query),
               patternMatch(headers: request.headers),
@@ -231,6 +246,7 @@ private extension HTTPRoute {
 
         return patternMatch(method: request.method, path: request.path)
     }
+#endif
 
     func patternMatch(method: HTTPMethod, path: String) -> Bool {
         guard self.methods.contains(method) else {
@@ -265,6 +281,22 @@ private extension HTTPRoute {
         }
     }
 
+#if compiler(>=6.2)
+    nonisolated(nonsending) func patternMatch(body request: HTTPBodySequence) async -> Bool {
+        guard let body = body else { return true }
+
+        guard request.canReplay else {
+            // body is large and can only be iterated one-time only so should not match it
+            return false
+        }
+
+        do {
+            return try await body.evaluate(request.get())
+        } catch {
+            return false
+        }
+    }
+#else
     func patternMatch(body request: HTTPBodySequence) async -> Bool {
         guard let body = body else { return true }
 
@@ -279,6 +311,7 @@ private extension HTTPRoute {
             return false
         }
     }
+#endif
 
     static func components(for target: String) -> (
         methods: Set<HTTPMethod>,

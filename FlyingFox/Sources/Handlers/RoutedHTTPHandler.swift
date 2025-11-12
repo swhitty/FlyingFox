@@ -78,13 +78,16 @@ public struct RoutedHTTPHandler: HTTPHandler, Sendable {
         insert((route, ClosureHTTPHandler(handler)), at: index)
     }
 
-    public func handleRequest(_ request: HTTPRequest) async throws -> HTTPResponse {
+#if compiler(>=6.2)
+    nonisolated(nonsending) public func handleRequest(_ request: HTTPRequest) async throws -> HTTPResponse {
         for entry in handlers  {
             do {
-                if await entry.route ~= request {
-                    return try await HTTPRequest.$matchedRoute.withValue(entry.route) {
-                        return try await entry.handler.handleRequest(request)
-                    }
+                if let response = try await Self.handleMatchedRequest(
+                    request,
+                    to: entry.route,
+                    handler: entry.handler.handleRequest
+                ) {
+                    return response
                 }
             } catch is HTTPUnhandledError {
                 continue
@@ -94,6 +97,26 @@ public struct RoutedHTTPHandler: HTTPHandler, Sendable {
         }
         throw HTTPUnhandledError()
     }
+#else
+    public func handleRequest(_ request: HTTPRequest) async throws -> HTTPResponse {
+        for entry in handlers  {
+            do {
+                if let response = try await Self.handleMatchedRequest(
+                    request,
+                    to: entry.route,
+                    handler: entry.handler.handleRequest
+                ) {
+                    return response
+                }
+            } catch is HTTPUnhandledError {
+                continue
+            } catch {
+                throw error
+            }
+        }
+        throw HTTPUnhandledError()
+    }
+#endif
 }
 
 public extension RoutedHTTPHandler {
@@ -136,9 +159,21 @@ public extension RoutedHTTPHandler {
     }
 }
 
-#if compiler(>=6.0)
 public extension RoutedHTTPHandler {
-
+#if compiler(>=6.2)
+    nonisolated(nonsending) static func handleMatchedRequest(
+        _ request: HTTPRequest,
+        to route: HTTPRoute,
+        handler: (HTTPRequest) async throws -> HTTPResponse
+    ) async throws -> HTTPResponse? {
+        if await route ~= request {
+            return try await HTTPRequest.$matchedRoute.withValue(route) {
+                return try await handler(request)
+            }
+        }
+        return nil
+    }
+#elseif compiler(>=6.0)
     static func handleMatchedRequest(
         isolation: isolated (any Actor)? = #isolation,
         _ request: HTTPRequest,
@@ -153,8 +188,21 @@ public extension RoutedHTTPHandler {
         }
         return nil
     }
-}
+#else
+    static func handleMatchedRequest(
+        _ request: HTTPRequest,
+        to route: HTTPRoute,
+        handler: (HTTPRequest) async throws -> HTTPResponse
+    ) async throws -> HTTPResponse? {
+        if await route ~= request {
+            return try await HTTPRequest.$matchedRoute.withValue(route) {
+                return try await handler(request)
+            }
+        }
+        return nil
+    }
 #endif
+}
 
 extension RoutedHTTPHandler: RangeReplaceableCollection {
     public typealias Index = Array<Element>.Index
