@@ -192,7 +192,7 @@ public extension JSONValue {
     }
 
     private static var defaultOptions: JSONSerialization.ReadingOptions {
-        guard #available(macOS 12.0, *) else { return [] }
+        guard #available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *) else { return [] }
         #if canImport(Darwin)
         return [.json5Allowed]
         #else
