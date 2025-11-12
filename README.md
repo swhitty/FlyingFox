@@ -307,7 +307,7 @@ JSON request bodies can be matched using a [JSONPath](https://en.wikipedia.org/w
 ```swift
 let route = HTTPRoute(
   "POST *",
-  jsonBody: { $0["$.food"] == "chips"  }
+  jsonBody: { $0["$.food"] == "fish"  }
 )
 ```
 ```json
