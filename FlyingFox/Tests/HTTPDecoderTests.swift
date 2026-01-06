@@ -292,6 +292,16 @@ struct HTTPDecoderTests {
             try await response.bodyString == "Hello"
         )
     }
+
+    @Test
+    func standardizedPath() {
+        #expect(
+            HTTPDecoder.standardizePath("/../a/b/../c/./d.html") == "/a/c/d.html"
+        )
+        #expect(
+            HTTPDecoder.standardizePath("/../a/b/../c/./d.html", fallback: true) == "/a/c/d.html"
+        )
+    }
 }
 
 private extension HTTPDecoder {

@@ -35,9 +35,13 @@ import Foundation
 extension HTTPDecoder {
 
     static func standardizePath(_ path: String) -> String? {
+        standardizePath(path, fallback: false)
+    }
+
+    static func standardizePath(_ path: String, fallback: Bool) -> String? {
         #if canImport(Darwin)
             #if compiler(>=6.2)
-            if #available(macOS 26.0, iOS 26.0, tvOS 26.0, watchOS 26.0, visionOS 26.0, *) {
+            if !fallback, #available(macOS 26.0, iOS 26.0, tvOS 26.0, watchOS 26.0, visionOS 26.0, *) {
                 return URL(string: path)?.standardized.path
             } else {
                 return standardizePathDarwinFallback(path)
