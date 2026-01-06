@@ -6,10 +6,10 @@ on:
   workflow_dispatch:
 
 jobs:
-  xcode_16_4:
-    runs-on: macos-15
+  xcode_26_2:
+    runs-on: macos-26
     env:
-      DEVELOPER_DIR: /Applications/Xcode_16.4.app/Contents/Developer
+      DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -39,10 +39,24 @@ jobs:
           junit: result-swift-testing.xml
           coverage: .build/debug/codecov/FlyingFox.json
 
-  xcode_26:
+  xcode_26_1:
     runs-on: macos-15
     env:
-      DEVELOPER_DIR: /Applications/Xcode_26.0.app/Contents/Developer
+      DEVELOPER_DIR: /Applications/Xcode_26.1.1.app/Contents/Developer
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Version
+        run: swift --version
+      - name: Build
+        run: swift build --build-tests
+      - name: Test
+        run: swift test --skip-build
+
+  xcode_16_4:
+    runs-on: macos-15
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_16.4.app/Contents/Developer
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -125,7 +139,7 @@ jobs:
 
   linux_swift_6_2:
     runs-on: ubuntu-latest
-    container: swiftlang/swift:nightly-6.2-noble
+    container: swift:6.2
     timeout-minutes: 5
     steps:
       - name: Checkout
