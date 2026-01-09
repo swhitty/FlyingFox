@@ -25,5 +25,5 @@
   "pod_target_xcconfig": {
     "OTHER_SWIFT_FLAGS": "-package-name FlyingFox"
   },
-  "swift_version": "5.10"
+  "swift_version": "6.0"
 }
