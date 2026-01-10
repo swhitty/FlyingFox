@@ -232,18 +232,6 @@ extension Socket {
     }
 }
 
-public struct AnySocketAddress: Sendable, SocketAddress {
-    public static var family: sa_family_t {
-        sa_family_t(AF_UNSPEC)
-    }
-
-    private var storage: sockaddr_storage
-
-    public init(_ sa: any SocketAddress) {
-        storage = sa.makeStorage()
-    }
-}
-
 public extension SocketAddress {
     func withSockAddr<T>(_ body: (_ sa: UnsafePointer<sockaddr>) throws -> T) rethrows -> T {
         try withUnsafePointer(to: self) {

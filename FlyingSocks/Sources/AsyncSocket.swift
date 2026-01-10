@@ -265,7 +265,7 @@ public struct AsyncSocket: Sendable {
     public func send(message: Message) async throws {
         try await send(
             message: message.payload,
-            to: AnySocketAddress(message.peerAddress),
+            to: message.peerAddress,
             interfaceIndex: message.interfaceIndex,
             from: message.localAddress
         )
