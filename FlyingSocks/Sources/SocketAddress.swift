@@ -109,9 +109,22 @@ public extension SocketAddress where Self == sockaddr_un {
 extension sockaddr_storage: SocketAddress,  @retroactive @unchecked Sendable {
     public static let family = sa_family_t(AF_UNSPEC)
 
+    private var size: socklen_t {
+        switch Int32(family) {
+        case AF_INET:
+            socklen_t(MemoryLayout<sockaddr_in>.size)
+        case AF_INET6:
+            socklen_t(MemoryLayout<sockaddr_in6>.size)
+        case AF_UNIX:
+            socklen_t(MemoryLayout<sockaddr_un>.size)
+        default:
+            0
+        }
+    }
+
     public func withSockAddr<R, E: Error>(_ body: (UnsafePointer<sockaddr>, socklen_t) throws(E) -> R) throws(E) -> R {
         try withUnsafeBytes(of: self) { (p) throws(E) -> R in
-            try body(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), socklen_t(p.count))
+            try body(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), size)
         }
     }
 
@@ -125,6 +138,10 @@ extension sockaddr_storage: SocketAddress,  @retroactive @unchecked Sendable {
 extension sockaddr_in: SocketAddress,  @retroactive @unchecked Sendable {
     public static let family = sa_family_t(AF_INET)
 
+    public static func make(from storage: sockaddr_storage) throws -> Self {
+        try makeAddress(from: storage)
+    }
+
     public func withSockAddr<R, E: Error>(_ body: (UnsafePointer<sockaddr>, socklen_t) throws(E) -> R) throws(E) -> R {
         try withUnsafeBytes(of: self) { (p) throws(E) -> R in
             try body(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), socklen_t(p.count))
@@ -134,6 +151,10 @@ extension sockaddr_in: SocketAddress,  @retroactive @unchecked Sendable {
 
 extension sockaddr_in6: SocketAddress,  @retroactive @unchecked Sendable {
     public static let family = sa_family_t(AF_INET6)
+
+    public static func make(from storage: sockaddr_storage) throws -> Self {
+        try makeAddress(from: storage)
+    }
 
     public func withSockAddr<R, E: Error>(_ body: (UnsafePointer<sockaddr>, socklen_t) throws(E) -> R) throws(E) -> R {
         try withUnsafeBytes(of: self) { (p) throws(E) -> R in
@@ -145,6 +166,10 @@ extension sockaddr_in6: SocketAddress,  @retroactive @unchecked Sendable {
 extension sockaddr_un: SocketAddress, @retroactive @unchecked Sendable {
     public static let family = sa_family_t(AF_UNIX)
 
+    public static func make(from storage: sockaddr_storage) throws -> Self {
+        try makeAddress(from: storage)
+    }
+
     public func withSockAddr<R, E: Error>(_ body: (UnsafePointer<sockaddr>, socklen_t) throws(E) -> R) throws(E) -> R {
         try withUnsafeBytes(of: self) { (p) throws(E) -> R in
             try body(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), socklen_t(p.count))
@@ -152,17 +177,12 @@ extension sockaddr_un: SocketAddress, @retroactive @unchecked Sendable {
     }
 }
 
-public extension SocketAddress {
-    static func make(from storage: sockaddr_storage) throws -> Self {
-        guard self is sockaddr_storage.Type || storage.ss_family == family else {
-            throw SocketError.unsupportedAddress
-        }
-        var storage = storage
-        return withUnsafePointer(to: &storage) {
-            $0.withMemoryRebound(to: Self.self, capacity: 1) {
-                $0.pointee
-            }
-        }
+package func makeAddress<A: SocketAddress>(from storage: sockaddr_storage) throws -> A {
+    guard storage.ss_family == A.family else {
+        throw SocketError.unsupportedAddress
+    }
+    return withUnsafeBytes(of: storage) {
+        $0.load(as: A.self)
     }
 }
 
