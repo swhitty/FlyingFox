@@ -110,6 +110,9 @@ extension sockaddr_storage: SocketAddress,  @retroactive @unchecked Sendable {
     public static let family = sa_family_t(AF_UNSPEC)
 
     private var size: socklen_t {
+    #if canImport(Darwin)
+        return socklen_t(ss_len)
+    #else
         switch Int32(family) {
         case AF_INET:
             socklen_t(MemoryLayout<sockaddr_in>.size)
@@ -120,6 +123,7 @@ extension sockaddr_storage: SocketAddress,  @retroactive @unchecked Sendable {
         default:
             0
         }
+    #endif
     }
 
     public func withSockAddr<R, E: Error>(_ body: (UnsafePointer<sockaddr>, socklen_t) throws(E) -> R) throws(E) -> R {
