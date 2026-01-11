@@ -55,7 +55,6 @@ struct HTTPConnectionTests {
         )
 
         let request = try await connection.requests.first()
-        print(request)
         #expect(
             await request == .make(
                 method: .GET,
