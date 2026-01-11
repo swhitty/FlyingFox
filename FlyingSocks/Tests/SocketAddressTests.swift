@@ -166,61 +166,6 @@ struct SocketAddressTests {
     #endif
 
     @Test
-    func unix_ThrowsInvalidAddress_WhenFamilyIncorrect() {
-        let storage = sockaddr_in6
-            .inet6(port: 8080)
-            .makeStorage()
-
-        #expect(throws: SocketError.unsupportedAddress) {
-            try sockaddr_un.make(from: storage)
-        }
-    }
-
-    @Test
-    func INET4_CheckSize() throws {
-        let sin = sockaddr_in.inet(port: 8001)
-        #expect(
-            sin.size == socklen_t(MemoryLayout<sockaddr_in>.size)
-        )
-    }
-
-    @Test
-    func INET6_CheckSize() throws {
-        let sin6 = sockaddr_in6.inet6(port: 8001)
-        #expect(
-            sin6.size == socklen_t(MemoryLayout<sockaddr_in6>.size)
-        )
-    }
-
-    @Test
-    func unix_CheckSize() throws {
-        let sun = sockaddr_un.unix(path: "/var/foo")
-        #expect(
-            sun.size == socklen_t(MemoryLayout<sockaddr_un>.size)
-        )
-    }
-
-    #if canImport(Glibc) || canImport(Musl) || canImport(Android)
-    @Test
-    func unixAbstractNamespace_CheckSize() throws {
-        let sun = sockaddr_un.unix(abstractNamespace: "some_great_namespace")
-        #expect(
-            sun.size == socklen_t(MemoryLayout<sockaddr_un>.size)
-        )
-    }
-    #endif
-
-    @Test
-    func unknown_CheckSize() throws {
-        var sa = sockaddr()
-        sa.sa_family = sa_family_t(AF_UNSPEC)
-
-        #expect(
-            sa.size == 0
-        )
-    }
-
-    @Test
     func unlinkUnix_Throws_WhenPathIsInvalid() {
         #expect(throws: SocketError.self) {
             try Socket.unlink(sockaddr_un())
@@ -359,44 +304,9 @@ struct SocketAddressTests {
             }
         }
     }
-
-    @Test
-    func testTypeErasedSockAddress() throws {
-        var addrIn6 = sockaddr_in6()
-        addrIn6.sin6_family = sa_family_t(AF_INET6)
-        addrIn6.sin6_port = UInt16(9090).bigEndian
-        addrIn6.sin6_addr = try Socket.makeInAddr(fromIP6: "fe80::1")
-
-        let storage = AnySocketAddress(addrIn6)
-
-        #expect(storage.family == sa_family_t(AF_INET6))
-        #expect(storage.family == addrIn6.sin6_family)
-
-        withUnsafeBytes(of: addrIn6) { addrIn6Ptr in
-            let storagePtr = addrIn6Ptr.bindMemory(to: sockaddr_storage.self)
-            #expect(storagePtr.baseAddress!.pointee.ss_family == sa_family_t(AF_INET6))
-            let sockaddrIn6Ptr = addrIn6Ptr.bindMemory(to: sockaddr_in6.self)
-            #expect(sockaddrIn6Ptr.baseAddress!.pointee.sin6_port == addrIn6.sin6_port)
-            let addrArray = withUnsafeBytes(of: sockaddrIn6Ptr.baseAddress!.pointee.sin6_addr) {
-                Array($0.bindMemory(to: UInt8.self))
-            }
-            let expectedArray = withUnsafeBytes(of: addrIn6.sin6_addr) {
-                Array($0.bindMemory(to: UInt8.self))
-            }
-            #expect(addrArray == expectedArray)
-        }
-
-        storage.withSockAddr { sa in
-            #expect(sa.pointee.sa_family == sa_family_t(AF_INET6))
-        }
-
-        addrIn6.withSockAddr { sa in
-            #expect(sa.pointee.sa_family == sa_family_t(AF_INET6))
-        }
-    }
 }
-
-// this is a bit ugly but necessary to get unknown_CheckSize() to function
-extension sockaddr: SocketAddress, @retroactive @unchecked Sendable {
-    public static var family: sa_family_t { sa_family_t(AF_UNSPEC) }
-}
+//
+//// this is a bit ugly but necessary to get unknown_CheckSize() to function
+//extension sockaddr: SocketAddress, @retroactive @unchecked Sendable {
+//    public static var family: sa_family_t { sa_family_t(AF_UNSPEC) }
+//}

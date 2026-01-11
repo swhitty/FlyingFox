@@ -142,8 +142,8 @@ extension Socket {
 
             let addr = makeAddressUnix(path: tempURL.path)
 
-            let bindListenerResult = addr.withSockAddr {
-                bind(listener, $0, addr.size)
+            let bindListenerResult = addr.withSockAddr { addr, size in
+                bind(listener, addr, size)
             }
 
             guard bindListenerResult == 0 else { return (INVALID_SOCKET, INVALID_SOCKET) }
@@ -160,7 +160,9 @@ extension Socket {
                 return (INVALID_SOCKET, INVALID_SOCKET) 
             }
 
-            let connectResult = addr.withSockAddr { connect(connector, $0, addr.size) == 0 }
+            let connectResult = addr.withSockAddr { addr, size in
+                connect(connector, addr, size) == 0
+            }
 
             guard connectResult else {
                 _ = close(listener)
