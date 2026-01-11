@@ -153,8 +153,8 @@ public struct Socket: Sendable, Hashable {
     }
 
     public func bind(to address: some SocketAddress) throws {
-        let result = address.withSockAddr {
-            Socket.bind(file.rawValue, $0, address.size)
+        let result = address.withSockAddr { addr, size in
+            Socket.bind(file.rawValue, addr, size)
         }
         guard result >= 0 else {
             throw SocketError.makeFailed("Bind")
@@ -215,8 +215,8 @@ public struct Socket: Sendable, Hashable {
     }
 
     public func connect(to address: some SocketAddress) throws {
-        let result = address.withSockAddr {
-            Socket.connect(file.rawValue, $0, address.size)
+        let result = address.withSockAddr { addr, size in
+            Socket.connect(file.rawValue, addr, size)
         }
         guard result >= 0 || errno == EISCONN else {
             if errno == EINPROGRESS || errno == EWOULDBLOCK {
@@ -379,8 +379,8 @@ public struct Socket: Sendable, Hashable {
     }
 
     private func send(_ pointer: UnsafeRawPointer, length: Int, to address: some SocketAddress) throws -> Int {
-        let sent = address.withSockAddr {
-            Socket.sendto(file.rawValue, pointer, length, 0, $0, address.size)
+        let sent = address.withSockAddr { addr, size in
+            Socket.sendto(file.rawValue, pointer, length, 0, addr, size)
         }
         guard sent >= 0 else {
             if errno == EWOULDBLOCK || errno == EAGAIN {
@@ -635,6 +635,12 @@ fileprivate func errnoSignalsDisconnected() -> Bool {
     #else
     return errno == EBADF
     #endif
+}
+
+private extension SocketAddress {
+    var size: socklen_t {
+        withSockAddr { _, size in size }
+    }
 }
 
 #if !canImport(WinSDK)
