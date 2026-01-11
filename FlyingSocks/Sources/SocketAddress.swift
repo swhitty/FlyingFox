@@ -113,10 +113,23 @@ public extension SocketAddress where Self == sockaddr_un {
 extension sockaddr_storage: SocketAddress, @unchecked Swift.Sendable {
     public static let family = sa_family_t(AF_UNSPEC)
 
+    private var size: socklen_t {
+        switch Int32(family) {
+        case AF_INET:
+            socklen_t(MemoryLayout<sockaddr_in>.size)
+        case AF_INET6:
+            socklen_t(MemoryLayout<sockaddr_in6>.size)
+        case AF_UNIX:
+            socklen_t(MemoryLayout<sockaddr_un>.size)
+        default:
+            0
+        }
+    }
+
 #if compiler(>=6.0)
     public func withSockAddr<R, E: Error>(_ body: (UnsafePointer<sockaddr>, socklen_t) throws(E) -> R) throws(E) -> R {
         try withUnsafeBytes(of: self) { (p) throws(E) -> R in
-            try body(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), socklen_t(p.count))
+            try body(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), size)
         }
     }
 
@@ -128,7 +141,7 @@ extension sockaddr_storage: SocketAddress, @unchecked Swift.Sendable {
 #else
     public func withSockAddr<R>(_ body: (UnsafePointer<sockaddr>, socklen_t) throws -> R) rethrows -> R {
         try withUnsafeBytes(of: self) { p in
-            try body(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), socklen_t(p.count))
+            try body(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), size)
         }
     }
 
