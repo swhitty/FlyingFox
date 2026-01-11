@@ -43,7 +43,11 @@ import CSystemLinux
 public protocol SocketAddress: Sendable {
     static var family: sa_family_t { get }
 
+#if compiler(>=6.0)
     func withSockAddr<R, E: Error>(_ body: (UnsafePointer<sockaddr>, socklen_t) throws(E) -> R) throws(E) -> R
+#else
+    func withSockAddr<R>(_ body: (UnsafePointer<sockaddr>, socklen_t) throws -> R) rethrows -> R
+#endif
 }
 
 extension SocketAddress {
@@ -106,9 +110,11 @@ public extension SocketAddress where Self == sockaddr_un {
     #endif
 }
 
-extension sockaddr_storage: SocketAddress,  @retroactive @unchecked Sendable {
+<<<<<<< HEAD
+extension sockaddr_storage: SocketAddress, @unchecked Swift.Sendable {
     public static let family = sa_family_t(AF_UNSPEC)
 
+#if compiler(>=6.0)
     public func withSockAddr<R, E: Error>(_ body: (UnsafePointer<sockaddr>, socklen_t) throws(E) -> R) throws(E) -> R {
         try withUnsafeBytes(of: self) { (p) throws(E) -> R in
             try body(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), socklen_t(p.count))
@@ -120,36 +126,92 @@ extension sockaddr_storage: SocketAddress,  @retroactive @unchecked Sendable {
             try body(p.baseAddress!.assumingMemoryBound(to: sockaddr.self))
         }
     }
+#else
+    public func withSockAddr<R>(_ body: (UnsafePointer<sockaddr>, socklen_t) throws -> R) rethrows -> R {
+        try withUnsafeBytes(of: self) { p in
+            try body(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), socklen_t(p.count))
+        }
+    }
+
+    public mutating func withMutableSockAddr<R>(_ body: (UnsafeMutablePointer<sockaddr>) throws -> R) rethrows -> R {
+        try withUnsafeMutableBytes(of: &self) { p in
+            try body(p.baseAddress!.assumingMemoryBound(to: sockaddr.self))
+        }
+    }
+#endif
 }
 
-extension sockaddr_in: SocketAddress,  @retroactive @unchecked Sendable {
+extension sockaddr_in: SocketAddress, @unchecked Swift.Sendable {
     public static let family = sa_family_t(AF_INET)
 
+#if compiler(>=6.0)
     public func withSockAddr<R, E: Error>(_ body: (UnsafePointer<sockaddr>, socklen_t) throws(E) -> R) throws(E) -> R {
         try withUnsafeBytes(of: self) { (p) throws(E) -> R in
             try body(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), socklen_t(p.count))
         }
     }
+#else
+    public func withSockAddr<R>(_ body: (UnsafePointer<sockaddr>, socklen_t) throws -> R) rethrows -> R {
+        try withUnsafeBytes(of: self) { p in
+            try body(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), socklen_t(p.count))
+        }
+    }
+#endif
+
 }
 
-extension sockaddr_in6: SocketAddress,  @retroactive @unchecked Sendable {
+extension sockaddr_in6: SocketAddress, @unchecked Swift.Sendable {
     public static let family = sa_family_t(AF_INET6)
 
+#if compiler(>=6.0)
     public func withSockAddr<R, E: Error>(_ body: (UnsafePointer<sockaddr>, socklen_t) throws(E) -> R) throws(E) -> R {
         try withUnsafeBytes(of: self) { (p) throws(E) -> R in
             try body(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), socklen_t(p.count))
         }
     }
+#else
+    public func withSockAddr<R>(_ body: (UnsafePointer<sockaddr>, socklen_t) throws -> R) rethrows -> R {
+        try withUnsafeBytes(of: self) { p in
+            try body(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), socklen_t(p.count))
+        }
+    }
+#endif
+
+}
+
+extension sockaddr_un: SocketAddress, @unchecked Swift.Sendable {
+    public static let family = sa_family_t(AF_UNIX)
+
+#if compiler(>=6.0)
+    public func withSockAddr<R, E: Error>(_ body: (UnsafePointer<sockaddr>, socklen_t) throws(E) -> R) throws(E) -> R {
+        try withUnsafeBytes(of: self) { (p) throws(E) -> R in
+            try body(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), socklen_t(p.count))
+        }
+    }
+#else
+    public func withSockAddr<R>(_ body: (UnsafePointer<sockaddr>, socklen_t) throws -> R) rethrows -> R {
+        try withUnsafeBytes(of: self) { p in
+            try body(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), socklen_t(p.count))
+        }
+    }
+#endif
+
+=======
+extension sockaddr_storage: SocketAddress, @retroactive @unchecked Sendable {
+    public static let family = sa_family_t(AF_UNSPEC)
+}
+
+extension sockaddr_in: SocketAddress, @retroactive @unchecked Sendable {
+    public static let family = sa_family_t(AF_INET)
+}
+
+extension sockaddr_in6: SocketAddress, @retroactive @unchecked Sendable {
+    public static let family = sa_family_t(AF_INET6)
 }
 
 extension sockaddr_un: SocketAddress, @retroactive @unchecked Sendable {
     public static let family = sa_family_t(AF_UNIX)
-
-    public func withSockAddr<R, E: Error>(_ body: (UnsafePointer<sockaddr>, socklen_t) throws(E) -> R) throws(E) -> R {
-        try withUnsafeBytes(of: self) { (p) throws(E) -> R in
-            try body(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), socklen_t(p.count))
-        }
-    }
+>>>>>>> 9053e23 (remove Swift 5)
 }
 
 public extension SocketAddress {
