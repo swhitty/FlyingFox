@@ -34,7 +34,6 @@ import Foundation
 @available(*, unavailable, renamed: "SocketError.timeout")
 public typealias TimeoutError = SocketError
 
-#if compiler(>=6.0)
 package func withThrowingTimeout<T>(
     isolation: isolated (any Actor)? = #isolation,
     seconds: TimeInterval,
@@ -65,40 +64,6 @@ package func withThrowingTimeout<T>(
         }
     }.value
 }
-#else
-package func withThrowingTimeout<T>(
-    seconds: TimeInterval,
-    body: () async throws -> T
-) async throws -> T {
-    let transferringBody = { try await Transferring(body()) }
-    typealias NonSendableClosure = () async throws -> Transferring<T>
-    typealias SendableClosure = @Sendable () async throws -> Transferring<T>
-    return try await withoutActuallyEscaping(transferringBody) {
-        (_ fn: @escaping NonSendableClosure) async throws -> Transferring<T> in
-        let sendableFn = unsafeBitCast(fn, to: SendableClosure.self)
-        return try await _withThrowingTimeout(seconds: seconds, body: sendableFn)
-    }.value
-}
-
-// Sendable
-private func _withThrowingTimeout<T: Sendable>(
-    seconds: TimeInterval,
-    body: @Sendable @escaping () async throws -> T
-) async throws -> T {
-    try await withThrowingTaskGroup(of: T.self) { group in
-        group.addTask {
-            try await body()
-        }
-        group.addTask {
-            try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
-            throw SocketError.makeTaskTimeout(seconds: seconds)
-        }
-        let success = try await group.next()!
-        group.cancelAll()
-        return success
-    }
-}
-#endif
 
 package extension Task {
 
