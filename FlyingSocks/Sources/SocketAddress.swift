@@ -114,6 +114,9 @@ extension sockaddr_storage: SocketAddress, @unchecked Swift.Sendable {
     public static let family = sa_family_t(AF_UNSPEC)
 
     private var size: socklen_t {
+    #if canImport(Darwin)
+        return socklen_t(ss_len)
+    #else
         switch Int32(family) {
         case AF_INET:
             socklen_t(MemoryLayout<sockaddr_in>.size)
@@ -124,6 +127,7 @@ extension sockaddr_storage: SocketAddress, @unchecked Swift.Sendable {
         default:
             0
         }
+    #endif
     }
 
 #if compiler(>=6.0)
