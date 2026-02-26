@@ -30,7 +30,11 @@
 //
 
 import Dispatch
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
 import Foundation
+#endif
 
 #if compiler(>=6.2)
 public protocol EventQueue: SendableMetatype {
@@ -228,7 +232,7 @@ public final actor SocketPool<Queue: EventQueue>: AsyncSocketPool {
             let events = waiting.resumeContinuation(id: id, with: result, for: socket)
             try queue.removeEvents(events, for: socket)
         } catch {
-            logger.logError("resumeContinuation queue.removeEvents: \(error.localizedDescription)")
+            logger.logError("resumeContinuation queue.removeEvents: \(error)")
         }
     }
 

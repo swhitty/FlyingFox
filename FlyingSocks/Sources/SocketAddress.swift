@@ -29,11 +29,23 @@
 //  SOFTWARE.
 //
 
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
 import Foundation
+#endif
 #if canImport(WinSDK)
 import WinSDK.WinSock2
 #elseif canImport(Android)
 import Android
+#elseif canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+#if canImport(Musl)
+import Musl
+#elseif canImport(Bionic)
+import Android
+#else
+import Glibc
+#endif
 #endif
 
 #if canImport(CSystemLinux)

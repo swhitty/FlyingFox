@@ -33,8 +33,20 @@
 import WinSDK.WinSock2
 #elseif canImport(Android)
 import Android
+#elseif canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+#if canImport(Musl)
+import Musl
+#elseif canImport(Bionic)
+import Android
+#else
+import Glibc
 #endif
+#endif
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
 import Foundation
+#endif
 
 public extension AsyncSocketPool where Self == SocketPool<Poll> {
     static func poll(interval: Poll.Interval = .seconds(0.01), logger: some Logging = .disabled) -> SocketPool<Poll> {

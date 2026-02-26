@@ -31,7 +31,11 @@
 
 #if canImport(WinSDK)
 import WinSDK.WinSock2
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
 import Foundation
+#endif
 import Synchronization
 
 let O_NONBLOCK = Int32(1)
