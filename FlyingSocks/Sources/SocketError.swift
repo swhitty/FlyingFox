@@ -29,9 +29,21 @@
 //  SOFTWARE.
 //
 
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
 import Foundation
+#endif
 #if canImport(Android)
 import Android
+#elseif canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+#if canImport(Musl)
+import Musl
+#elseif canImport(Bionic)
+import Android
+#else
+import Glibc
+#endif
 #endif
 
 public enum SocketError: LocalizedError, Equatable {

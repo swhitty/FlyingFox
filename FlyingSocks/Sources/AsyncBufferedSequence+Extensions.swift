@@ -29,7 +29,11 @@
 //  SOFTWARE.
 //
 
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
 import Foundation
+#endif
 
 package extension AsyncBufferedSequence where Element == UInt8 {
 

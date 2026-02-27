@@ -29,7 +29,11 @@
 //  SOFTWARE.
 //
 
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
 import Foundation
+#endif
 
 package struct AsyncBufferedCollection<C: Collection>: AsyncBufferedSequence where C: Sendable, C.Element: Sendable {
     package typealias Element = C.Element

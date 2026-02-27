@@ -29,6 +29,7 @@
 //  SOFTWARE.
 //
 
+@testable import FlyingFox
 @testable import FlyingSocks
 import Foundation
 import Testing
@@ -113,7 +114,7 @@ struct AsyncBufferedFileSequenceTests {
 
 private extension URL {
     static var jackOfHeartsRecital: URL {
-        Bundle.module.url(forResource: "Resources", withExtension: nil)!
+        Bundle.module.url(forResource: "Stubs", withExtension: nil)!
             .appendingPathComponent("JackOfHeartsRecital.txt")
     }
 }

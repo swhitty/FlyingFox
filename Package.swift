@@ -47,9 +47,6 @@ let package = Package(
             name: "FlyingSocksTests",
             dependencies: ["FlyingSocks"],
             path: "FlyingSocks/Tests",
-            resources: [
-               .copy("Resources")
-            ],
             swiftSettings: .upcomingFeatures
         )
     ]

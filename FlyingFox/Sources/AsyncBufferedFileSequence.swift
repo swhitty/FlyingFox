@@ -30,6 +30,7 @@
 //
 
 import Foundation
+import FlyingSocks
 
 package struct AsyncBufferedFileSequence: AsyncBufferedSequence {
     package typealias Element = UInt8

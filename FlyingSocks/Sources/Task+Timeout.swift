@@ -29,7 +29,11 @@
 //  SOFTWARE.
 //
 
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
 import Foundation
+#endif
 
 @available(*, unavailable, renamed: "SocketError.timeout")
 public typealias TimeoutError = SocketError

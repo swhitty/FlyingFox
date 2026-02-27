@@ -29,7 +29,11 @@
 //  SOFTWARE.
 //
 
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
 import Foundation
+#endif
 
 /// AsyncSequence that can be iterated multiple-times-concurrently.
 package struct AsyncSharedReplaySequence<Base>: AsyncBufferedSequence, Sendable where Base: AsyncBufferedSequence {
