@@ -33,28 +33,35 @@
 import CSystemLinux
 
 public extension AsyncSocketPool where Self == SocketPool<ePoll> {
-    static func ePoll(maxEvents limit: Int = 20, logger: some Logging = .disabled) -> SocketPool<ePoll> {
-        .init(maxEvents: limit, logger: logger)
+    static func ePoll(triggering: ePoll.TriggerMode = .edge, maxEvents limit: Int = 20, logger: some Logging = .disabled) -> SocketPool<ePoll> {
+        .init(triggering: triggering, maxEvents: limit, logger: logger)
     }
 
-    private init(maxEvents limit: Int, logger: some Logging = .disabled) {
-        self.init(queue: FlyingSocks.ePoll(maxEvents: limit, logger: logger), logger: logger)
+    private init(triggering: ePoll.TriggerMode, maxEvents limit: Int, logger: some Logging = .disabled) {
+        self.init(queue: FlyingSocks.ePoll(triggering: triggering, maxEvents: limit, logger: logger), logger: logger)
     }
 }
 
 public struct ePoll: EventQueue {
 
+    public enum TriggerMode: Sendable {
+        case edge
+        case level
+    }
+
     private(set) var file: Socket.FileDescriptor
     private(set) var canary: Socket.FileDescriptor
     private(set) var existing: [Socket.FileDescriptor: Socket.Events]
     private let eventsLimit: Int
+    private let triggerMode: TriggerMode
     private let logger: any Logging
 
-    public init(maxEvents limit: Int, logger: some Logging = .disabled) {
+    public init(triggering: TriggerMode = .edge, maxEvents limit: Int, logger: some Logging = .disabled) {
         self.file = .invalid
         self.canary = .invalid
         self.existing = [:]
         self.eventsLimit = limit
+        self.triggerMode = triggering
         self.logger = logger
     }
 
@@ -105,8 +112,9 @@ public struct ePoll: EventQueue {
     }
 
     mutating func setEvents(_ events: Socket.Events, for socket: Socket.FileDescriptor) throws {
+        guard existing[socket] != events else { return }
         var event = CSystemLinux.epoll_event()
-        event.events = events.epollEvents.rawValue
+        event.events = events.epollEvents(triggerMode: triggerMode).rawValue
         event.data.fd = socket.rawValue
 
         if existing[socket] != nil {
@@ -241,8 +249,12 @@ private struct EPOLLEvents: OptionSet, Hashable {
 
 private extension Socket.Events {
 
-    var epollEvents: EPOLLEvents {
-        reduce(EPOLLEvents()) { [$0, $1.epollEvent] }
+    func epollEvents(triggerMode: ePoll.TriggerMode) -> EPOLLEvents {
+        var events = reduce(EPOLLEvents()) { [$0, $1.epollEvent] }
+        if triggerMode == .edge {
+            events.insert(.edgeTriggered)
+        }
+        return events
     }
 
     static func make(from pollevents: EPOLLEvents) -> Socket.Events {

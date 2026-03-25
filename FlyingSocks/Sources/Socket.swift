@@ -517,7 +517,11 @@ extension Socket.Event: CustomStringConvertible {
 public extension Socket.Events {
     static let read: Self = [.read]
     static let write: Self = [.write]
+    #if canImport(CSystemLinux)
+    static let connection: Self = [.read]
+    #else
     static let connection: Self = [.read, .write]
+    #endif
 }
 
 public protocol SocketOption {

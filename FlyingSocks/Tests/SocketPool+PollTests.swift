@@ -104,7 +104,11 @@ struct PollTests {
         let entry = Poll.Entry(file: .init(rawValue: 30), events: .connection)
 
         #expect(entry.pollfd.fd == 30)
+        #if canImport(CSystemLinux)
+        #expect(entry.pollfd.events == Int16(POLLIN))
+        #else
         #expect(entry.pollfd.events == Int16(POLLOUT | POLLIN))
+        #endif
         #expect(entry.pollfd.revents == 0)
     }
 
@@ -162,7 +166,7 @@ struct PollTests {
                 revents: POLLHUP
             )) == EventNotification(
                 file: .init(rawValue: 10),
-                events: .connection,
+                events: [.read, .write],
                 errors: [.endOfFile]
             )
         )
