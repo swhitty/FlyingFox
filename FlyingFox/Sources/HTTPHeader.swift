@@ -52,6 +52,7 @@ public struct HTTPHeader: Sendable, RawRepresentable, Hashable {
 public extension HTTPHeader {
     static let acceptRanges        = HTTPHeader("Accept-Ranges")
     static let authorization       = HTTPHeader("Authorization")
+    static let cacheControl        = HTTPHeader("Cache-Control")
     static let cookie              = HTTPHeader("Cookie")
     static let connection          = HTTPHeader("Connection")
     static let contentDisposition  = HTTPHeader("Content-Disposition")
@@ -62,6 +63,9 @@ public extension HTTPHeader {
     static let date                = HTTPHeader("Date")
     static let eTag                = HTTPHeader("ETag")
     static let host                = HTTPHeader("Host")
+    static let ifModifiedSince     = HTTPHeader("If-Modified-Since")
+    static let ifNoneMatch         = HTTPHeader("If-None-Match")
+    static let lastModified        = HTTPHeader("Last-Modified")
     static let location            = HTTPHeader("Location")
     static let range               = HTTPHeader("Range")
     static let setCookie           = HTTPHeader("Set-Cookie")
@@ -71,4 +75,61 @@ public extension HTTPHeader {
     static let webSocketKey        = HTTPHeader("Sec-WebSocket-Key")
     static let webSocketVersion    = HTTPHeader("Sec-WebSocket-Version")
     static let xForwardedFor       = HTTPHeader("X-Forwarded-For")
+}
+
+
+public enum CacheControl {
+    public enum ResponseDirective: Sendable, CustomStringConvertible {
+        case maxAge(Int)
+        case sharedMaxAge(Int)
+        case noCache
+        case noStore
+        case noTransform
+        case mustRevalidate
+        case proxyRevalidate
+        case mustUnderstand
+        case `private`
+        case `public`
+        case immutable
+        case staleWhileRevalidate
+        case staleIfError
+        
+        public var description: String {
+            switch self {
+            case .maxAge(let value):
+                return "max-age=\(value)"
+            case .sharedMaxAge(let value):
+                return "s-maxage=\(value)"
+            case .noCache:
+                return "no-cache"
+            case .noStore:
+                return "no-store"
+            case .noTransform:
+                return "no-transform"
+            case .mustRevalidate:
+                return "must-revalidate"
+            case .proxyRevalidate:
+                return "proxy-revalidate"
+            case .mustUnderstand:
+                return "must-understand"
+            case .private:
+                return "private"
+            case .public:
+                return "public"
+            case .immutable:
+                return "immutable"
+            case .staleWhileRevalidate:
+                return "stale-while-revalidate"
+            case .staleIfError:
+                return "stale-if-error"
+            }
+        }
+    }
+}
+
+extension [CacheControl.ResponseDirective] {
+    func serialized() -> String {
+        let directives: [CacheControl.ResponseDirective] = self.isEmpty ? [.private] : self
+        return Set(directives.map({ $0.description })).joined(separator: ",")
+    }
 }

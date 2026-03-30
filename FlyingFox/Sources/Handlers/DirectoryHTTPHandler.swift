@@ -30,20 +30,29 @@
 //
 
 import Foundation
+#if canImport(CryptoKit)
+import CryptoKit
+#endif
 
 public struct DirectoryHTTPHandler: HTTPHandler {
 
     private(set) var root: URL?
     let serverPath: String
+    let cacheControl: [CacheControl.ResponseDirective]
 
     public init(root: URL, serverPath: String = "/") {
         self.root = root
         self.serverPath = serverPath
+        self.cacheControl = [.private]
     }
 
-    public init(bundle: Bundle, subPath: String = "", serverPath: String) {
+    public init(bundle: Bundle,
+                subPath: String = "",
+                serverPath: String,
+                cacheControl: [CacheControl.ResponseDirective] = [.private]) {
         self.root = bundle.resourceURL?.appendingPathComponent(subPath)
         self.serverPath = serverPath
+        self.cacheControl = cacheControl
     }
 
     public func handleRequest(_ request: HTTPRequest) async throws -> HTTPResponse {
@@ -52,10 +61,33 @@ public struct DirectoryHTTPHandler: HTTPHandler {
             let data = try? Data(contentsOf: filePath) else {
             return HTTPResponse(statusCode: .notFound)
         }
+        
+        var headers: HTTPHeaders = [
+            .contentType: FileHTTPHandler.makeContentType(for: filePath.absoluteString),
+            .cacheControl: cacheControl.serialized()
+        ]
+        
+        let expiresValue = generateExpiresValue(for: filePath)
+        headers[.lastModified] = expiresValue
+        
+        if let ifModifiedSince = request.headers[.ifModifiedSince], expiresValue == ifModifiedSince {
+            return HTTPResponse(statusCode: .notModified,
+                                headers: headers)
+        }
+        
+#if canImport(CryptoKit)
+        let eTag = generateETag(for: data)
+        headers[.eTag] = eTag
+        
+        if let ifNoneMatch = request.headers[.ifNoneMatch], eTag == ifNoneMatch {
+            return HTTPResponse(statusCode: .notModified,
+                                headers: headers)
+        }
+#endif
 
         return HTTPResponse(
             statusCode: .ok,
-            headers: [.contentType: FileHTTPHandler.makeContentType(for: filePath.absoluteString)],
+            headers: headers,
             body: data
         )
     }
@@ -73,4 +105,26 @@ public struct DirectoryHTTPHandler: HTTPHandler {
         let subPath = String(compsB.dropFirst(compsA.count))
         return root?.appendingPathComponent(subPath)
     }
+    
+    private static let dateFormatter: DateFormatter = {
+        let df = DateFormatter()
+        df.dateFormat = "EEE, d MMM yyyy HH:mm:ss zzz"
+        df.timeZone = TimeZone(secondsFromGMT: 0)
+        df.locale = Locale(identifier: "en_US_POSIX")
+        return df
+    }()
+    
+    private func generateExpiresValue(for filePath: URL) -> String {
+        let attributes = try? FileManager.default.attributesOfItem(atPath: filePath.absoluteString)
+        let modificationDate = attributes?[FileAttributeKey.modificationDate] as? Date ?? Date()
+        return Self.dateFormatter.string(from: modificationDate)
+    }
+    
+#if canImport(CryptoKit)
+    private func generateETag(for data: Data) -> String {
+        let sha256digest = SHA256.hash(data: data)
+        let eTag = "\"\(sha256digest.map { String(format: "%02x", $0) }.joined())\""
+        return eTag
+    }
+#endif
 }
