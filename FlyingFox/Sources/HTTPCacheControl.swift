@@ -10,7 +10,7 @@ import Foundation
 import CryptoKit
 #endif
 
-public enum CacheControl {
+public enum HTTPCacheControl {
     public enum ResponseDirective: Sendable, CustomStringConvertible {
         case maxAge(Int)
         case sharedMaxAge(Int)
@@ -70,7 +70,7 @@ public enum CacheControl {
         return df
     }()
 
-    static func generateExpiresValue(for filePath: URL) -> String? {
+    static func getExpiresValue(for filePath: URL) -> String? {
         do {
             let path = {
                 if #available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *) {
@@ -88,7 +88,7 @@ public enum CacheControl {
         return nil
     }
 
-    static func generateETagValue(for data: Data) -> String? {
+    static func getETagValue(for data: Data) -> String? {
 #if canImport(CryptoKit)
         let sha256digest = SHA256.hash(data: data)
         let eTag = "\"\(sha256digest.map { String(format: "%02x", $0) }.joined())\""
@@ -99,9 +99,9 @@ public enum CacheControl {
     }
 }
 
-extension [CacheControl.ResponseDirective] {
-    func serialized() -> String {
-        let directives: [CacheControl.ResponseDirective] = self.isEmpty ? [.private] : self
+extension [HTTPCacheControl.ResponseDirective] {
+    func getSerializedValue() -> String {
+        let directives: [HTTPCacheControl.ResponseDirective] = self.isEmpty ? [.private] : self
         return Set(directives.map({ $0.description })).joined(separator: ",")
     }
 }

@@ -35,18 +35,20 @@ public struct DirectoryHTTPHandler: HTTPHandler {
 
     private(set) var root: URL?
     let serverPath: String
-    let cacheControl: [CacheControl.ResponseDirective]
+    let cacheControl: [HTTPCacheControl.ResponseDirective]
 
-    public init(root: URL, serverPath: String = "/") {
+    public init(root: URL,
+                serverPath: String = "/",
+                cacheControl: [HTTPCacheControl.ResponseDirective] = [.private]) {
         self.root = root
         self.serverPath = serverPath
-        self.cacheControl = [.private]
+        self.cacheControl = cacheControl
     }
 
     public init(bundle: Bundle,
                 subPath: String = "",
                 serverPath: String,
-                cacheControl: [CacheControl.ResponseDirective] = [.private]) {
+                cacheControl: [HTTPCacheControl.ResponseDirective] = [.private]) {
         self.root = bundle.resourceURL?.appendingPathComponent(subPath)
         self.serverPath = serverPath
         self.cacheControl = cacheControl
@@ -61,11 +63,11 @@ public struct DirectoryHTTPHandler: HTTPHandler {
 
         var headers: HTTPHeaders = [
             .contentType: FileHTTPHandler.makeContentType(for: filePath.absoluteString),
-            .cacheControl: cacheControl.serialized(),
-            .date: CacheControl.getDateHeaderValue()
+            .cacheControl: cacheControl.getSerializedValue(),
+            .date: HTTPCacheControl.getDateHeaderValue()
         ]
 
-        if let expiresValue = CacheControl.generateExpiresValue(for: filePath) {
+        if let expiresValue = HTTPCacheControl.getExpiresValue(for: filePath) {
             headers[.lastModified] = expiresValue
             if let ifModifiedSince = request.headers[.ifModifiedSince], expiresValue == ifModifiedSince {
                 return HTTPResponse(statusCode: .notModified,
@@ -73,9 +75,9 @@ public struct DirectoryHTTPHandler: HTTPHandler {
             }
         }
 
-        if let eTag = CacheControl.generateETagValue(for: data) {
-            headers[.eTag] = eTag
-            if let ifNoneMatch = request.headers[.ifNoneMatch], eTag == ifNoneMatch {
+        if let eTagValue = HTTPCacheControl.getETagValue(for: data) {
+            headers[.eTag] = eTagValue
+            if let ifNoneMatch = request.headers[.ifNoneMatch], eTagValue == ifNoneMatch {
                 return HTTPResponse(statusCode: .notModified,
                                     headers: headers)
             }
