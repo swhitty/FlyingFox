@@ -64,15 +64,17 @@ public struct DirectoryHTTPHandler: HTTPHandler {
         
         var headers: HTTPHeaders = [
             .contentType: FileHTTPHandler.makeContentType(for: filePath.absoluteString),
-            .cacheControl: cacheControl.serialized()
+            .cacheControl: cacheControl.serialized(),
+            .date: Self.dateFormatter.string(from: Date())
         ]
         
-        let expiresValue = generateExpiresValue(for: filePath)
-        headers[.lastModified] = expiresValue
-        
-        if let ifModifiedSince = request.headers[.ifModifiedSince], expiresValue == ifModifiedSince {
-            return HTTPResponse(statusCode: .notModified,
-                                headers: headers)
+        if let expiresValue = generateExpiresValue(for: filePath) {
+            headers[.lastModified] = expiresValue
+            
+            if let ifModifiedSince = request.headers[.ifModifiedSince], expiresValue == ifModifiedSince {
+                return HTTPResponse(statusCode: .notModified,
+                                    headers: headers)
+            }
         }
         
 #if canImport(CryptoKit)
@@ -114,10 +116,22 @@ public struct DirectoryHTTPHandler: HTTPHandler {
         return df
     }()
     
-    private func generateExpiresValue(for filePath: URL) -> String {
-        let attributes = try? FileManager.default.attributesOfItem(atPath: filePath.absoluteString)
-        let modificationDate = attributes?[FileAttributeKey.modificationDate] as? Date ?? Date()
-        return Self.dateFormatter.string(from: modificationDate)
+    private func generateExpiresValue(for filePath: URL) -> String? {
+        do {
+            let path = {
+                if #available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *) {
+                    return filePath.path()
+                } else {
+                    return filePath.path
+                }
+            }()
+            let attributes = try FileManager.default.attributesOfItem(atPath: path)
+            if let modificationDate = attributes[FileAttributeKey.modificationDate] as? Date ?? attributes[FileAttributeKey.creationDate] as? Date {
+                return Self.dateFormatter.string(from: modificationDate)
+            }
+        } catch {
+        }
+        return nil
     }
     
 #if canImport(CryptoKit)
