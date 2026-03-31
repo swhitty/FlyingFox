@@ -39,15 +39,21 @@ public struct FileHTTPHandler: HTTPHandler {
 
     private(set) var path: URL?
     let contentType: String
+    let cacheControl: [CacheControl.ResponseDirective]
 
     public init(path: URL, contentType: String) {
         self.path = path
         self.contentType = contentType
+        self.cacheControl = [.private]
     }
 
-    public init(named: String, in bundle: Bundle, contentType: String? = nil) {
+    public init(named: String,
+                in bundle: Bundle,
+                contentType: String? = nil,
+                cacheControl: [CacheControl.ResponseDirective] = [.private]) {
         self.path = bundle.url(forResource: named, withExtension: nil)
         self.contentType = contentType ?? Self.makeContentType(for: named)
+        self.cacheControl = cacheControl
     }
 
     static func makeContentType(for filename: String) -> String {
@@ -121,8 +127,26 @@ public struct FileHTTPHandler: HTTPHandler {
         do {
             var headers: HTTPHeaders = [
                 .contentType: contentType,
-                .acceptRanges: "bytes"
+                .acceptRanges: "bytes",
+                .date: CacheControl.getDateHeaderValue()
             ]
+            
+            if let expiresValue = CacheControl.generateExpiresValue(for: path) {
+                headers[.lastModified] = expiresValue
+                if let ifModifiedSince = request.headers[.ifModifiedSince], expiresValue == ifModifiedSince {
+                    return HTTPResponse(statusCode: .notModified,
+                                        headers: headers)
+                }
+            }
+
+            if let data = try? Data(contentsOf: path),
+                let eTag = CacheControl.generateETagValue(for: data) {
+                headers[.eTag] = eTag
+                if let ifNoneMatch = request.headers[.ifNoneMatch], eTag == ifNoneMatch {
+                    return HTTPResponse(statusCode: .notModified,
+                                        headers: headers)
+                }
+            }
 
             let fileSize = try AsyncBufferedFileSequence.fileSize(at: path)
 
