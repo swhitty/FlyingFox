@@ -35,15 +35,23 @@ public struct DirectoryHTTPHandler: HTTPHandler {
 
     private(set) var root: URL?
     let serverPath: String
+    let cacheControl: [HTTPCacheControl.ResponseDirective]
 
-    public init(root: URL, serverPath: String = "/") {
+    public init(root: URL,
+                serverPath: String = "/",
+                cacheControl: [HTTPCacheControl.ResponseDirective] = [.private]) {
         self.root = root
         self.serverPath = serverPath
+        self.cacheControl = cacheControl
     }
 
-    public init(bundle: Bundle, subPath: String = "", serverPath: String) {
+    public init(bundle: Bundle,
+                subPath: String = "",
+                serverPath: String,
+                cacheControl: [HTTPCacheControl.ResponseDirective] = [.private]) {
         self.root = bundle.resourceURL?.appendingPathComponent(subPath)
         self.serverPath = serverPath
+        self.cacheControl = cacheControl
     }
 
     public func handleRequest(_ request: HTTPRequest) async throws -> HTTPResponse {
@@ -53,9 +61,31 @@ public struct DirectoryHTTPHandler: HTTPHandler {
             return HTTPResponse(statusCode: .notFound)
         }
 
+        var headers: HTTPHeaders = [
+            .contentType: FileHTTPHandler.makeContentType(for: filePath.absoluteString),
+            .cacheControl: cacheControl.getSerializedValue(),
+            .date: HTTPCacheControl.getDateHeaderValue()
+        ]
+
+        if let expiresValue = HTTPCacheControl.getExpiresValue(for: filePath) {
+            headers[.lastModified] = expiresValue
+            if let ifModifiedSince = request.headers[.ifModifiedSince], expiresValue == ifModifiedSince {
+                return HTTPResponse(statusCode: .notModified,
+                                    headers: headers)
+            }
+        }
+
+        if let eTagValue = HTTPCacheControl.getETagValue(for: data) {
+            headers[.eTag] = eTagValue
+            if let ifNoneMatch = request.headers[.ifNoneMatch], eTagValue == ifNoneMatch {
+                return HTTPResponse(statusCode: .notModified,
+                                    headers: headers)
+            }
+        }
+
         return HTTPResponse(
             statusCode: .ok,
-            headers: [.contentType: FileHTTPHandler.makeContentType(for: filePath.absoluteString)],
+            headers: headers,
             body: data
         )
     }
@@ -73,4 +103,5 @@ public struct DirectoryHTTPHandler: HTTPHandler {
         let subPath = String(compsB.dropFirst(compsA.count))
         return root?.appendingPathComponent(subPath)
     }
+    
 }

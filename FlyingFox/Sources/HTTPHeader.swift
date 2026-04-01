@@ -52,6 +52,7 @@ public struct HTTPHeader: Sendable, RawRepresentable, Hashable {
 public extension HTTPHeader {
     static let acceptRanges        = HTTPHeader("Accept-Ranges")
     static let authorization       = HTTPHeader("Authorization")
+    static let cacheControl        = HTTPHeader("Cache-Control")
     static let cookie              = HTTPHeader("Cookie")
     static let connection          = HTTPHeader("Connection")
     static let contentDisposition  = HTTPHeader("Content-Disposition")
@@ -62,6 +63,9 @@ public extension HTTPHeader {
     static let date                = HTTPHeader("Date")
     static let eTag                = HTTPHeader("ETag")
     static let host                = HTTPHeader("Host")
+    static let ifModifiedSince     = HTTPHeader("If-Modified-Since")
+    static let ifNoneMatch         = HTTPHeader("If-None-Match")
+    static let lastModified        = HTTPHeader("Last-Modified")
     static let location            = HTTPHeader("Location")
     static let range               = HTTPHeader("Range")
     static let setCookie           = HTTPHeader("Set-Cookie")

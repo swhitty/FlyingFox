@@ -39,15 +39,23 @@ public struct FileHTTPHandler: HTTPHandler {
 
     private(set) var path: URL?
     let contentType: String
+    let cacheControl: [HTTPCacheControl.ResponseDirective]
 
-    public init(path: URL, contentType: String) {
+    public init(path: URL,
+                contentType: String,
+                cacheControl: [HTTPCacheControl.ResponseDirective] = [.private]) {
         self.path = path
         self.contentType = contentType
+        self.cacheControl = cacheControl
     }
 
-    public init(named: String, in bundle: Bundle, contentType: String? = nil) {
+    public init(named: String,
+                in bundle: Bundle,
+                contentType: String? = nil,
+                cacheControl: [HTTPCacheControl.ResponseDirective] = [.private]) {
         self.path = bundle.url(forResource: named, withExtension: nil)
         self.contentType = contentType ?? Self.makeContentType(for: named)
+        self.cacheControl = cacheControl
     }
 
     static func makeContentType(for filename: String) -> String {
@@ -121,8 +129,26 @@ public struct FileHTTPHandler: HTTPHandler {
         do {
             var headers: HTTPHeaders = [
                 .contentType: contentType,
-                .acceptRanges: "bytes"
+                .acceptRanges: "bytes",
+                .date: HTTPCacheControl.getDateHeaderValue()
             ]
+            
+            if let expiresValue = HTTPCacheControl.getExpiresValue(for: path) {
+                headers[.lastModified] = expiresValue
+                if let ifModifiedSince = request.headers[.ifModifiedSince], expiresValue == ifModifiedSince {
+                    return HTTPResponse(statusCode: .notModified,
+                                        headers: headers)
+                }
+            }
+
+            if let data = try? Data(contentsOf: path),
+                let eTagValue = HTTPCacheControl.getETagValue(for: data) {
+                headers[.eTag] = eTagValue
+                if let ifNoneMatch = request.headers[.ifNoneMatch], eTagValue == ifNoneMatch {
+                    return HTTPResponse(statusCode: .notModified,
+                                        headers: headers)
+                }
+            }
 
             let fileSize = try AsyncBufferedFileSequence.fileSize(at: path)
 
