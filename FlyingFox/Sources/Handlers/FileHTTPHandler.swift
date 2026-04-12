@@ -130,6 +130,7 @@ public struct FileHTTPHandler: HTTPHandler {
             var headers: HTTPHeaders = [
                 .contentType: contentType,
                 .acceptRanges: "bytes",
+                .cacheControl: cacheControl.getSerializedValue(),
                 .date: HTTPCacheControl.getDateHeaderValue()
             ]
             
