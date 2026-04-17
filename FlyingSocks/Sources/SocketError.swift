@@ -68,7 +68,7 @@ public enum SocketError: LocalizedError, Equatable {
         }
     }
 
-    static func makeFailed(_ type: StaticString) -> Self {
+    public static func makeFailed(_ type: StaticString) -> Self {
         .failed(type: String(describing: type),
                 errno: errno,
                 message: String(cString: strerror(errno)))
