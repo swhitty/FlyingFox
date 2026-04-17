@@ -297,7 +297,7 @@ extension AsyncSocket {
     }
 
     static func makeListening(pool: some AsyncSocketPool) throws -> AsyncSocket {
-        let tempFile = try FileManager.default.makeTemporaryDirectory().appending(path: "socket")
+        let tempFile = try FileManager.default.makeTemporaryDirectory().appendingPathComponent("socket")
         let address = sockaddr_un.unix(path: tempFile.path)
         try? Socket.unlink(address)
         defer { try? Socket.unlink(address) }
@@ -331,7 +331,7 @@ extension AsyncSocket {
 #if !canImport(WinSDK)
     static func makeDatagramPair() async throws -> (AsyncSocket, AsyncSocket, sockaddr_un) {
         let socketPair = try await makePair(pool: .client, type: .datagram)
-        let endpoint = try FileManager.default.makeTemporaryDirectory().appending(path: "socket")
+        let endpoint = try FileManager.default.makeTemporaryDirectory().appendingPathComponent("socket")
         let addr = sockaddr_un.unix(path: endpoint.path)
 
         try socketPair.1.socket.bind(to: addr)
