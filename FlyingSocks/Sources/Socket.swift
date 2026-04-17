@@ -232,7 +232,7 @@ public struct Socket: Sendable, Hashable {
             Socket.connect(file.rawValue, addr, size)
         }
         guard result >= 0 || errno == EISCONN else {
-            if errno == EINPROGRESS || errno == EWOULDBLOCK {
+            if Self.connectErrnoIsBlocked(errno) {
                 throw SocketError.blocked
             } else {
                 throw SocketError.makeFailed("Connect")
@@ -266,6 +266,14 @@ public struct Socket: Sendable, Hashable {
             }
         }
         return count
+    }
+
+    static func connectErrnoIsBlocked(_ value: Int32) -> Bool {
+        #if canImport(WinSDK)
+        value == EINPROGRESS || value == EWOULDBLOCK || value == WSAEALREADY
+        #else
+        value == EINPROGRESS || value == EWOULDBLOCK || value == EALREADY
+        #endif
     }
 
     public func receive(length: Int) throws -> (any SocketAddress, [UInt8]) {
