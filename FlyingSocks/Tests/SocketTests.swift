@@ -244,6 +244,19 @@ struct SocketTests {
     }
 
     @Test
+    func socketConnect_RecognisesBlockedErrnos() {
+        #if canImport(WinSDK)
+        #expect(Socket.connectErrnoIsBlocked(WSAEINPROGRESS))
+        #expect(Socket.connectErrnoIsBlocked(WSAEWOULDBLOCK))
+        #expect(Socket.connectErrnoIsBlocked(WSAEALREADY))
+        #else
+        #expect(Socket.connectErrnoIsBlocked(EINPROGRESS))
+        #expect(Socket.connectErrnoIsBlocked(EWOULDBLOCK))
+        #expect(Socket.connectErrnoIsBlocked(EALREADY))
+        #endif
+    }
+
+    @Test
     func socketClose_ThrowsError_WhenInvalid() {
         let socket = Socket.invalid()
         #expect(throws: SocketError.self) {
