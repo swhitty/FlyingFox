@@ -67,6 +67,12 @@ public struct EventNotification: Equatable, Sendable {
         case endOfFile
         case error
     }
+
+    public init(file: Socket.FileDescriptor, events: Socket.Events, errors: Set<Error>) {
+        self.file = file
+        self.events = events
+        self.errors = errors
+    }
 }
 
 @available(*, unavailable, message: "use .make(maxEvents:)")
