@@ -242,7 +242,7 @@ struct SocketPoolTests {
             Set(waiting.continuationIDs(for: .validMock, events: .write)) == [cnWrite.id]
         )
         #expect(
-            Set(waiting.continuationIDs(for: .validMock, events: .connection)) == [cnRead1.id, cnRead.id, cnWrite.id]
+            Set(waiting.continuationIDs(for: .validMock, events: [.read, .write])) == [cnRead1.id, cnRead.id, cnWrite.id]
         )
         #expect(
             Set(waiting.continuationIDs(for: .validMock, events: [])) == []
