@@ -340,24 +340,24 @@ public extension HTTPServer {
 extension Logging {
 
     func logOpenConnection(_ connection: HTTPConnection) {
-        logInfo("\(connection.identifer) open connection")
+        logInfo("\(connection.identifier) open connection")
     }
 
     func logCloseConnection(_ connection: HTTPConnection) {
-        logInfo("\(connection.identifer) close connection")
+        logInfo("\(connection.identifier) close connection")
     }
 
     func logSwitchProtocol(_ connection: HTTPConnection, to protocol: String) {
-        logInfo("\(connection.identifer) switching protocol to \(`protocol`)")
+        logInfo("\(connection.identifier) switching protocol to \(`protocol`)")
     }
 
     func logRequest(_ request: HTTPRequest, on connection: HTTPConnection) {
         let suffix = request.headers[.range] != nil ? " <ranged>" : ""
-        logInfo("\(connection.identifer) request: \(request.method.rawValue) \(request.path)\(suffix)")
+        logInfo("\(connection.identifier) request: \(request.method.rawValue) \(request.path)\(suffix)")
     }
 
     func logError(_ error: any Error, on connection: HTTPConnection) {
-        logError("\(connection.identifer) error: \(error.localizedDescription)")
+        logError("\(connection.identifier) error: \(error.localizedDescription)")
     }
 
     func logListening(on socket: Socket) {
@@ -391,7 +391,7 @@ extension Logging {
 }
 
 private extension HTTPConnection {
-    var identifer: String {
+    var identifier: String {
         "<\(hostname)>"
     }
 }

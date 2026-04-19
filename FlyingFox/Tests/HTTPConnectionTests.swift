@@ -134,13 +134,13 @@ struct HTTPConnectionTests {
     @Test
     func connectionHostName() {
         #expect(
-            HTTPConnection.makeIdentifer(from: .ip4("8.8.8.8", port: 8080)) == "8.8.8.8"
+            HTTPConnection.makeIdentifier(from: .ip4("8.8.8.8", port: 8080)) == "8.8.8.8"
         )
         #expect(
-            HTTPConnection.makeIdentifer(from: .ip6("::1", port: 8080)) == "::1"
+            HTTPConnection.makeIdentifier(from: .ip6("::1", port: 8080)) == "::1"
         )
         #expect(
-            HTTPConnection.makeIdentifer(from: .unix("/var/sock/fox")) == "/var/sock/fox"
+            HTTPConnection.makeIdentifier(from: .unix("/var/sock/fox")) == "/var/sock/fox"
         )
     }
 }
