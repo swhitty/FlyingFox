@@ -45,7 +45,7 @@ struct HTTPConnection: Sendable {
         self.decoder = decoder
         self.logger = logger
 
-        let (peer, identifier) = HTTPConnection.makeIdentifer(from: socket.socket)
+        let (peer, identifier) = HTTPConnection.makeIdentifier(from: socket.socket)
         self.hostname = identifier
         self.requests = HTTPRequestSequence(bytes: socket.bytes, decoder: decoder, remoteAddress: peer)
     }
@@ -156,19 +156,19 @@ actor HTTPRequestSequence<S: AsyncBufferedSequence & Sendable>: AsyncSequence, A
 
 extension HTTPConnection {
 
-    static func makeIdentifer(from socket: Socket) -> (address: Socket.Address?, identifier: String) {
+    static func makeIdentifier(from socket: Socket) -> (address: Socket.Address?, identifier: String) {
         guard let peer = try? socket.remotePeer() else {
             return (nil, "unknown")
         }
 
         if case .unix = peer, let unixAddress = try? socket.sockname() {
-            return (peer, makeIdentifer(from: unixAddress))
+            return (peer, makeIdentifier(from: unixAddress))
         } else {
-            return (peer, makeIdentifer(from: peer))
+            return (peer, makeIdentifier(from: peer))
         }
     }
 
-    static func makeIdentifer(from peer: Socket.Address) -> String {
+    static func makeIdentifier(from peer: Socket.Address) -> String {
         switch peer {
         case .ip4(let address, port: _):
             return address
