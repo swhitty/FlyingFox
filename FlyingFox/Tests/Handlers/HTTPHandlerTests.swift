@@ -263,7 +263,7 @@ struct HTTPHandlerTests {
     }
 
     @Test
-    func proxyHandler_ThrowsError_WhenResponseIsNotHTTPURLResponse() async throws {
+    func proxyHandler_ThrowsErrorWhenResponseIsNotHTTPURLResponse() async throws {
         let config = URLSessionConfiguration.ephemeral
         config.protocolClasses = [FakeNonHTTPURLProtocol.self]
         let session = URLSession(configuration: config)
@@ -272,6 +272,18 @@ struct HTTPHandlerTests {
         await #expect(throws: URLError.self) {
             try await handler.handleRequest(.make())
         }
+    }
+
+    @Test
+    func proxyHandler_ReturnsResponseForHTTPURLResponse() async throws {
+        let config = URLSessionConfiguration.ephemeral
+        config.protocolClasses = [FakeHTTPURLProtocol.self]
+        let session = URLSession(configuration: config)
+        let handler = ProxyHTTPHandler(base: "http://example.com", session: session)
+
+        let response = try await handler.handleRequest(.make())
+        #expect(response.statusCode.code == 202)
+        try await #expect(response.bodyString == "fish")
     }
 
     @Test
@@ -362,6 +374,23 @@ private final class FakeNonHTTPURLProtocol: URLProtocol {
         )
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
         client?.urlProtocol(self, didLoad: Data())
+        client?.urlProtocolDidFinishLoading(self)
+    }
+    override func stopLoading() {}
+}
+
+private final class FakeHTTPURLProtocol: URLProtocol {
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+    override func startLoading() {
+        let response = HTTPURLResponse(
+            url: request.url!,
+            statusCode: 202,
+            httpVersion: "HTTP/1.1",
+            headerFields: nil
+        )!
+        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+        client?.urlProtocol(self, didLoad: Data("fish".utf8))
         client?.urlProtocolDidFinishLoading(self)
     }
     override func stopLoading() {}
