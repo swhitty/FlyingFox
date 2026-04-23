@@ -95,7 +95,7 @@ public struct WebSocketHTTPHandler: HTTPHandler, Sendable {
         // 4. A |Connection| header field that includes the token "Upgrade", treated as an ASCII
         //    case-insensitive value.
         guard let connectionHeader = headers[.connection] else {
-            throw WSInvalidHandshakeError("Connection header must must be present")
+            throw WSInvalidHandshakeError("Connection header must be present")
         }
 
         let connectionHeaderTokens = connectionHeader.lowercased().split(separator: ",").map { token in
