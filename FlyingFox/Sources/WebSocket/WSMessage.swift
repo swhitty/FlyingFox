@@ -31,7 +31,7 @@
 
 import Foundation
 
-public enum WSMessage: @unchecked Sendable, Hashable {
+public enum WSMessage: Sendable, Hashable {
     case text(String)
     case data(Data)
     case close(WSCloseCode = .normalClosure)

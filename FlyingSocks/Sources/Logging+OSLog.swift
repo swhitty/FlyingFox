@@ -33,7 +33,7 @@
 import OSLog
 
 @available(macOS 11.0, iOS 14.0, tvOS 14.0, *)
-public struct OSLogLogger: Logging, @unchecked Sendable {
+public struct OSLogLogger: Logging {
 
     private var logger: Logger
 
