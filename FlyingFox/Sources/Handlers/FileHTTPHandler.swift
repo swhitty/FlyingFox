@@ -162,11 +162,18 @@ public struct FileHTTPHandler: HTTPHandler {
             }
 
             if let range = Self.makePartialRange(for: request.headers, fileSize: fileSize) {
-                headers[.contentRange] = "bytes \(range.lowerBound)-\(range.upperBound)/\(fileSize)"
+                guard range.lowerBound < fileSize else {
+                    return HTTPResponse(
+                        statusCode: .rangeNotSatisfiable,
+                        headers: HTTPHeaders([.contentRange: "bytes */\(fileSize)"])
+                    )
+                }
+                let upperBound = min(range.upperBound, fileSize - 1)
+                headers[.contentRange] = "bytes \(range.lowerBound)-\(upperBound)/\(fileSize)"
                 return try HTTPResponse(
                     statusCode: .partialContent,
                     headers: headers,
-                    body: HTTPBodySequence(file: path, range: range.lowerBound..<range.upperBound + 1)
+                    body: HTTPBodySequence(file: path, range: range.lowerBound..<upperBound + 1)
                 )
             } else {
                 return try HTTPResponse(
