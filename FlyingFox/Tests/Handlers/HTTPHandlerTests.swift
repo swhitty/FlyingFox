@@ -239,6 +239,25 @@ struct HTTPHandlerTests {
         try await #expect(response.bodyString == "cakes")
     }
 
+    @Test
+    func fileHandler_Returns416WhenRangeStartExceedsFileSize() async throws {
+        let handler = FileHTTPHandler(named: "Stubs/fish.json", in: .module)
+
+        let response = try await handler.handleRequest(.make(headers: [.range: "bytes=20-30"]))
+        #expect(response.statusCode == .rangeNotSatisfiable)
+        #expect(response.headers[.contentRange] == "bytes */17")
+    }
+
+    @Test
+    func fileHandler_ClampsRangeEndToFileSize() async throws {
+        let handler = FileHTTPHandler(named: "Stubs/fish.json", in: .module)
+
+        let response = try await handler.handleRequest(.make(headers: [.range: "bytes=0-100"]))
+        #expect(response.statusCode == .partialContent)
+        #expect(response.headers[.contentRange] == "bytes 0-16/17")
+        try await #expect(response.bodyString == #"{"fish": "cakes"}"#)
+    }
+
     //MARK: - ProxyHTTPHandler
     
     @Test(.disabled("pie.dev appears to be down"))
