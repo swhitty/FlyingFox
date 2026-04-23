@@ -110,7 +110,7 @@ extension HTTPConnection: Hashable {
     }
 }
 
-actor HTTPRequestSequence<S: AsyncBufferedSequence & Sendable>: AsyncSequence, AsyncIteratorProtocol, @unchecked Sendable where S.Element == UInt8 {
+actor HTTPRequestSequence<S: AsyncBufferedSequence & Sendable>: AsyncSequence, AsyncIteratorProtocol where S.Element == UInt8 {
     typealias Element = HTTPRequest
     private let bytes: S
     private let remoteAddress: HTTPRequest.Address?

@@ -37,7 +37,7 @@ public struct HTTPResponse: Sendable {
     public var headers: HTTPHeaders
     public var payload: Payload
 
-    public enum Payload: @unchecked Sendable {
+    public enum Payload: Sendable {
         case httpBody(HTTPBodySequence)
         case webSocket(any WSHandler)
 
