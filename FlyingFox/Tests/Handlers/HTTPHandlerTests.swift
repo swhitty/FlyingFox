@@ -31,6 +31,9 @@
 
 @testable import FlyingFox
 import Foundation
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#endif
 import Testing
 
 struct HTTPHandlerTests {
@@ -260,6 +263,30 @@ struct HTTPHandlerTests {
     }
 
     @Test
+    func proxyHandler_ThrowsErrorWhenResponseIsNotHTTPURLResponse() async throws {
+        let config = URLSessionConfiguration.ephemeral
+        config.protocolClasses = [FakeNonHTTPURLProtocol.self]
+        let session = URLSession(configuration: config)
+        let handler = ProxyHTTPHandler(base: "http://example.com", session: session)
+
+        await #expect(throws: URLError.self) {
+            try await handler.handleRequest(.make())
+        }
+    }
+
+    @Test
+    func proxyHandler_ReturnsResponseForHTTPURLResponse() async throws {
+        let config = URLSessionConfiguration.ephemeral
+        config.protocolClasses = [FakeHTTPURLProtocol.self]
+        let session = URLSession(configuration: config)
+        let handler = ProxyHTTPHandler(base: "http://example.com", session: session)
+
+        let response = try await handler.handleRequest(.make())
+        #expect(response.statusCode.code == 202)
+        try await #expect(response.bodyString == "fish")
+    }
+
+    @Test
     func proxyHandler_MakesRequestWithQuery() async throws {
         let handler = ProxyHTTPHandler(base: "fish.com")
 
@@ -333,4 +360,38 @@ private extension FileHTTPHandler {
     static func makePartialRange(for headers: HTTPHeaders) -> ClosedRange<Int>? {
         makePartialRange(for: headers, fileSize: 10000)
     }
+}
+
+private final class FakeNonHTTPURLProtocol: URLProtocol {
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+    override func startLoading() {
+        let response = URLResponse(
+            url: request.url!,
+            mimeType: "text/plain",
+            expectedContentLength: 0,
+            textEncodingName: nil
+        )
+        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+        client?.urlProtocol(self, didLoad: Data())
+        client?.urlProtocolDidFinishLoading(self)
+    }
+    override func stopLoading() {}
+}
+
+private final class FakeHTTPURLProtocol: URLProtocol {
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+    override func startLoading() {
+        let response = HTTPURLResponse(
+            url: request.url!,
+            statusCode: 202,
+            httpVersion: "HTTP/1.1",
+            headerFields: nil
+        )!
+        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+        client?.urlProtocol(self, didLoad: Data("fish".utf8))
+        client?.urlProtocolDidFinishLoading(self)
+    }
+    override func stopLoading() {}
 }
