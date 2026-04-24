@@ -321,6 +321,29 @@ struct HTTPDecoderTests {
             HTTPDecoder.standardizePath("/served/%252e%252e/secret.txt") == "/served/%2e%2e/secret.txt"
         )
     }
+
+    // Exercises branches of the vendored removingDotSegments state machine
+    // that standardizePath now routes through directly. Each case targets a
+    // distinct state transition so regressions in any branch surface here.
+    @Test(arguments: [
+        ("", ""),                     // isEmpty guard
+        (".", ""),                    // .initial → .dot (terminal)
+        ("..", ""),                   // .initial → .dot → .dotDot (terminal)
+        ("./foo", "foo"),             // .dot → .initial (leading "./" strip)
+        ("../foo", "foo"),            // .dot → .dotDot → .initial (leading "../" strip)
+        (".foo", ".foo"),             // .dot → .appendUntilSlash
+        ("..foo", "..foo"),           // .dotDot → .appendUntilSlash
+        ("/.hidden", "/.hidden"),     // .slashDot → .appendUntilSlash
+        ("/..hidden", "/..hidden"),   // .slashDotDot → .appendUntilSlash
+        ("/a//b", "/a//b"),           // .slash → .slash (double slash write)
+        ("/foo/..", "/"),             // terminal .slashDotDot (trailing "/..")
+        ("/./", "/"),                 // .slashDot → .slash then terminal .slash
+        ("/a/.", "/a/"),              // .slashDot terminal (trailing "/.")
+        ("/a%XY/b", "/a%XY/b")        // malformed %-encoding → `?? path` fallback
+    ])
+    func standardizedPath_stateMachineBranches(input: String, expected: String) {
+        #expect(HTTPDecoder.standardizePath(input) == expected)
+    }
 }
 
 private extension HTTPDecoder {
