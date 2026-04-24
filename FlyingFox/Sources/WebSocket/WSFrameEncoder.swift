@@ -142,14 +142,14 @@ struct WSFrameEncoder {
                                    UInt16(bytes.take())
             return try await (Int(length), hasMask ? decodeMask(from: bytes) : nil)
         default:
-            var length = try await UInt64(bytes.take())
-            length |= try await UInt64(bytes.take()) << 8
-            length |= try await UInt64(bytes.take()) << 16
-            length |= try await UInt64(bytes.take()) << 24
-            length |= try await UInt64(bytes.take()) << 32
-            length |= try await UInt64(bytes.take()) << 40
+            var length = try await UInt64(bytes.take()) << 56
             length |= try await UInt64(bytes.take()) << 48
-            length |= try await UInt64(bytes.take()) << 56
+            length |= try await UInt64(bytes.take()) << 40
+            length |= try await UInt64(bytes.take()) << 32
+            length |= try await UInt64(bytes.take()) << 24
+            length |= try await UInt64(bytes.take()) << 16
+            length |= try await UInt64(bytes.take()) << 8
+            length |= try await UInt64(bytes.take())
 
             guard length <= Int.max else {
                 throw Error("Length is greater than Int.max")
