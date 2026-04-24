@@ -103,6 +103,20 @@ struct DirectoryHTTPHandlerTests {
     }
 
     @Test
+    func fileURL_rejectsServerPathSiblings() {
+        let handler = DirectoryHTTPHandler(root: URL(fileURLWithPath: "/temp"),
+                                           serverPath: "/sub/folder")
+
+        #expect(
+            handler.makeFileURL(for: "/sub/folderx/secret") == nil
+        )
+
+        #expect(
+            handler.makeFileURL(for: "/sub/folder-extra/secret") == nil
+        )
+    }
+
+    @Test
     func serverPath_doesNotRequier_leadingSlash() {
         let handler = DirectoryHTTPHandler(root: URL(fileURLWithPath: "/temp"),
                                            serverPath: "sub/folder")

@@ -84,6 +84,19 @@ struct RedirectHTTPHandlerTests {
     }
 
     @Test
+    func base_rejectsServerPathSiblings() async throws {
+        let handler: any HTTPHandler = .redirect(via: "http://fish.com", serverPath: "chips/shrimp")
+
+        await #expect(throws: URLError.self) {
+            try await handler.handleRequest(.make(path: "/chips/shrimpx/1"))
+        }
+
+        await #expect(throws: URLError.self) {
+            try await handler.handleRequest(.make(path: "/chips/shrimp-extra/1"))
+        }
+    }
+
+    @Test
     func base_statuscode() async throws {
         let handler = RedirectHTTPHandler(base: "http://fish.com", statusCode: .temporaryRedirect, serverPath: "/chips/shrimp")
 

@@ -91,16 +91,11 @@ public struct DirectoryHTTPHandler: HTTPHandler {
     }
 
     func makeFileURL(for requestPath: String) -> URL? {
-        let compsA = serverPath
-            .split(separator: "/", omittingEmptySubsequences: true)
-            .joined(separator: "/")
+        let serverComponents = serverPath.split(separator: "/", omittingEmptySubsequences: true)
+        let requestComponents = requestPath.split(separator: "/", omittingEmptySubsequences: true)
 
-        let compsB = requestPath
-            .split(separator: "/", omittingEmptySubsequences: true)
-            .joined(separator: "/")
-
-        guard compsB.hasPrefix(compsA) else { return nil }
-        let subPath = String(compsB.dropFirst(compsA.count))
+        guard requestComponents.starts(with: serverComponents) else { return nil }
+        let subPath = requestComponents.dropFirst(serverComponents.count).joined(separator: "/")
         return root?.appendingPathComponent(subPath)
     }
     

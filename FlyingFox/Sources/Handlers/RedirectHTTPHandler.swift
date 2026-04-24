@@ -82,24 +82,19 @@ public struct RedirectHTTPHandler: HTTPHandler {
             throw URLError(.badURL)
         }
 
-        let compsA = serverPath
-            .split(separator: "/", omittingEmptySubsequences: true)
-            .joined(separator: "/")
+        let serverComponents = serverPath.split(separator: "/", omittingEmptySubsequences: true)
+        let requestComponents = request.path.split(separator: "/", omittingEmptySubsequences: true)
 
-        let compsB = request.path
-            .split(separator: "/", omittingEmptySubsequences: true)
-            .joined(separator: "/")
-
-        guard !compsA.isEmpty else {
+        guard !serverComponents.isEmpty else {
             return try base.appendingRequest(request)
         }
 
-        guard compsB.hasPrefix(compsA) else {
+        guard requestComponents.starts(with: serverComponents) else {
             throw URLError(.badURL)
         }
 
         var request = request
-        request.path = String(compsB.dropFirst(compsA.count))
+        request.path = requestComponents.dropFirst(serverComponents.count).joined(separator: "/")
         return try base.appendingRequest(request)
     }
 
