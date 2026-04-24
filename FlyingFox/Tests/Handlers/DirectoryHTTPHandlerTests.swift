@@ -140,4 +140,39 @@ struct DirectoryHTTPHandlerTests {
             handler.makeFileURL(for: "sub/a") == URL(fileURLWithPath: "/temp/file/sub/a")
         )
     }
+
+    // TVT-289 — regression guard for percent-encoded path traversal.
+    // A sibling `secret.txt` is placed above the served root; traversal
+    // vectors are routed through HTTPDecoder + DirectoryHTTPHandler. Any
+    // response body equal to "SECRET" is a confirmed traversal.
+    @Test(arguments: [
+        "/served/%2e%2e/secret.txt",
+        "/served/%2E%2E/secret.txt",
+        "/served/%2e%2e%2fsecret.txt",
+        "/served/%252e%252e/secret.txt",
+        "/served/..%2fsecret.txt",
+        "/served/../secret.txt"
+    ])
+    func pathTraversalProbe(rawTarget: String) async throws {
+        let fm = FileManager.default
+        let root = fm.temporaryDirectory.appendingPathComponent("tvt289-\(UUID().uuidString)")
+        try fm.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: root) }
+
+        let served = root.appendingPathComponent("served")
+        try fm.createDirectory(at: served, withIntermediateDirectories: true)
+        try "INSIDE".data(using: .utf8)!.write(to: served.appendingPathComponent("inside.txt"))
+        try "SECRET".data(using: .utf8)!.write(to: root.appendingPathComponent("secret.txt"))
+
+        let handler = DirectoryHTTPHandler(root: served, serverPath: "/served")
+
+        let decoder = HTTPDecoder()
+        let components = decoder.readComponents(from: rawTarget)
+        let request = HTTPRequest.make(path: components.path, query: components.query)
+
+        let response = try await handler.handleRequest(request)
+        let body = try await response.bodyString
+
+        #expect(body != "SECRET", "path traversal via \(rawTarget) — served sibling file above root")
+    }
 }

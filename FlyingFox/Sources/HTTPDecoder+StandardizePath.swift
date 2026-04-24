@@ -34,31 +34,24 @@ import Foundation
 
 extension HTTPDecoder {
 
+    // Decode percent-escapes before RFC 3986 §5.2.4 dot-segment removal.
+    // URL.standardized and URL.path would otherwise round-trip the encoding:
+    // dot-segment removal runs on the percent-encoded path (see the
+    // swift-foundation reference below, which this file's removingDotSegments
+    // helper is copied from), so "%2e%2e" is opaque to the normalizer, and
+    // URL.path then percent-decodes on the way out, smuggling a literal ".."
+    // past normalization. Without this pre-decode, handlers that map
+    // request.path to the filesystem — presently only DirectoryHTTPHandler —
+    // are exposed to path traversal via percent-encoded dot sequences
+    // (TVT-289). Using removingDotSegments directly on the decoded string
+    // avoids a second decode round that would re-introduce the same issue
+    // for double-encoded inputs like "%252e%252e".
     static func standardizePath(_ path: String) -> String? {
-        standardizePath(path, fallback: false)
-    }
-
-    static func standardizePath(_ path: String, fallback: Bool) -> String? {
-        #if canImport(Darwin)
-            #if compiler(>=6.2)
-            if !fallback, #available(macOS 26.0, iOS 26.0, tvOS 26.0, watchOS 26.0, visionOS 26.0, *) {
-                return URL(string: path)?.standardized.path
-            } else {
-                return standardizePathDarwinFallback(path)
-            }
-            #else
-            return standardizePathDarwinFallback(path)
-            #endif
-        #else
-        return URL(string: path)?.standardized.path
-        #endif
-    }
-
-    private static func standardizePathDarwinFallback(_ path: String) -> String? {
+        let decoded = path.removingPercentEncoding ?? path
         if #available(macOS 11.0, iOS 14.0, tvOS 14.0, watchOS 7.0, visionOS 26.0, *) {
-            return URL(string: path.removingDotSegments)?.standardized.path
+            return decoded.removingDotSegments
         } else {
-            return URL(string: path)?.standardized.path
+            return URL(string: decoded)?.standardized.path
         }
     }
 }

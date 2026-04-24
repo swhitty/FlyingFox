@@ -298,8 +298,27 @@ struct HTTPDecoderTests {
         #expect(
             HTTPDecoder.standardizePath("/../a/b/../c/./d.html") == "/a/c/d.html"
         )
+    }
+
+    @Test
+    func standardizedPath_collapsesPercentEncodedDotSegments() {
+        // TVT-289 — percent-encoded dot segments must be decoded and collapsed
+        // before reaching handlers that map paths to the filesystem.
         #expect(
-            HTTPDecoder.standardizePath("/../a/b/../c/./d.html", fallback: true) == "/a/c/d.html"
+            HTTPDecoder.standardizePath("/served/%2e%2e/secret.txt") == "/secret.txt"
+        )
+        #expect(
+            HTTPDecoder.standardizePath("/served/%2E%2E/secret.txt") == "/secret.txt"
+        )
+        #expect(
+            HTTPDecoder.standardizePath("/served/%2e%2e%2fsecret.txt") == "/secret.txt"
+        )
+        #expect(
+            HTTPDecoder.standardizePath("/served/..%2fsecret.txt") == "/secret.txt"
+        )
+        // Double-encoded input must NOT collapse — it's a literal "%2e%2e" component.
+        #expect(
+            HTTPDecoder.standardizePath("/served/%252e%252e/secret.txt") == "/served/%2e%2e/secret.txt"
         )
     }
 }
