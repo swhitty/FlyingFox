@@ -97,6 +97,10 @@ public struct MessageFrameWSHandler: WSHandler {
         messagesIn: AsyncStream<WSMessage>.Continuation,
         messagesOut: AsyncStream<WSMessage>
     ) async where S.Element == WSFrame {
+        defer {
+            messagesIn.finish()
+            framesOut.finish()
+        }
         await withTaskGroup(of: Void.self) { group in
             group.addTask {
                 do {
@@ -110,30 +114,24 @@ public struct MessageFrameWSHandler: WSHandler {
                             throw FrameError.closed(frame)
                         }
                     }
-                    framesOut.finish(throwing: nil)
                 } catch FrameError.closed(let frame) {
                     framesOut.yield(frame)
-                    framesOut.finish(throwing: nil)
+                } catch is CancellationError {
                 } catch {
                     framesOut.finish(throwing: error)
                 }
             }
             group.addTask {
-                do {
-                    for await message in messagesOut {
-                        for frame in makeFrames(for: message) {
-                            framesOut.yield(frame)
-                            if frame.opcode == .close {
-                                throw FrameError.closed(frame)
-                            }
+                for await message in messagesOut {
+                    for frame in makeFrames(for: message) {
+                        framesOut.yield(frame)
+                        if frame.opcode == .close {
+                            return
                         }
                     }
-                    framesOut.finish(throwing: nil)
-                } catch {
-                    framesOut.finish(throwing: nil)
                 }
             }
-            await group.next()!
+            await group.next()
             group.cancelAll()
         }
     }
