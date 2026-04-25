@@ -232,10 +232,16 @@ struct WSFrameEncoderTests {
     @Test
     func decodeLength() async throws {
         #expect(
+            try await WSFrameEncoder.decodeLength(0x00) == 0
+        )
+        #expect(
             try await WSFrameEncoder.decodeLength(0x01) == 1
         )
         #expect(
             try await WSFrameEncoder.decodeLength(0x7D) == 125
+        )
+        #expect(
+            try await WSFrameEncoder.decodeLength(0x7E, 0x00, 0x7E) == 126
         )
         #expect(
             try await WSFrameEncoder.decodeLength(0x7E, 0x00, 0xFF) == 0x00FF
@@ -247,7 +253,22 @@ struct WSFrameEncoderTests {
             try await WSFrameEncoder.decodeLength(0x7E, 0xFF, 0xFF) == 0xFFFF
         )
         #expect(
-            try await WSFrameEncoder.decodeLength(0x7F, 0xFF, 0xEE, 0xDD, 0xCC, 0xBB, 0xAA, 0x99, 0x00) == 0x0099AABBCCDDEEFF
+            try await WSFrameEncoder.decodeLength(0x7F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00) == 0x00010000
+        )
+        #expect(
+            try await WSFrameEncoder.decodeLength(0x7F, 0x00, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF) == 0x0099AABBCCDDEEFF
+        )
+        #expect(
+            try await WSFrameEncoder.decodeLength(0x7F, 0x7F, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF) == Int.max
+        )
+        #expect(
+            try await WSFrameEncoder.decodeLength(0x80, 0x00, 0x00, 0x00, 0x00) == 0x00
+        )
+        #expect(
+            try await WSFrameEncoder.decodeLength(0xFE, 0x00, 0x7E, 0x00, 0x00, 0x00, 0x00) == 0x7E
+        )
+        #expect(
+            try await WSFrameEncoder.decodeLength(0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x7F, 0x00, 0x00, 0x00, 0x00) == 0x7F
         )
     }
 
@@ -257,7 +278,16 @@ struct WSFrameEncoderTests {
             try await WSFrameEncoder.decodeLength(0x7E)
         }
         await #expect(throws: SocketError.disconnected) {
+            try await WSFrameEncoder.decodeLength(0x7E, 0x00)
+        }
+        await #expect(throws: SocketError.disconnected) {
             try await WSFrameEncoder.decodeLength(0x7F, 0xFF, 0xFF, 0xFF)
+        }
+        await #expect(throws: SocketError.disconnected) {
+            try await WSFrameEncoder.decodeLength(0x7F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)
+        }
+        await #expect(throws: WSFrameEncoder.Error.self) {
+            try await WSFrameEncoder.decodeLength(0x7F, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)
         }
         await #expect(throws: WSFrameEncoder.Error.self) {
             try await WSFrameEncoder.decodeLength(0x7F, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF)
