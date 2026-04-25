@@ -187,10 +187,10 @@ struct HTTPDecoderTests {
     @Test
     func body_ThrowsError_WhenSequenceEnds() async throws {
         await #expect(throws: SocketError.self) {
-            try await HTTPDecoder.make(sharedRequestReplaySize: 1024).readBody(from: AsyncBufferedEmptySequence(completeImmediately: true), length: "100").get()
+            try await HTTPDecoder.make(sharedRequestReplaySize: 1024).readBody(from: AsyncBufferedEmptySequence(completeImmediately: true), contentLength: "100", transferEncoding: nil).get()
         }
         await #expect(throws: SocketError.self) {
-            try await HTTPDecoder.make(sharedRequestBufferSize: 1024).readBody(from: AsyncBufferedEmptySequence(completeImmediately: true), length: "100").get()
+            try await HTTPDecoder.make(sharedRequestBufferSize: 1024).readBody(from: AsyncBufferedEmptySequence(completeImmediately: true), contentLength: "100", transferEncoding: nil).get()
         }
     }
 
@@ -302,6 +302,106 @@ struct HTTPDecoderTests {
             HTTPDecoder.standardizePath("/../a/b/../c/./d.html", fallback: true) == "/a/c/d.html"
         )
     }
+
+    // RFC 9112 §7.1 — chunked-coded request bodies are decoded into the body data.
+    @Test
+    func body_IsParsed_WhenTransferEncoding_IsChunked() async throws {
+        let request = try await HTTPDecoder.make().decodeRequestFromString(
+            """
+            POST /hello HTTP/1.1\r
+            Transfer-Encoding: chunked\r
+            \r
+            5\r
+            Hello\r
+            7\r
+             World!\r
+            0\r
+            \r
+
+            """
+        )
+
+        #expect(try await request.bodyString == "Hello World!")
+    }
+
+    @Test
+    func body_IsEmpty_WhenChunkedTerminatorOnly() async throws {
+        let request = try await HTTPDecoder.make().decodeRequestFromString(
+            """
+            POST /hello HTTP/1.1\r
+            Transfer-Encoding: chunked\r
+            \r
+            0\r
+            \r
+
+            """
+        )
+
+        #expect(try await request.bodyData == Data())
+    }
+
+    // RFC 9112 §7.1.2 — trailer fields are consumed but not part of the body.
+    @Test
+    func chunkedBody_IgnoresTrailerHeaders() async throws {
+        let request = try await HTTPDecoder.make().decodeRequestFromString(
+            """
+            POST /hello HTTP/1.1\r
+            Transfer-Encoding: chunked\r
+            \r
+            5\r
+            Hello\r
+            0\r
+            X-Trailer: ignored\r
+            \r
+
+            """
+        )
+
+        #expect(try await request.bodyString == "Hello")
+    }
+
+    // RFC 9112 §6.1 — reject simultaneous Content-Length and Transfer-Encoding (smuggling prevention).
+    @Test
+    func contentLengthAndTransferEncoding_ThrowsError() async throws {
+        await #expect(throws: HTTPDecoder.Error.self) {
+            try await HTTPDecoder.make().decodeRequestFromString(
+                """
+                POST /hello HTTP/1.1\r
+                Content-Length: 5\r
+                Transfer-Encoding: chunked\r
+                \r
+                Hello
+                """
+            )
+        }
+    }
+
+    // RFC 9112 §6.3 #5 — invalid Content-Length is an unrecoverable framing error.
+    @Test
+    func nonNumericContentLength_ThrowsError() async throws {
+        await #expect(throws: HTTPDecoder.Error.self) {
+            try await HTTPDecoder.make().decodeRequestFromString(
+                """
+                POST /hello HTTP/1.1\r
+                Content-Length: abc\r
+                \r
+                """
+            )
+        }
+    }
+
+    @Test
+    func negativeContentLength_ThrowsError() async throws {
+        await #expect(throws: HTTPDecoder.Error.self) {
+            try await HTTPDecoder.make().decodeRequestFromString(
+                """
+                POST /hello HTTP/1.1\r
+                Content-Length: -5\r
+                \r
+                """
+            )
+        }
+    }
 }
 
 private extension HTTPDecoder {
@@ -318,7 +418,8 @@ private extension HTTPDecoder {
         let data = string.data(using: .utf8)!
         return try await readBody(
             from: ConsumingAsyncSequence(data),
-            length: "\(data.count)"
+            contentLength: "\(data.count)",
+            transferEncoding: nil
         )
     }
 }

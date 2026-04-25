@@ -234,6 +234,9 @@ public final actor HTTPServer {
                 try await connection.sendResponse(response)
             }
         } catch {
+            // TODO: send `400 Bad Request` on `HTTPDecoder.Error` before closing.
+            // Closing without a response is RFC 9112 §6.3 #5-compliant for unrecoverable
+            // framing errors, but a 400 response would be more informative.
             logger.logError(error, on: connection)
         }
         connections.remove(connection)
