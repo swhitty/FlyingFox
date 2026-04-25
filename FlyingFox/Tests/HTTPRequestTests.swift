@@ -88,4 +88,61 @@ struct HTTPRequestTests {
         #expect(request.target.query() == "food=fish%20%26%20chips&qty=15")
         #expect(request.target.query(percentEncoded: false) == "food=fish & chips&qty=15")
     }
+
+    // RFC 9112 §9.3 — HTTP/1.1 connections persist by default; only `Connection: close` opts out.
+    @Test
+    func http11_keepsAliveByDefault_whenConnectionHeaderAbsent() {
+        let request = HTTPRequest.make(version: .http11, headers: [:])
+        #expect(request.shouldKeepAlive)
+    }
+
+    @Test
+    func http11_closes_whenConnectionHeaderIsClose() {
+        let request = HTTPRequest.make(version: .http11, headers: [.connection: "close"])
+        #expect(!request.shouldKeepAlive)
+    }
+
+    @Test
+    func http11_closes_whenConnectionHeaderIsCloseMixedCase() {
+        let request = HTTPRequest.make(version: .http11, headers: [.connection: "Close"])
+        #expect(!request.shouldKeepAlive)
+    }
+
+    @Test
+    func http11_keepsAlive_whenConnectionHeaderIsKeepAlive() {
+        let request = HTTPRequest.make(version: .http11, headers: [.connection: "keep-alive"])
+        #expect(request.shouldKeepAlive)
+    }
+
+    // RFC 9110 §7.6.1 — Connection is a comma-separated list of options.
+    @Test
+    func http11_keepsAlive_withMultiTokenConnectionHeader() {
+        let request = HTTPRequest.make(version: .http11, headers: [.connection: "keep-alive, Upgrade"])
+        #expect(request.shouldKeepAlive)
+    }
+
+    @Test
+    func http11_closes_whenCloseTokenAppearsAmongOthers() {
+        let request = HTTPRequest.make(version: .http11, headers: [.connection: "Upgrade, close"])
+        #expect(!request.shouldKeepAlive)
+    }
+
+    // RFC 9112 §9.3 — HTTP/1.0 closes by default; only `Connection: keep-alive` opts in.
+    @Test
+    func http10_closesByDefault_whenConnectionHeaderAbsent() {
+        let request = HTTPRequest.make(version: HTTPVersion("HTTP/1.0"), headers: [:])
+        #expect(!request.shouldKeepAlive)
+    }
+
+    @Test
+    func http10_keepsAlive_whenConnectionHeaderIsKeepAlive() {
+        let request = HTTPRequest.make(version: HTTPVersion("HTTP/1.0"), headers: [.connection: "keep-alive"])
+        #expect(request.shouldKeepAlive)
+    }
+
+    @Test
+    func http10_closes_whenConnectionHeaderIsClose() {
+        let request = HTTPRequest.make(version: HTTPVersion("HTTP/1.0"), headers: [.connection: "close"])
+        #expect(!request.shouldKeepAlive)
+    }
 }

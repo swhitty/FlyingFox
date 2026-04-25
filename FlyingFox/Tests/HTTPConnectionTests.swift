@@ -83,6 +83,7 @@ struct HTTPConnectionTests {
             Connection: Keep-Alive\r
             \r
             GET /hello HTTP/1.1\r
+            Connection: close\r
             \r
 
             """
