@@ -243,7 +243,9 @@ public final actor HTTPServer {
 
     func handleRequest(_ request: HTTPRequest) async -> HTTPResponse {
         var response = await handleRequest(request, timeout: config.timeout)
-        if request.shouldKeepAlive {
+        // Echo the request's Connection header on keep-alive responses, but only
+        // if the handler did not set its own (e.g. WebSocket upgrade → "upgrade").
+        if request.shouldKeepAlive, response.headers[.connection] == nil {
             response.headers[.connection] = request.headers[.connection]
         }
         return response

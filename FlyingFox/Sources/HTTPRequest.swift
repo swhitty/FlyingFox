@@ -129,7 +129,15 @@ public extension HTTPRequest {
 }
 
 extension HTTPRequest {
+    // RFC 9112 §9.3 — HTTP/1.1 connections persist unless `Connection: close`;
+    // HTTP/1.0 connections close unless `Connection: keep-alive` is present.
     var shouldKeepAlive: Bool {
-        headers[.connection]?.caseInsensitiveCompare("keep-alive") == .orderedSame
+        let tokens = (headers[.connection] ?? "")
+            .split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespaces).lowercased() }
+        if version == .http11 {
+            return !tokens.contains("close")
+        }
+        return tokens.contains("keep-alive")
     }
 }
