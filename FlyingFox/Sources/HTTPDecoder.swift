@@ -50,7 +50,11 @@ struct HTTPDecoder {
         let version = HTTPVersion(String(comps[2]))
         let target = makeTarget(from: comps[1])
         let headers = try await readHeaders(from: bytes)
-        let body = try await readBody(from: bytes, length: headers[.contentLength])
+        let body = try await readBody(
+            from: bytes,
+            contentLength: headers[.contentLength],
+            transferEncoding: headers[.transferEncoding]
+        )
 
         return HTTPRequest(
             method: method,
@@ -74,7 +78,11 @@ struct HTTPDecoder {
         let statusCode = HTTPStatusCode(code, phrase: String(comps[2]))
 
         let headers = try await readHeaders(from: bytes)
-        let body = try await readBody(from: bytes, length: headers[.contentLength])
+        let body = try await readBody(
+            from: bytes,
+            contentLength: headers[.contentLength],
+            transferEncoding: headers[.transferEncoding]
+        )
 
         return HTTPResponse(
             version: version,
@@ -127,11 +135,46 @@ struct HTTPDecoder {
             .reduce(into: [HTTPHeader: String]()) { $0[$1.header] = $1.value }
     }
 
-    func readBody(from bytes: some AsyncBufferedSequence<UInt8>, length: String?) async throws -> HTTPBodySequence {
-        let length = length.flatMap(Int.init) ?? 0
+    func readBody(
+        from bytes: some AsyncBufferedSequence<UInt8>,
+        contentLength: String?,
+        transferEncoding: String?
+    ) async throws -> HTTPBodySequence {
         guard sharedRequestBufferSize > 0 else {
             throw SocketError.disconnected
         }
+
+        // RFC 9112 §6.1 — reject simultaneous Content-Length and Transfer-Encoding.
+        if transferEncoding != nil && contentLength != nil {
+            throw Error("Content-Length and Transfer-Encoding cannot both be present")
+        }
+
+        // RFC 9112 §6.3 #3 — Transfer-Encoding takes precedence. §6.1 requires
+        // `chunked` to be the final coding when present; only `chunked` is supported here.
+        if let transferEncoding {
+            let tokens = transferEncoding
+                .split(separator: ",")
+                .map { $0.trimmingCharacters(in: .whitespaces).lowercased() }
+            guard tokens.last == "chunked" else {
+                throw Error("Unsupported Transfer-Encoding: \(transferEncoding)")
+            }
+            return HTTPBodySequence(
+                chunked: bytes,
+                suggestedBufferSize: sharedRequestBufferSize
+            )
+        }
+
+        // RFC 9112 §6.3 #5 — invalid Content-Length is an unrecoverable framing error.
+        let length: Int
+        if let contentLength {
+            guard let parsed = Int(contentLength), parsed >= 0 else {
+                throw Error("Invalid Content-Length: \(contentLength)")
+            }
+            length = parsed
+        } else {
+            length = 0
+        }
+
         if length <= sharedRequestBufferSize {
             return try await HTTPBodySequence(data: readData(from: bytes, length: length), suggestedBufferSize: length)
         } else if length <= sharedRequestReplaySize {

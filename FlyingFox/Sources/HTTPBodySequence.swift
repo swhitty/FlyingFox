@@ -69,6 +69,14 @@ public struct HTTPBodySequence: Sendable, AsyncSequence {
         )
     }
 
+    init(chunked bytes: some AsyncBufferedSequence<UInt8>, suggestedBufferSize: Int = 4096) {
+        self.storage = Storage(
+            bytes: HTTPChunkedTransferDecoder(bytes: bytes),
+            count: nil,
+            bufferSize: suggestedBufferSize
+        )
+    }
+
     public init(file url: URL, range: Range<Int>? = nil, suggestedBufferSize: Int = 4096) throws {
         self.storage = try Storage(
             fileURL: url,
