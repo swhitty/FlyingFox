@@ -122,18 +122,13 @@ public struct MessageFrameWSHandler: WSHandler {
                 }
             }
             group.addTask {
-                do {
-                    for await message in messagesOut {
-                        for frame in makeFrames(for: message) {
-                            framesOut.yield(frame)
-                            if frame.opcode == .close {
-                                throw FrameError.closed(frame)
-                            }
+                for await message in messagesOut {
+                    for frame in makeFrames(for: message) {
+                        framesOut.yield(frame)
+                        if frame.opcode == .close {
+                            return
                         }
                     }
-                } catch FrameError.closed {
-                } catch is CancellationError {
-                } catch {
                 }
             }
             await group.next()
