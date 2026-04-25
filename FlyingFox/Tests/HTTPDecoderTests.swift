@@ -402,6 +402,109 @@ struct HTTPDecoderTests {
             )
         }
     }
+
+    // RFC 9112 §7.1 — `chunk-ext` (preceded by `;`) is permitted on the chunk-size line.
+    @Test
+    func chunkExt_IsIgnored() async throws {
+        let request = try await HTTPDecoder.make().decodeRequestFromString(
+            """
+            POST /hello HTTP/1.1\r
+            Transfer-Encoding: chunked\r
+            \r
+            5;name=value\r
+            Hello\r
+            0\r
+            \r
+
+            """
+        )
+
+        #expect(try await request.bodyString == "Hello")
+    }
+
+    @Test
+    func invalidChunkSize_ThrowsError() async throws {
+        let request = try await HTTPDecoder.make().decodeRequestFromString(
+            """
+            POST /hello HTTP/1.1\r
+            Transfer-Encoding: chunked\r
+            \r
+            XX\r
+            \r
+
+            """
+        )
+
+        await #expect(throws: HTTPDecoder.Error.self) {
+            _ = try await request.bodyData
+        }
+    }
+
+    @Test
+    func missingCRLFAfterChunkData_ThrowsError() async throws {
+        let request = try await HTTPDecoder.make().decodeRequestFromString(
+            """
+            POST /hello HTTP/1.1\r
+            Transfer-Encoding: chunked\r
+            \r
+            5\r
+            HelloAB
+            """
+        )
+
+        await #expect(throws: HTTPDecoder.Error.self) {
+            _ = try await request.bodyData
+        }
+    }
+
+    // Truncated chunked-body: chunk-size line never terminates → SocketError.disconnected.
+    @Test
+    func truncatedChunkSize_ThrowsError() async throws {
+        let request = try await HTTPDecoder.make().decodeRequestFromString(
+            """
+            POST /hello HTTP/1.1\r
+            Transfer-Encoding: chunked\r
+            \r
+            5
+            """
+        )
+
+        await #expect(throws: SocketError.self) {
+            _ = try await request.bodyData
+        }
+    }
+
+    // Truncated chunked-body: stream ends inside chunk-data → SocketError.disconnected.
+    @Test
+    func truncatedChunkData_ThrowsError() async throws {
+        let request = try await HTTPDecoder.make().decodeRequestFromString(
+            """
+            POST /hello HTTP/1.1\r
+            Transfer-Encoding: chunked\r
+            \r
+            5\r
+            Hi
+            """
+        )
+
+        await #expect(throws: SocketError.self) {
+            _ = try await request.bodyData
+        }
+    }
+
+    // RFC 9112 §6.1 — only `chunked` transfer coding is supported here.
+    @Test
+    func unsupportedTransferEncoding_ThrowsError() async throws {
+        await #expect(throws: HTTPDecoder.Error.self) {
+            try await HTTPDecoder.make().decodeRequestFromString(
+                """
+                POST /hello HTTP/1.1\r
+                Transfer-Encoding: gzip\r
+                \r
+                """
+            )
+        }
+    }
 }
 
 private extension HTTPDecoder {
