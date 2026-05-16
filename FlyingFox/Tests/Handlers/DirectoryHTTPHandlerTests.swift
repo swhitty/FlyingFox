@@ -73,6 +73,82 @@ struct DirectoryHTTPHandlerTests {
     }
 
     @Test
+    func directoryHandler_streamsBody_fromFile() async throws {
+        let handler = DirectoryHTTPHandler(bundle: .module, subPath: "Stubs", serverPath: "server/path")
+
+        let response = try await handler.handleRequest(.make(path: "server/path/fish.json"))
+        guard case .httpBody(let body) = response.payload else {
+            Issue.record("expected .httpBody payload")
+            return
+        }
+        #expect(body.storage.sequence is AsyncBufferedFileSequence)
+    }
+
+    @Test
+    func directoryHandler_setsCacheHeaders_on200() async throws {
+        let handler = DirectoryHTTPHandler(bundle: .module, subPath: "Stubs", serverPath: "server/path")
+
+        let response = try await handler.handleRequest(.make(path: "server/path/fish.json"))
+        #expect(response.statusCode == .ok)
+        #expect(response.headers[.cacheControl]?.isEmpty == false)
+        #expect(response.headers[.date]?.isEmpty == false)
+        #expect(response.headers[.lastModified]?.isEmpty == false)
+        #expect(response.headers[.eTag]?.isEmpty == false)
+    }
+
+    @Test
+    func directoryHandler_returns304_whenIfModifiedSinceMatches() async throws {
+        let handler = DirectoryHTTPHandler(bundle: .module, subPath: "Stubs", serverPath: "server/path")
+
+        let initial = try await handler.handleRequest(.make(path: "server/path/fish.json"))
+        let lastModified = try #require(initial.headers[.lastModified])
+
+        let response = try await handler.handleRequest(.make(
+            path: "server/path/fish.json",
+            headers: [.ifModifiedSince: lastModified]
+        ))
+        #expect(response.statusCode == .notModified)
+        #expect(response.headers[.lastModified] == lastModified)
+    }
+
+    @Test
+    func directoryHandler_returns200_whenIfModifiedSinceDoesNotMatch() async throws {
+        let handler = DirectoryHTTPHandler(bundle: .module, subPath: "Stubs", serverPath: "server/path")
+
+        let response = try await handler.handleRequest(.make(
+            path: "server/path/fish.json",
+            headers: [.ifModifiedSince: "Mon, 01 Jan 1990 00:00:00 GMT"]
+        ))
+        #expect(response.statusCode == .ok)
+    }
+
+    @Test
+    func directoryHandler_returns304_whenIfNoneMatchMatches() async throws {
+        let handler = DirectoryHTTPHandler(bundle: .module, subPath: "Stubs", serverPath: "server/path")
+
+        let initial = try await handler.handleRequest(.make(path: "server/path/fish.json"))
+        let etag = try #require(initial.headers[.eTag])
+
+        let response = try await handler.handleRequest(.make(
+            path: "server/path/fish.json",
+            headers: [.ifNoneMatch: etag]
+        ))
+        #expect(response.statusCode == .notModified)
+        #expect(response.headers[.eTag] == etag)
+    }
+
+    @Test
+    func directoryHandler_returns200_whenIfNoneMatchDoesNotMatch() async throws {
+        let handler = DirectoryHTTPHandler(bundle: .module, subPath: "Stubs", serverPath: "server/path")
+
+        let response = try await handler.handleRequest(.make(
+            path: "server/path/fish.json",
+            headers: [.ifNoneMatch: "\"deadbeef-0\""]
+        ))
+        #expect(response.statusCode == .ok)
+    }
+
+    @Test
     func directoryHandler_Returns404WhenFileDoesNotExist() async throws {
         let handler = DirectoryHTTPHandler.directory(for: .module, subPath: "Stubs", serverPath: "server/path")
 

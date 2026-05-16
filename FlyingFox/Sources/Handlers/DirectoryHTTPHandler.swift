@@ -55,39 +55,41 @@ public struct DirectoryHTTPHandler: HTTPHandler {
     }
 
     public func handleRequest(_ request: HTTPRequest) async throws -> HTTPResponse {
-        guard
-            let filePath = makeFileURL(for: request.path),
-            let data = try? Data(contentsOf: filePath) else {
+        guard let filePath = makeFileURL(for: request.path) else {
             return HTTPResponse(statusCode: .notFound)
         }
 
-        var headers: HTTPHeaders = [
-            .contentType: FileHTTPHandler.makeContentType(for: filePath.absoluteString),
-            .cacheControl: cacheControl.getSerializedValue(),
-            .date: HTTPCacheControl.getDateHeaderValue()
-        ]
+        do {
+            var headers: HTTPHeaders = [
+                .contentType: FileHTTPHandler.makeContentType(for: filePath.absoluteString),
+                .cacheControl: cacheControl.getSerializedValue(),
+                .date: HTTPCacheControl.getDateHeaderValue()
+            ]
 
-        if let expiresValue = HTTPCacheControl.getExpiresValue(for: filePath) {
-            headers[.lastModified] = expiresValue
-            if let ifModifiedSince = request.headers[.ifModifiedSince], expiresValue == ifModifiedSince {
-                return HTTPResponse(statusCode: .notModified,
-                                    headers: headers)
+            if let expiresValue = HTTPCacheControl.getExpiresValue(for: filePath) {
+                headers[.lastModified] = expiresValue
+                if let ifModifiedSince = request.headers[.ifModifiedSince], expiresValue == ifModifiedSince {
+                    return HTTPResponse(statusCode: .notModified,
+                                        headers: headers)
+                }
             }
-        }
 
-        if let eTagValue = HTTPCacheControl.getETagValue(for: filePath) {
-            headers[.eTag] = eTagValue
-            if let ifNoneMatch = request.headers[.ifNoneMatch], eTagValue == ifNoneMatch {
-                return HTTPResponse(statusCode: .notModified,
-                                    headers: headers)
+            if let eTagValue = HTTPCacheControl.getETagValue(for: filePath) {
+                headers[.eTag] = eTagValue
+                if let ifNoneMatch = request.headers[.ifNoneMatch], eTagValue == ifNoneMatch {
+                    return HTTPResponse(statusCode: .notModified,
+                                        headers: headers)
+                }
             }
-        }
 
-        return HTTPResponse(
-            statusCode: .ok,
-            headers: headers,
-            body: data
-        )
+            return try HTTPResponse(
+                statusCode: .ok,
+                headers: headers,
+                body: HTTPBodySequence(file: filePath)
+            )
+        } catch {
+            return HTTPResponse(statusCode: .notFound)
+        }
     }
 
     func makeFileURL(for requestPath: String) -> URL? {
