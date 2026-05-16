@@ -81,6 +81,31 @@ struct WSFrameValidatorTests {
     }
 
     @Test
+    func controlFrames_throwError_whenPayloadExceeds125Bytes() async {
+        // RFC 6455 §5.5: control frames MUST have payload length ≤ 125 bytes.
+        let oversized = Data(repeating: 0x41, count: 126)
+        await #expect(throws: WSFrameValidator.Error.self) {
+            try await WSFrameValidator.validate([.make(opcode: .ping, payload: oversized)]).collectAll()
+        }
+        await #expect(throws: WSFrameValidator.Error.self) {
+            try await WSFrameValidator.validate([.make(opcode: .pong, payload: oversized)]).collectAll()
+        }
+        await #expect(throws: WSFrameValidator.Error.self) {
+            try await WSFrameValidator.validate([.make(opcode: .close, payload: oversized)]).collectAll()
+        }
+    }
+
+    @Test
+    func controlFrames_areAccepted_whenPayloadIsAtMost125Bytes() async throws {
+        let maxPayload = Data(repeating: 0x41, count: 125)
+        let ping = WSFrame.make(opcode: .ping, payload: maxPayload)
+        let emptyPing = WSFrame.make(opcode: .ping)
+        #expect(
+            try await WSFrameValidator.validate([ping, emptyPing]).collectAll() == [ping, emptyPing]
+        )
+    }
+
+    @Test
     func controlFrames_ThrowError_WhenNotFin() async {
         await #expect(throws: WSFrameValidator.Error.self) {
             try await WSFrameValidator.validate([.make(fin: false, opcode: .ping)]).collectAll()

@@ -45,6 +45,16 @@ struct WSFrameValidator: Sendable {
 
         @Sendable
         func validateFrame(_ frame: WSFrame) throws -> WSFrame? {
+            switch frame.opcode {
+            case .ping, .pong, .close:
+                // RFC 6455 §5.5: control frame payload MUST be ≤ 125 bytes.
+                guard frame.payload.count <= 125 else {
+                    throw Error("Control frame payload exceeds 125 bytes")
+                }
+            default:
+                break
+            }
+
             if frame.opcode == .continuation {
                 try appendContinuation(frame)
                 guard let last = last, frame.fin else {
