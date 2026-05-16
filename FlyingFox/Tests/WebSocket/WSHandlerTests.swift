@@ -137,6 +137,40 @@ struct WSHandlerTests {
             try await frames.collectAll() == [.pong]
         )
     }
+
+    @Test
+    func messagesOut_Ends_WhenCloseMessageIsSent() async throws {
+        let messages = Messages()
+        let handler = MessageFrameWSHandler.make(handler: messages)
+        let frames = try await handler.makeFrames(for: [])
+
+        messages.output.yield(.close(.normalClosure))
+
+        #expect(
+            try await frames.collectAll() == [.close(code: .normalClosure)]
+        )
+    }
+
+    @Test
+    func messagesOut_YieldsFrames() async throws {
+        let messages = Messages()
+        let handler = MessageFrameWSHandler.make(handler: messages)
+        let (clientFrames, clientContinuation) = AsyncThrowingStream<WSFrame, any Error>.makeStream()
+
+        defer {
+            clientContinuation.finish()
+            messages.output.finish()
+        }
+
+        let frames = try await handler.makeFrames(for: clientFrames)
+
+        messages.output.yield(.text("Hello"))
+
+        var iterator = frames.makeAsyncIterator()
+        #expect(
+            try await iterator.next() == .make(fin: true, opcode: .text, payload: "Hello".data(using: .utf8)!)
+        )
+    }
 }
 
 extension MessageFrameWSHandler {
