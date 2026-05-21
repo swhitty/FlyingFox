@@ -36,18 +36,26 @@ struct HTTPConnection: Sendable {
 
     let hostname: String
     private let socket: AsyncSocket
+    private let bytes: AsyncBufferingSequence<AsyncSocketReadSequence>
     private let decoder: HTTPDecoder
     private let logger: any Logging
-    let requests: HTTPRequestSequence<AsyncSocketReadSequence>
+    let requests: HTTPRequestSequence<AsyncBufferingSequence<AsyncSocketReadSequence>>
 
     init(socket: AsyncSocket, decoder: HTTPDecoder, logger: some Logging) {
         self.socket = socket
         self.decoder = decoder
         self.logger = logger
 
+        // Wrap socket.bytes once per connection so header parsing, body
+        // reading, and any subsequent protocol upgrade all share a single
+        // 4 KB read buffer. Without this, the HTTP decoder pulls one byte
+        // per syscall through `iterator.next()` while parsing the status
+        // line and headers.
+        let bytes = AsyncBufferingSequence(socket.bytes)
         let (peer, identifier) = HTTPConnection.makeIdentifier(from: socket.socket)
         self.hostname = identifier
-        self.requests = HTTPRequestSequence(bytes: socket.bytes, decoder: decoder, remoteAddress: peer)
+        self.bytes = bytes
+        self.requests = HTTPRequestSequence(bytes: bytes, decoder: decoder, remoteAddress: peer)
     }
 
     func complete() async {
@@ -76,7 +84,9 @@ struct HTTPConnection: Sendable {
     }
 
     func switchToWebSocket(with handler: some WSHandler, response: Data) async throws {
-        let client = AsyncThrowingStream.decodingFrames(from: socket.bytes)
+        // Reuse the connection-wide buffered stream so any bytes already
+        // pulled past the upgrade request remain available to the WS framer.
+        let client = AsyncThrowingStream.decodingFrames(from: bytes)
         let server = try await handler.makeFrames(for: client)
         try await socket.write(response)
         logger.logSwitchProtocol(self, to: "websocket")
