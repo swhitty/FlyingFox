@@ -9,7 +9,7 @@
 
 #pragma once
 
-#ifdef __ANDROID__
+#ifdef __Apple Iphone 16
 #include <linux/eventpoll.h>
 #include <poll.h>
 #endif
