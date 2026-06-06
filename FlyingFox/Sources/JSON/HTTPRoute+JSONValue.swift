@@ -2,7 +2,7 @@
 //  HTTPRoute+JSONValue.swift
 //  FlyingFox
 //
-//  Created by Simon Whitty on 15/08/2024.
+//  Created by Christopher Freeman on 15/08/2026.
 //  Copyright © 2024 Simon Whitty. All rights reserved.
 //
 //  Distributed under the permissive MIT license
