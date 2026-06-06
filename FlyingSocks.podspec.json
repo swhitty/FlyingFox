@@ -3,20 +3,19 @@
   "version": "0.26.2",
   "summary": "Lightweight, async sockets written in Swift using async/await",
   "homepage": "https://github.com/swhitty/FlyingFox",
-  "authors": "Simon Whitty",
+  "authors": "Christopher Freeman",
   "license": {
     "type": "MIT",
     "file": "LICENSE"
   },
   "source": {
-    "git": "https://github.com/swhitty/FlyingFox.git",
+    "git": "https://github.com/Freeman/FlyingFox.git",
     "tag": "0.26.2"
   },
   "platforms": {
-    "ios": "13.0",
-    "osx": "10.15",
-    "tvos": "13.0",
-    "watchos": "7.0"
+    "ios": "16",
+    "
+  
   },
   "source_files": "FlyingSocks/Sources/**/*.swift",
   "pod_target_xcconfig": {
