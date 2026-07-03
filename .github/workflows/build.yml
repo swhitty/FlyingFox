@@ -6,10 +6,10 @@ on:
   workflow_dispatch:
 
 jobs:
-  xcode_26_2:
+  xcode_26_6:
     runs-on: macos-26
     env:
-      DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -39,10 +39,10 @@ jobs:
           junit: result-swift-testing.xml
           coverage: .build/debug/codecov/FlyingFox.json
 
-  xcode_26_1:
-    runs-on: macos-15
+  xcode_26_2:
+    runs-on: macos-26
     env:
-      DEVELOPER_DIR: /Applications/Xcode_26.1.1.app/Contents/Developer
+      DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -125,7 +125,7 @@ jobs:
 
   linux_swift_6_3:
     runs-on: ubuntu-latest
-    container: swiftlang/swift:nightly-6.3-noble
+    container: swift:6.3
     timeout-minutes: 5
     steps:
       - name: Checkout
@@ -137,9 +137,9 @@ jobs:
       - name: Test
         run: swift test --skip-build
 
-  linux_swift_6_1_musl:
+  linux_swift_6_3_musl:
     runs-on: ubuntu-latest
-    container: swift:6.1.2
+    container: swift:6.3.3
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -148,7 +148,7 @@ jobs:
       - name: SDK List Pre
         run: swift sdk list
       - name: Install SDK
-        run: swift sdk install https://download.swift.org/swift-6.1.2-release/static-sdk/swift-6.1.2-RELEASE/swift-6.1.2-RELEASE_static-linux-0.0.1.artifactbundle.tar.gz --checksum df0b40b9b582598e7e3d70c82ab503fd6fbfdff71fd17e7f1ab37115a0665b3b
+        run: swift sdk install https://download.swift.org/swift-6.3.3-release/static-sdk/swift-6.3.3-RELEASE/swift-6.3.3-RELEASE_static-linux-0.1.0.artifactbundle.tar.gz --checksum 87c3eaf908e67c0e13a84367119e12273cec1d2cd3d81f7d74bb36722d6b607b
       - name: SDK List Post
         run: swift sdk list
       - name: Build

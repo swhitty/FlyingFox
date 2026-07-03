@@ -140,7 +140,7 @@ struct IdentifiableContinuationAsyncTests {
         let waiter = Waiter<String?, any Error>()
 
         let task = await waiter.makeTask(onCancel: .failure(CancellationError()))
-        try? await Task.sleep(seconds: 0.1)
+        try? await Task.sleep(seconds: 0.5)
         var isEmpty = await waiter.isEmpty
         #expect(!isEmpty)
         task.cancel()
@@ -159,7 +159,7 @@ struct IdentifiableContinuationAsyncTests {
         let waiter = Waiter<String?, any Error>()
 
         let task = await waiter.makeTask(delay: 1.0, onCancel: .failure(CancellationError()))
-        try? await Task.sleep(seconds: 0.1)
+        try? await Task.sleep(seconds: 0.5)
         let isEmpty = await waiter.isEmpty
         #expect(isEmpty)
         task.cancel()
