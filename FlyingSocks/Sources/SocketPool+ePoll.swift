@@ -31,6 +31,13 @@
 
 #if canImport(CSystemLinux)
 import CSystemLinux
+#if canImport(Glibc)
+import Glibc
+#elseif canImport(Musl)
+import Musl
+#elseif canImport(Android)
+import Android
+#endif
 
 public extension AsyncSocketPool where Self == SocketPool<ePoll> {
     static func ePoll(triggering: ePoll.TriggerMode = .edge, maxEvents limit: Int = 20, logger: some Logging = .disabled) -> SocketPool<ePoll> {
@@ -145,8 +152,12 @@ public struct ePoll: EventQueue {
             throw SocketError.disconnected
         }
         var events = Array(repeating: epoll_event(), count: eventsLimit)
-        let status = CSystemLinux.epoll_wait(file.rawValue, &events, Int32(eventsLimit), -1)
-        guard status > 0 else {
+        // retry on EINTR rather than treating a signal as fatal
+        var status: Int32
+        repeat {
+            status = CSystemLinux.epoll_wait(file.rawValue, &events, Int32(eventsLimit), -1)
+        } while status < 0 && errno == EINTR
+        guard status >= 0 else {
             throw SocketError.makeFailed("epoll wait")
         }
 
