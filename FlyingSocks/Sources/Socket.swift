@@ -257,9 +257,12 @@ public struct Socket: Sendable, Hashable {
     private func read(into buffer: UnsafeMutablePointer<UInt8>, length: Int) throws -> Int {
         let count = Socket.read(file.rawValue, buffer, length)
         guard count > 0 else {
-            if errno == EWOULDBLOCK {
+            // count == 0 is EOF; errno is only valid after a -1 return.
+            if count == 0 {
+                throw SocketError.disconnected
+            } else if errno == EWOULDBLOCK {
                 throw SocketError.blocked
-            } else if errnoSignalsDisconnected() || count == 0 {
+            } else if errnoSignalsDisconnected() {
                 throw SocketError.disconnected
             } else {
                 throw SocketError.makeFailed("Read")
@@ -292,9 +295,12 @@ public struct Socket: Sendable, Hashable {
             Socket.recvfrom(file.rawValue, buffer, length, 0, $0, &size)
         }
         guard count > 0 else {
-            if errno == EWOULDBLOCK {
+            // count == 0 is EOF; errno is only valid after a -1 return.
+            if count == 0 {
+                throw SocketError.disconnected
+            } else if errno == EWOULDBLOCK {
                 throw SocketError.blocked
-            } else if errnoSignalsDisconnected() || count == 0 {
+            } else if errnoSignalsDisconnected() {
                 throw SocketError.disconnected
             } else {
                 throw SocketError.makeFailed("RecvFrom")
@@ -357,9 +363,12 @@ public struct Socket: Sendable, Hashable {
         }
 
         guard count > 0 else {
-            if errno == EWOULDBLOCK || errno == EAGAIN {
+            // count == 0 is EOF; errno is only valid after a -1 return.
+            if count == 0 {
+                throw SocketError.disconnected
+            } else if errno == EWOULDBLOCK || errno == EAGAIN {
                 throw SocketError.blocked
-            } else if errnoSignalsDisconnected() || count == 0 {
+            } else if errnoSignalsDisconnected() {
                 throw SocketError.disconnected
             } else {
                 throw SocketError.makeFailed("RecvMsg")
