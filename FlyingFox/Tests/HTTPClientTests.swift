@@ -30,7 +30,6 @@
 //
 
 #if canImport(Darwin)
-@_spi(Private) import struct FlyingFox._HTTPClient
 @testable import FlyingFox
 @testable import FlyingSocks
 import Foundation
@@ -44,7 +43,7 @@ struct HTTPClientTests {
         let server = HTTPServer(address: .loopback(port: 0))
         let task = Task { try await server.run() }
         defer { task.cancel() }
-        let client = _HTTPClient()
+        var client = HTTPClient()
 
         // when
         let port = try await server.waitForListeningPort()
