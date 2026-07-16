@@ -31,19 +31,28 @@
 
 import FlyingSocks
 
-@_spi(Private)
-public struct _HTTPClient {
+@available(*, deprecated, renamed: "HTTPClient")
+public typealias _HTTPClient = HTTPClient
+
+public struct HTTPClient: ~Copyable {
+
+    private var _lastSocket: AsyncSocket?
 
     public init() { }
 
-    public func sendHTTPRequest(_ request: HTTPRequest, to address: some SocketAddress) async throws -> HTTPResponse {
+    public mutating func sendHTTPRequest(_ request: HTTPRequest, to address: some SocketAddress) async throws -> HTTPResponse {
+
+        try? _lastSocket?.close()
+        _lastSocket = nil
+
         let socket = try await AsyncSocket.connected(to: address)
+        _lastSocket = socket
         try await socket.writeRequest(request)
-        let response = try await socket.readResponse()
-        // if streaming very large responses then you shouldn't close here
-        // maybe better to close in deinit instead
-        try? socket.close()
-        return response
+        return try await socket.readResponse()
+    }
+
+    deinit {
+        try? _lastSocket?.close()
     }
 }
 
