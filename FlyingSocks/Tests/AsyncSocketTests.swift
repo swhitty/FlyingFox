@@ -84,6 +84,32 @@ struct AsyncSocketTests {
         }
     }
 
+    #if canImport(Darwin) || canImport(Glibc) || canImport(Musl) || canImport(Android)
+    @Test
+    func connected_DoesNotLeakFileDescriptor_WhenConnectFails() async throws {
+        func openFileDescriptorCount() throws -> Int {
+            #if canImport(Darwin)
+            try FileManager.default.contentsOfDirectory(atPath: "/dev/fd").count
+            #else
+            try FileManager.default.contentsOfDirectory(atPath: "/proc/self/fd").count
+            #endif
+        }
+
+        let before = try openFileDescriptorCount()
+        for _ in 0..<50 {
+            _ = try? await AsyncSocket.connected(
+                to: sockaddr_un.unix(path: "/nonexistent/\(UUID().uuidString)"),
+                pool: DisconnectedPool()
+            )
+        }
+        let after = try openFileDescriptorCount()
+
+        // Each failed connect leaked exactly one descriptor before the fix
+        // (+50 here); the margin absorbs churn from tests running in parallel.
+        #expect(after - before < 25)
+    }
+    #endif
+
     @Test(.disabled("problematic test as file descriptor can be re-opened by another parallel test"))
     func socketReadByte_ThrowsDisconnected_WhenSocketIsClosed() async throws {
         let s1 = try await AsyncSocket.make()
