@@ -133,6 +133,11 @@ public struct kQueue: EventQueue {
         var events = Array(repeating: kevent(), count: eventsLimit)
         let status = kevent(file.rawValue, nil, 0, &events, Int32(eventsLimit), nil)
         guard status > 0 else {
+            // EINTR (signal) is not a failure: report no events so the caller
+            // polls again rather than tearing down the server. See kevent(2).
+            if status == -1 && errno == EINTR {
+                return []
+            }
             throw SocketError.makeFailed("kqueue kevent")
         }
 
