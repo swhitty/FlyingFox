@@ -123,9 +123,14 @@ public struct AsyncSocket: Sendable {
                                  timeout: TimeInterval = 5) async throws -> Self {
         try await withThrowingTimeout(seconds: timeout) {
             let socket = try Socket(domain: Int32(type(of: address).family), type: .stream)
-            let asyncSocket = try AsyncSocket(socket: socket, pool: pool)
-            try await asyncSocket.connect(to: address)
-            return asyncSocket
+            do {
+                let asyncSocket = try AsyncSocket(socket: socket, pool: pool)
+                try await asyncSocket.connect(to: address)
+                return asyncSocket
+            } catch {
+                try? socket.close()
+                throw error
+            }
         }
     }
 
@@ -134,7 +139,12 @@ public struct AsyncSocket: Sendable {
         try await pool.loopUntilReady(for: .connection, on: socket) {
             let file = try socket.accept().file
             let socket = Socket(file: file)
-            return try AsyncSocket(socket: socket, pool: pool)
+            do {
+                return try AsyncSocket(socket: socket, pool: pool)
+            } catch {
+                try? socket.close()
+                throw error
+            }
         }
     }
 
