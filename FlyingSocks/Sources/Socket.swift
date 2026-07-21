@@ -158,6 +158,7 @@ public struct Socket: Sendable, Hashable {
 
     public func getValue<O: SocketOption>(for option: O) throws -> O.Value {
         let valuePtr = UnsafeMutablePointer<O.SocketValue>.allocate(capacity: 1)
+        defer { valuePtr.deallocate() }
         var length = socklen_t(MemoryLayout<O.SocketValue>.size)
         guard Socket.getsockopt(file.rawValue, option.level, option.name, valuePtr, &length) >= 0 else {
             throw SocketError.makeFailed("GetOption")
