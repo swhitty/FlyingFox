@@ -89,12 +89,15 @@ extension Socket {
     static func makeAddressUnix(path: String) -> Darwin.sockaddr_un {
         var addr = Darwin.sockaddr_un()
         addr.sun_family = sa_family_t(AF_UNIX)
-        let pathCount = min(path.utf8.count, 104)
+        // Darwin <sys/un.h> declares `char sun_path[104]`; reserve the last byte
+        // for the NUL terminator that String(cString:) and unlink() read back.
+        let pathCount = min(path.utf8.count, 103)
         let len = UInt8(MemoryLayout<UInt8>.size + MemoryLayout<sa_family_t>.size + pathCount + 1)
-        _ = withUnsafeMutablePointer(to: &addr.sun_path.0) { ptr in
+        withUnsafeMutablePointer(to: &addr.sun_path.0) { ptr in
             path.withCString {
-                strncpy(ptr, $0, Int(len))
+                _ = strncpy(ptr, $0, pathCount)
             }
+            ptr[pathCount] = 0
         }
         addr.sun_len = len
         return addr

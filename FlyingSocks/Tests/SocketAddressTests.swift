@@ -148,6 +148,30 @@ struct SocketAddressTests {
         )
     }
 
+    #if canImport(Darwin)
+    @Test
+    func unixMaxLengthPath_IsCorrectlyDecodedFromStorage() throws {
+        let path = "/tmp/" + String(repeating: "x", count: 98)
+        let addr = sockaddr_un.unix(path: path)
+
+        #expect(Int(addr.sun_len) <= MemoryLayout<sockaddr_un>.size)
+        #expect(
+            try Socket.makeAddress(from: addr.makeStorage()) == .unix(path)
+        )
+    }
+
+    @Test
+    func unixOverlongPath_TruncatesWithoutOverflow() throws {
+        let path = "/tmp/" + String(repeating: "x", count: 99)
+        let addr = sockaddr_un.unix(path: path)
+
+        #expect(Int(addr.sun_len) <= MemoryLayout<sockaddr_un>.size)
+        #expect(
+            try Socket.makeAddress(from: addr.makeStorage()) == .unix(String(path.prefix(103)))
+        )
+    }
+    #endif
+
     #if canImport(Glibc) || canImport(Musl) || canImport(Android)
     @Test
     func unixAbstractNamespace_IsCorrectlyDecodedFromStorage() throws {
@@ -268,7 +292,7 @@ struct SocketAddressTests {
     func maximumPathLengthForUnixDomainSocket() {
         var addrUn = sockaddr_un()
         addrUn.sun_family = sa_family_t(AF_UNIX)
-        let maxPathLength = MemoryLayout<sockaddr_un>.size - MemoryLayout<sa_family_t>.size - 1
+        let maxPathLength = MemoryLayout.size(ofValue: addrUn.sun_path) - 1
         let maxPath = String(repeating: "a", count: maxPathLength)
         _ = maxPath.withCString { pathPtr in
             memcpy(&addrUn.sun_path, pathPtr, maxPath.count + 1)
