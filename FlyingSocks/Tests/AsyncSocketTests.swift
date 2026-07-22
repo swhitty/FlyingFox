@@ -74,6 +74,16 @@ struct AsyncSocketTests {
         try await task.value
     }
 
+    @Test
+    func connected_ThrowsError_WhenConnectFails() async throws {
+        await #expect(throws: SocketError.self) {
+            _ = try await AsyncSocket.connected(
+                to: sockaddr_un.unix(path: "/nonexistent/\(UUID().uuidString)"),
+                pool: DisconnectedPool()
+            )
+        }
+    }
+
     @Test(.disabled("problematic test as file descriptor can be re-opened by another parallel test"))
     func socketReadByte_ThrowsDisconnected_WhenSocketIsClosed() async throws {
         let s1 = try await AsyncSocket.make()
