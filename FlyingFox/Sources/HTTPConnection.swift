@@ -63,6 +63,12 @@ struct HTTPConnection: Sendable {
     }
 
     func sendResponse(_ response: HTTPResponse) async throws {
+        var response = response
+        // RFC 9110 §6.6.1: an origin server with a clock MUST send Date on
+        // 2xx/3xx/4xx responses and MAY on 1xx/5xx; handler-supplied values win.
+        if response.headers[.date] == nil {
+            response.headers[.date] = HTTPDate.string(from: Date())
+        }
         let header = HTTPEncoder.encodeResponseHeader(response)
 
         switch response.payload {

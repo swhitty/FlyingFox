@@ -105,18 +105,45 @@ struct HTTPConnectionTests {
         try await connection.sendResponse(
             .make(version: .http11,
                   statusCode: .gone,
+                  headers: [.date: "Sun, 06 Nov 1994 08:49:37 GMT"],
                   body: "Hello World!".data(using: .utf8)!)
         )
 
-        let response = try await s2.readString(length: 53)
+        let response = try await s2.readString(length: 90)
         #expect(
             response == """
             HTTP/1.1 410 Gone\r
             Content-Length: 12\r
+            Date: Sun, 06 Nov 1994 08:49:37 GMT\r
             \r
             Hello World!
             """
         )
+    }
+
+    @Test
+    func connectionResponse_IncludesGeneratedDateHeader() async throws {
+        let (s1, s2) = try await AsyncSocket.makePair()
+
+        let connection = HTTPConnection(socket: s1)
+
+        try await connection.sendResponse(
+            .make(version: .http11,
+                  statusCode: .ok,
+                  body: "Hello World!".data(using: .utf8)!)
+        )
+
+        // IMF-fixdate is fixed width so the response length is deterministic.
+        let response = try await s2.readString(length: 88)
+        let expected = #"""
+        ^HTTP/1\.1 200 OK\r\nContent-Length: 12\r\nDate: (Mon|Tue|Wed|Thu|Fri|Sat|Sun), \d{2} (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{4} \d{2}:\d{2}:\d{2} GMT\r\n\r\nHello World!$
+        """#
+        #expect(
+            response.range(of: expected, options: .regularExpression) != nil
+        )
+
+        try s1.close()
+        try s2.close()
     }
 
     @Test
