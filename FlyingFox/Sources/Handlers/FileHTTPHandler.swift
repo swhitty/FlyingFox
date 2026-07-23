@@ -131,7 +131,7 @@ public struct FileHTTPHandler: HTTPHandler {
                 .contentType: contentType,
                 .acceptRanges: "bytes",
                 .cacheControl: cacheControl.getSerializedValue(),
-                .date: HTTPCacheControl.getDateHeaderValue()
+                .date: HTTPDate.string(from: Date())
             ]
             
             if let expiresValue = HTTPCacheControl.getExpiresValue(for: path) {

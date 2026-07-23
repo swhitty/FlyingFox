@@ -55,18 +55,6 @@ public enum HTTPCacheControl {
         }
     }
 
-    static func getDateHeaderValue() -> String {
-        return Self.dateFormatter.string(from: Date())
-    }
-
-    private static let dateFormatter: DateFormatter = {
-        let df = DateFormatter()
-        df.dateFormat = "EEE, d MMM yyyy HH:mm:ss zzz"
-        df.timeZone = TimeZone(secondsFromGMT: 0)
-        df.locale = Locale(identifier: "en_US_POSIX")
-        return df
-    }()
-
     static func getExpiresValue(for filePath: URL) -> String? {
         do {
             let path = {
@@ -78,7 +66,7 @@ public enum HTTPCacheControl {
             }()
             let attributes = try FileManager.default.attributesOfItem(atPath: path)
             if let modificationDate = attributes[FileAttributeKey.modificationDate] as? Date ?? attributes[FileAttributeKey.creationDate] as? Date {
-                return Self.dateFormatter.string(from: modificationDate)
+                return HTTPDate.string(from: modificationDate)
             }
         } catch {
         }
