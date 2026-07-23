@@ -84,15 +84,75 @@ struct HTTPConnection: Sendable {
     }
 
     func switchToWebSocket(with handler: some WSHandler, response: Data) async throws {
+        let (violations, violationsIn) = AsyncStream<Void>.makeStream()
+
         // Reuse the connection-wide buffered stream so any bytes already
         // pulled past the upgrade request remain available to the WS framer.
-        let client = AsyncThrowingStream.decodingFrames(from: bytes)
+        let bytes = self.bytes
+        let client = AsyncThrowingStream<WSFrame, any Swift.Error> {
+            do {
+                var frame = try await WSFrameEncoder.decodeFrame(from: bytes)
+                // RFC 6455 §5.1: "a client MUST mask all frames that it sends
+                // to the server. ... The server MUST close the connection upon
+                // receiving a frame that is not masked."
+                guard frame.mask != nil else {
+                    violationsIn.yield(())
+                    return nil
+                }
+                // Handlers never see wire masks, so frames they echo back are
+                // safe to send unchanged.
+                frame.mask = nil
+                return frame
+            } catch SocketError.disconnected, is SequenceTerminationError {
+                return nil
+            }
+        }
+
         let server = try await handler.makeFrames(for: client)
         try await socket.write(response)
         logger.logSwitchProtocol(self, to: "websocket")
         await requests.complete()
-        for await frame in server {
-            try await socket.write(WSFrameEncoder.encodeFrame(frame))
+        try await withThrowingTaskGroup(of: Bool.self) { group in
+            group.addTask {
+                // Finishing `violations` on every exit — including a write
+                // error — guarantees the monitor task below always completes
+                // once output ends.
+                defer { violationsIn.finish() }
+                for await frame in server {
+                    // RFC 6455 §5.1: "A server MUST NOT mask any frames that
+                    // it sends to the client."
+                    var frame = frame
+                    frame.mask = nil
+                    try await socket.write(WSFrameEncoder.encodeFrame(frame))
+                }
+                return false
+            }
+            group.addTask {
+                for await _ in violations {
+                    return true
+                }
+                return false
+            }
+
+            var isViolation = try await group.next() ?? false
+            if isViolation {
+                // Stop and drain the output task before touching the socket
+                // so the close frame cannot interleave with another write.
+                group.cancelAll()
+                try? await group.waitForAll()
+            } else if let second = try await group.next() {
+                isViolation = second
+            }
+            if isViolation {
+                // RFC 6455 §5.1: a server "MAY send a Close frame with a
+                // status code of 1002 (protocol error)" and §7.1.7: "An
+                // endpoint SHOULD send a Close frame with an appropriate
+                // status code before closing the underlying connection."
+                // Throwing then fails the connection regardless of handler
+                // behaviour.
+                try? await socket.write(WSFrameEncoder.encodeFrame(.close(code: .protocolError)))
+                throw Error("Unmasked WebSocket frame received")
+            }
         }
     }
 

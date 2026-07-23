@@ -46,6 +46,11 @@ struct WSFrameSequenceTests {
         #expect(
             try await AsyncThrowingStream.make([.close]).collectAll() == [.close]
         )
+        // Decoding preserves the mask of a masked frame (RFC 6455 §5.1) while
+        // storing the payload unmasked.
+        #expect(
+            try await AsyncThrowingStream.make([.fish.masked()]).collectAll() == [.fish.masked()]
+        )
         #expect(
             try await AsyncThrowingStream.make([]).collectAll() == []
         )

@@ -128,6 +128,14 @@ extension WSFrame {
                 payload: text.data(using: .utf8)!)
     }
 
+    // Copy of the frame carrying a client masking key, as sent client → server.
+    // RFC 6455 §5.1: "a client MUST mask all frames that it sends to the server."
+    func masked(_ mask: Mask = .mock) -> Self {
+        var frame = self
+        frame.mask = mask
+        return frame
+    }
+
     static func makeTextFrames(_ payload: String, maxCharacters: Int) -> [WSFrame] {
         var messages = payload.chunked(size: maxCharacters).enumerated().map { idx, substring in
             WSFrame.make(fin: false, isContinuation: idx != 0, text: String(substring))
