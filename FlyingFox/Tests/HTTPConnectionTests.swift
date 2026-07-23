@@ -144,6 +144,155 @@ struct HTTPConnectionTests {
             HTTPConnection.makeIdentifier(from: .unix("/var/sock/fox")) == "/var/sock/fox"
         )
     }
+
+    @Test
+    func webSocket_UnmaskedClientFrame_FailsConnectionWithProtocolErrorClose() async throws {
+        // RFC 6455 §5.1: "The server MUST close the connection upon receiving
+        // a frame that is not masked. In this case, a server MAY send a Close
+        // frame with a status code of 1002 (protocol error)."
+        let (s1, s2) = try await AsyncSocket.makePair()
+        let connection = HTTPConnection(socket: s1)
+
+        let response = Task {
+            try await connection.sendResponse(HTTPResponse(webSocket: MessageFrameWSHandler.make()))
+        }
+
+        _ = try await s2.readResponse()
+        try await s2.writeFrame(.fish)
+
+        #expect(
+            try await s2.readFrame() == .close(code: .protocolError)
+        )
+        await #expect(throws: HTTPConnection.Error.self) {
+            try await response.value
+        }
+
+        try s1.close()
+        try s2.close()
+    }
+
+    @Test
+    func webSocket_UnmaskedClientFrame_FailsConnection_WhenHandlerSuppressesErrors() async throws {
+        // The connection owns RFC 6455 §5.1 termination: a handler that
+        // swallows input-stream failures and keeps its output open cannot
+        // keep the connection alive after an unmasked frame.
+        let (s1, s2) = try await AsyncSocket.makePair()
+        let connection = HTTPConnection(socket: s1)
+
+        let response = Task {
+            try await connection.sendResponse(HTTPResponse(webSocket: ErrorSuppressingWSHandler()))
+        }
+
+        _ = try await s2.readResponse()
+        try await s2.writeFrame(.fish)
+
+        #expect(
+            try await s2.readFrame() == .close(code: .protocolError)
+        )
+        await #expect(throws: HTTPConnection.Error.self) {
+            try await response.value
+        }
+
+        try s1.close()
+        try s2.close()
+    }
+
+    @Test
+    func webSocket_MaskedClientFrames_AreDeliveredToHandlerUnmasked() async throws {
+        // Wire masks are consumed at the connection boundary; handlers receive
+        // frames with `mask == nil` and the payload already unmasked.
+        let (s1, s2) = try await AsyncSocket.makePair()
+        let connection = HTTPConnection(socket: s1)
+
+        let response = Task {
+            try await connection.sendResponse(HTTPResponse(webSocket: MaskReportingWSHandler()))
+        }
+
+        _ = try await s2.readResponse()
+        try await s2.writeFrame(.fish.masked())
+
+        #expect(
+            try await s2.readFrame() == .make(
+                opcode: .binary,
+                payload: Data([1]) + "Fish".data(using: .utf8)!
+            )
+        )
+
+        response.cancel()
+        try s1.close()
+        try s2.close()
+    }
+
+    @Test
+    func webSocket_MaskedServerFrames_AreSentUnmasked() async throws {
+        // RFC 6455 §5.1: "A server MUST NOT mask any frames that it sends to
+        // the client." — even when a handler deliberately sets a mask.
+        let (s1, s2) = try await AsyncSocket.makePair()
+        let connection = HTTPConnection(socket: s1)
+
+        let response = Task {
+            try await connection.sendResponse(HTTPResponse(webSocket: MaskedOutputWSHandler()))
+        }
+
+        _ = try await s2.readResponse()
+
+        #expect(
+            try await s2.readFrame() == .chips
+        )
+        try await response.value
+
+        try s1.close()
+        try s2.close()
+    }
+}
+
+private struct ErrorSuppressingWSHandler: WSHandler {
+    // Consumes client frames, swallows any input error, and never finishes
+    // its output stream.
+    func makeFrames(for client: AsyncThrowingStream<WSFrame, any Error>) async throws -> AsyncStream<WSFrame> {
+        AsyncStream { continuation in
+            let task = Task {
+                do {
+                    for try await _ in client { }
+                } catch { }
+                // deliberately never calls continuation.finish()
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+}
+
+private struct MaskReportingWSHandler: WSHandler {
+    // Echoes each frame as binary: first byte 1 when the received frame had
+    // no mask, followed by the received payload.
+    func makeFrames(for client: AsyncThrowingStream<WSFrame, any Error>) async throws -> AsyncStream<WSFrame> {
+        AsyncStream { continuation in
+            let task = Task {
+                do {
+                    for try await frame in client {
+                        continuation.yield(
+                            WSFrame(fin: true,
+                                    opcode: .binary,
+                                    mask: nil,
+                                    payload: Data([frame.mask == nil ? 1 : 0]) + frame.payload)
+                        )
+                    }
+                } catch { }
+                continuation.finish()
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+}
+
+private struct MaskedOutputWSHandler: WSHandler {
+    // Ignores input and emits a single, deliberately masked frame.
+    func makeFrames(for client: AsyncThrowingStream<WSFrame, any Error>) async throws -> AsyncStream<WSFrame> {
+        AsyncStream { continuation in
+            continuation.yield(.chips.masked())
+            continuation.finish()
+        }
+    }
 }
 
 private extension HTTPConnection {

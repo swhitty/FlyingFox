@@ -70,6 +70,10 @@ struct WSFrameEncoder {
     static func decodeFrame(from bytes: some AsyncBufferedSequence<UInt8>) async throws -> WSFrame {
         var frame = try await decodeFrame(from: bytes.take())
         let (length, mask) = try await decodeLengthMask(from: bytes)
+        // The payload is stored unmasked; the mask is preserved so servers can
+        // enforce RFC 6455 §5.1 — "a client MUST mask all frames that it sends
+        // to the server."
+        frame.mask = mask
         frame.payload = try await decodePayload(from: bytes, length: length, mask: mask)
         return frame
     }
