@@ -51,8 +51,11 @@ extension Socket {
     static let ipproto_ip = Int32(IPPROTO_IP)
     static let ipproto_ipv6 = Int32(IPPROTO_IPV6)
     static let ip_pktinfo = Int32(IP_PKTINFO)
-    static let ipv6_pktinfo = Int32(50) // __APPLE_USE_RFC_2292
-    static let ipv6_recvpktinfo = Int32(61) // __APPLE_USE_RFC_2292
+    // Swift cannot define __APPLE_USE_RFC_3542 before importing Darwin, so
+    // the RFC 3542 values from <netinet6/in6.h> are hardcoded:
+    // IPV6_PKTINFO = IPV6_3542PKTINFO (46), IPV6_RECVPKTINFO (61).
+    static let ipv6_pktinfo = Int32(46) // __APPLE_USE_RFC_3542
+    static let ipv6_recvpktinfo = Int32(61) // __APPLE_USE_RFC_3542
 
     static func makeAddressINET(port: UInt16) -> Darwin.sockaddr_in {
         Darwin.sockaddr_in(
