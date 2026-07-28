@@ -63,7 +63,7 @@ public struct DirectoryHTTPHandler: HTTPHandler {
             var headers: HTTPHeaders = [
                 .contentType: FileHTTPHandler.makeContentType(for: filePath.absoluteString),
                 .cacheControl: cacheControl.getSerializedValue(),
-                .date: HTTPCacheControl.getDateHeaderValue()
+                .date: HTTPDate.string(from: Date())
             ]
 
             if let expiresValue = HTTPCacheControl.getExpiresValue(for: filePath) {

@@ -246,6 +246,59 @@ actor HTTPServerTests {
     }
 
     @Test
+    func unhandledRequest_ResponseIncludesDateHeader() async throws {
+        let server = HTTPServer.make()
+        let port = try await startServerWithPort(server)
+
+        let socket = try await AsyncSocket.connected(to: .inet(ip4: "127.0.0.1", port: port))
+        defer { try? socket.close() }
+
+        try await socket.writeRequest(.make("/missing"))
+        let response = try await socket.readResponse()
+        #expect(response.statusCode == .notFound)
+        #expect(Self.isIMFFixdate(response.headers[.date]))
+    }
+
+    @Test
+    func handlerError_ResponseIncludesDateHeader() async throws {
+        let server = HTTPServer.make() { _ in
+            throw SocketError.disconnected
+        }
+        let port = try await startServerWithPort(server)
+
+        let socket = try await AsyncSocket.connected(to: .inet(ip4: "127.0.0.1", port: port))
+        defer { try? socket.close() }
+
+        try await socket.writeRequest(.make("/error"))
+        let response = try await socket.readResponse()
+        #expect(response.statusCode == .internalServerError)
+        #expect(Self.isIMFFixdate(response.headers[.date]))
+    }
+
+    @Test
+    func handlerTimeout_ResponseIncludesDateHeader() async throws {
+        let server = HTTPServer.make(timeout: 0.1) { _ in
+            try await Task.sleep(seconds: 1)
+            return HTTPResponse.make(statusCode: .accepted)
+        }
+        let port = try await startServerWithPort(server)
+
+        let socket = try await AsyncSocket.connected(to: .inet(ip4: "127.0.0.1", port: port))
+        defer { try? socket.close() }
+
+        try await socket.writeRequest(.make("/slow"))
+        let response = try await socket.readResponse()
+        #expect(response.statusCode == .internalServerError)
+        #expect(Self.isIMFFixdate(response.headers[.date]))
+    }
+
+    static func isIMFFixdate(_ value: String?) -> Bool {
+        guard let value else { return false }
+        let pattern = #"^(Mon|Tue|Wed|Thu|Fri|Sat|Sun), \d{2} (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{4} \d{2}:\d{2}:\d{2} GMT$"#
+        return value.range(of: pattern, options: .regularExpression) != nil
+    }
+
+    @Test
     func keepAlive_IsAddedToResponses() async throws {
         let server = HTTPServer.make()
 
