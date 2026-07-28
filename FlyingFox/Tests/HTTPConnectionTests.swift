@@ -244,6 +244,26 @@ struct HTTPConnectionTests {
         try s1.close()
         try s2.close()
     }
+
+    @Test
+    func webSocket_ClientDisconnect_EndsConnectionWithoutError() async throws {
+        // A peer that closes TCP without sending a Close frame ends the client
+        // stream (SocketError.disconnected → nil); the handler's output then
+        // finishes and the connection completes cleanly.
+        let (s1, s2) = try await AsyncSocket.makePair()
+        let connection = HTTPConnection(socket: s1)
+
+        let response = Task {
+            try await connection.sendResponse(HTTPResponse(webSocket: MessageFrameWSHandler.make()))
+        }
+
+        _ = try await s2.readResponse()
+        try s2.close()
+
+        try await response.value
+
+        try s1.close()
+    }
 }
 
 private struct ErrorSuppressingWSHandler: WSHandler {
