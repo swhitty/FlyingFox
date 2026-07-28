@@ -297,6 +297,33 @@ struct AsyncSocketTests {
         )
     }
     #endif
+
+    @Test
+    func receiveMessage_ParsesIPv6PacketInfo() async throws {
+        // TVT-1131 regression: Socket.ipv6_pktinfo must match the cmsg_type
+        // the kernel delivers for IPV6_RECVPKTINFO — on Darwin the RFC 3542
+        // IPV6_PKTINFO (46), per <netinet6/in6.h>. Datagram sockets enable
+        // pktinfo delivery in Socket.init, so a received Message carries the
+        // parsed interface index and local (destination) address.
+        let (server, port) = try await AsyncSocket.makeLoopbackDatagram()
+
+        async let received: AsyncSocket.Message = server.receive(atMost: 100)
+
+        let client = try await AsyncSocket.makeLoopbackDatagram().0
+        try await client.send(Data("Peas 🫛".utf8), to: sockaddr_in6.loopback(port: port))
+
+        let message = try await received
+        #expect(try message.payloadString == "Peas 🫛")
+        #expect(message.interfaceIndex != nil)
+        let storage = try #require(message.localAddress).makeStorage()
+        let sin6 = withUnsafeBytes(of: storage) { $0.load(as: sockaddr_in6.self) }
+        let loopback = sockaddr_in6.loopback(port: 0).sin6_addr
+        #expect(
+            withUnsafeBytes(of: sin6.sin6_addr) { received in
+                withUnsafeBytes(of: loopback) { received.elementsEqual($0) }
+            }
+        )
+    }
 #endif
 }
 
