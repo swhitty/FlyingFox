@@ -8,6 +8,7 @@ on:
 jobs:
   xcode_26_6:
     runs-on: macos-26
+    timeout-minutes: 4
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
     steps:
@@ -41,6 +42,7 @@ jobs:
 
   xcode_26_2:
     runs-on: macos-26
+    timeout-minutes: 4
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
     steps:
@@ -55,6 +57,7 @@ jobs:
 
   xcode_16_4:
     runs-on: macos-15
+    timeout-minutes: 4
     env:
       DEVELOPER_DIR: /Applications/Xcode_16.4.app/Contents/Developer
     steps:
@@ -69,6 +72,7 @@ jobs:
 
   xcode_16_2:
     runs-on: macos-15
+    timeout-minutes: 4
     env:
       DEVELOPER_DIR: /Applications/Xcode_16.2.app/Contents/Developer
     steps:
@@ -84,7 +88,7 @@ jobs:
   linux_swift_6_0:
     runs-on: ubuntu-latest
     container: swift:6.0
-    timeout-minutes: 5
+    timeout-minutes: 4
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -98,7 +102,7 @@ jobs:
   linux_swift_6_1:
     runs-on: ubuntu-latest
     container: swift:6.1.2
-    timeout-minutes: 5
+    timeout-minutes: 4
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -112,7 +116,7 @@ jobs:
   linux_swift_6_2:
     runs-on: ubuntu-latest
     container: swift:6.2
-    timeout-minutes: 5
+    timeout-minutes: 4
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -126,7 +130,7 @@ jobs:
   linux_swift_6_3:
     runs-on: ubuntu-latest
     container: swift:6.3
-    timeout-minutes: 5
+    timeout-minutes: 4
     steps:
       - name: Checkout
         uses: actions/checkout@v4
