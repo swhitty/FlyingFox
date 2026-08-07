@@ -6,6 +6,21 @@ on:
   workflow_dispatch:
 
 jobs:
+  xcode-27-b4:
+    runs-on: xcode-27
+    timeout-minutes: 4
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27_beta_4.app/Contents/Developer
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Version
+        run: swift --version
+      - name: Build
+        run: swift build --build-tests
+      - name: Test
+        run: swift test --skip-build
+
   xcode_26_6:
     runs-on: macos-26
     timeout-minutes: 4
@@ -17,7 +32,7 @@ jobs:
       - name: Version
         run: swift --version
       - name: Build
-        run: swift build --build-tests --enable-code-coverage 
+        run: swift build --build-tests --enable-code-coverage
       - name: Test
         run: swift test --skip-build --enable-code-coverage --xunit-output result.xml
         timeout-minutes: 1
