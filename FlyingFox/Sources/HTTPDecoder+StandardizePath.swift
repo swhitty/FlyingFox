@@ -42,10 +42,11 @@ extension HTTPDecoder {
         #if canImport(Darwin)
             #if compiler(>=6.2)
             if !fallback, #available(macOS 26.0, iOS 26.0, tvOS 26.0, watchOS 26.0, visionOS 26.0, *) {
-                return URL(string: path)?.standardized.path
-            } else {
-                return standardizePathDarwinFallback(path)
+                if #unavailable(anyAppleOS 27.0) {
+                    return URL(string: path)?.standardized.path
+                }
             }
+            return standardizePathDarwinFallback(path)
             #else
             return standardizePathDarwinFallback(path)
             #endif
