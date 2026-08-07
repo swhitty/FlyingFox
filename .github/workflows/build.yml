@@ -6,14 +6,16 @@ on:
   workflow_dispatch:
 
 jobs:
-  xcode-27-b4:
+  xcode-27:
     runs-on: xcode-27
     timeout-minutes: 4
-    env:
-      DEVELOPER_DIR: /Applications/Xcode_27_beta_4.app/Contents/Developer
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: 🔍 Xcode Select
+        run: |
+          XCODE_PATH=`mdfind "kMDItemCFBundleIdentifier == 'com.apple.dt.Xcode' && kMDItemVersion = '27.0*'" -onlyin /Applications | head -1`
+          echo "DEVELOPER_DIR=$XCODE_PATH/Contents/Developer" >> $GITHUB_ENV
       - name: Version
         run: swift --version
       - name: Build
