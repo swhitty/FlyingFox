@@ -68,7 +68,7 @@ struct IdentifiableContinuationAsyncTests {
         let waiter = Waiter<String?, Never>()
 
         let task = await waiter.makeTask(onCancel: nil)
-        try? await Task.sleep(seconds: 0.1)
+        await waiter.waitUntilCreated()
         var isEmpty = await waiter.isEmpty
         #expect(!isEmpty)
         task.cancel()
@@ -84,11 +84,12 @@ struct IdentifiableContinuationAsyncTests {
     func cancels_Before_Created() async {
         let waiter = Waiter<String?, Never>()
 
-        let task = await waiter.makeTask(delay: 1.0, onCancel: nil)
-        try? await Task.sleep(seconds: 0.1)
+        let task = await waiter.makeTask(pauseBeforeCreating: true, onCancel: nil)
+        await waiter.waitUntilPaused()
         let isEmpty = await waiter.isEmpty
         #expect(isEmpty)
         task.cancel()
+        await waiter.resumeCreation()
 
         let val = await task.value
         #expect(val == nil)
@@ -140,7 +141,7 @@ struct IdentifiableContinuationAsyncTests {
         let waiter = Waiter<String?, any Error>()
 
         let task = await waiter.makeTask(onCancel: .failure(CancellationError()))
-        try? await Task.sleep(seconds: 0.5)
+        await waiter.waitUntilCreated()
         var isEmpty = await waiter.isEmpty
         #expect(!isEmpty)
         task.cancel()
@@ -158,11 +159,12 @@ struct IdentifiableContinuationAsyncTests {
     func throwingCancels_Before_Created() async {
         let waiter = Waiter<String?, any Error>()
 
-        let task = await waiter.makeTask(delay: 1.0, onCancel: .failure(CancellationError()))
-        try? await Task.sleep(seconds: 0.5)
+        let task = await waiter.makeTask(pauseBeforeCreating: true, onCancel: .failure(CancellationError()))
+        await waiter.waitUntilPaused()
         let isEmpty = await waiter.isEmpty
         #expect(isEmpty)
         task.cancel()
+        await waiter.resumeCreation()
 
         let result = await task.result
         #expect(throws: CancellationError.self) {
@@ -175,14 +177,19 @@ private actor Waiter<T: Sendable, E: Error> {
     typealias Continuation = IdentifiableContinuation<T, E>
 
     private var waiting = [Continuation.ID: Continuation]()
+    private var creationObserver: CheckedContinuation<Void, Never>?
+    private var pauseObserver: CheckedContinuation<Void, Never>?
+    private var creationGate: CheckedContinuation<Void, Never>?
 
     var isEmpty: Bool {
         waiting.isEmpty
     }
 
-    func makeTask(delay: TimeInterval = 0, onCancel: T) -> Task<T, Never> where E == Never {
+    func makeTask(pauseBeforeCreating: Bool = false, onCancel: T) -> Task<T, Never> where E == Never {
         Task {
-            try? await Task.sleep(seconds: delay)
+            if pauseBeforeCreating {
+                await pauseCreation()
+            }
             return await withIdentifiableContinuation {
                 addContinuation($0)
             } onCancel: { id in
@@ -191,9 +198,11 @@ private actor Waiter<T: Sendable, E: Error> {
         }
     }
 
-    func makeTask(delay: TimeInterval = 0, onCancel: Result<T, E>) -> Task<T, any Error> where E == any Error {
+    func makeTask(pauseBeforeCreating: Bool = false, onCancel: Result<T, E>) -> Task<T, any Error> where E == any Error {
         Task {
-            try? await Task.sleep(seconds: delay)
+            if pauseBeforeCreating {
+                await pauseCreation()
+            }
             return try await withIdentifiableThrowingContinuation {
                 addContinuation($0)
             } onCancel: { id in
@@ -202,9 +211,40 @@ private actor Waiter<T: Sendable, E: Error> {
         }
     }
 
+    func waitUntilCreated() async {
+        guard waiting.isEmpty else { return }
+        await withCheckedContinuation {
+            creationObserver = $0
+        }
+    }
+
+    func waitUntilPaused() async {
+        guard creationGate == nil else { return }
+        await withCheckedContinuation {
+            pauseObserver = $0
+        }
+    }
+
+    func resumeCreation() {
+        creationGate?.resume()
+        creationGate = nil
+    }
+
+    private func pauseCreation() async {
+        // Cancellation must not release this gate: the before-creation tests resume
+        // the already-cancelled task so it still invokes the continuation API.
+        await withCheckedContinuation {
+            creationGate = $0
+            pauseObserver?.resume()
+            pauseObserver = nil
+        }
+    }
+
     private func addContinuation(_ continuation: Continuation) {
         assertIsolated()
         waiting[continuation.id] = continuation
+        creationObserver?.resume()
+        creationObserver = nil
     }
 
     private func resumeID(_ id: Continuation.ID, returning value: T) {

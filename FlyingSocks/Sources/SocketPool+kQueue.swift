@@ -76,12 +76,14 @@ public struct kQueue: EventQueue {
 
     public mutating func addEvents(_ events: Socket.Events, for socket: Socket.FileDescriptor) throws {
         for event in events {
+            // Add the event even when it is recorded as added: EV_ADD of a filter the kqueue
+            // has just updates it, but a descriptor closed while registered has left the
+            // kqueue, and skipping the add would leave a socket since given the descriptor
+            // never woken.
+            try addEvent(event, for: socket)
             var socketEvents = existing[socket] ?? []
-            if !socketEvents.contains(event) {
-                try addEvent(event, for: socket)
-                socketEvents.insert(event)
-                existing[socket] = socketEvents
-            }
+            socketEvents.insert(event)
+            existing[socket] = socketEvents
         }
     }
 
@@ -101,17 +103,13 @@ public struct kQueue: EventQueue {
 
     public mutating func removeEvents(_ events: Socket.Events, for socket: Socket.FileDescriptor) throws {
         for event in events {
-            if var entries = existing[socket] {
-                if entries.contains(event) {
-                    try removeEvent(event, for: socket)
-                    entries.remove(event)
-                    if entries.isEmpty {
-                        existing[socket] = nil
-                    } else {
-                        existing[socket] = entries
-                    }
-                }
-            }
+            guard var entries = existing[socket], entries.contains(event) else { continue }
+            // Forget the event before removing it: a socket closed while registered has left
+            // the kqueue already, so the removal fails, and remembering the event would stop
+            // it being added for a socket later given the same descriptor.
+            entries.remove(event)
+            existing[socket] = entries.isEmpty ? nil : entries
+            try removeEvent(event, for: socket)
         }
     }
 

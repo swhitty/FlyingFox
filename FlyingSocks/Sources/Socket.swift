@@ -765,16 +765,20 @@ extension Socket {
                     // match getPacketInfoControl above.
                     header.pointee.cmsg_level = Socket.ipproto_ip
                     header.pointee.cmsg_type = Socket.ip_pktinfo
+                    // ManagedBuffer leaves the element uninitialized: zero it, so that no
+                    // field is sent holding whatever was in memory.
+                    element.initialize(to: in_pktinfo())
                     element.pointee.ipi_ifindex = IPv4InterfaceIndexType(interfaceIndex ?? 0)
+                    // ip(7): "If IP_PKTINFO is passed to sendmsg(2) and ipi_spec_dst is not
+                    // zero, then it is used as the local source address for the routing
+                    // table lookup". ipi_addr is the destination of a received packet.
                     if let address {
-                        var address = address
-                        withUnsafePointer(to: &address) {
-                            $0.withMemoryRebound(to: sockaddr_in.self, capacity: 1) {
-                                element.pointee.ipi_addr = $0.pointee.sin_addr
+                        let storage = address.makeStorage()
+                        if storage.ss_family == sa_family_t(AF_INET) {
+                            element.pointee.ipi_spec_dst = withUnsafeBytes(of: storage) {
+                                $0.load(as: sockaddr_in.self).sin_addr
                             }
                         }
-                    } else {
-                        element.pointee.ipi_addr.s_addr = 0
                     }
 
                     return header.pointee
@@ -791,16 +795,20 @@ extension Socket {
                     // match getPacketInfoControl above.
                     header.pointee.cmsg_level = Socket.ipproto_ipv6
                     header.pointee.cmsg_type = Socket.ipv6_pktinfo
+                    // memberwise: Socket+Glibc declares its own in6_pktinfo, which has no
+                    // zero initializer
+                    element.initialize(to: in6_pktinfo(ipi6_addr: in6_addr(), ipi6_ifindex: 0))
                     element.pointee.ipi6_ifindex = IPv6InterfaceIndexType(interfaceIndex ?? 0)
+                    // RFC 3542 §6.1: on output, ipi6_addr is the source address. Read it
+                    // from the address's storage: a sockaddr_in6 is too large to be held
+                    // inline in an existential, so the existential's own bytes are not it.
                     if let address {
-                        var address = address
-                        withUnsafePointer(to: &address) {
-                            $0.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) {
-                                element.pointee.ipi6_addr = $0.pointee.sin6_addr
+                        let storage = address.makeStorage()
+                        if storage.ss_family == sa_family_t(AF_INET6) {
+                            element.pointee.ipi6_addr = withUnsafeBytes(of: storage) {
+                                $0.load(as: sockaddr_in6.self).sin6_addr
                             }
                         }
-                    } else {
-                        element.pointee.ipi6_addr = in6_addr()
                     }
 
                     return header.pointee

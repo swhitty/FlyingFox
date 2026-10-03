@@ -107,7 +107,10 @@ public struct ePoll: EventQueue {
     public mutating func addEvents(_ events: Socket.Events, for socket: Socket.FileDescriptor) throws {
         var socketEvents = existing[socket] ?? []
         socketEvents.formUnion(events)
-        try setEvents(socketEvents, for: socket)
+        // Tell the kernel even when the events are recorded as registered: a descriptor
+        // closed while registered has left the epoll set, and a socket since given the
+        // descriptor would otherwise never be registered.
+        try setEvents(socketEvents, for: socket, evenIfRecorded: true)
     }
 
     public mutating func removeEvents(_ events: Socket.Events, for socket: Socket.FileDescriptor) throws {
@@ -118,32 +121,39 @@ public struct ePoll: EventQueue {
         try setEvents(socketEvents, for: socket)
     }
 
-    mutating func setEvents(_ events: Socket.Events, for socket: Socket.FileDescriptor) throws {
-        guard existing[socket] != events else { return }
+    mutating func setEvents(
+        _ events: Socket.Events,
+        for socket: Socket.FileDescriptor,
+        evenIfRecorded: Bool = false
+    ) throws {
+        guard evenIfRecorded || existing[socket] != events else { return }
         var event = CSystemLinux.epoll_event()
         event.events = events.epollEvents(triggerMode: triggerMode).rawValue
         event.data.fd = socket.rawValue
 
-        if existing[socket] != nil {
-            if events.isEmpty {
-                guard epoll_ctl(file.rawValue, EPOLL_CTL_DEL, socket.rawValue, &event) != -1 else {
-                    throw SocketError.makeFailed("epoll_ctl EPOLL_CTL_DEL")
-                }
-            } else {
-                guard epoll_ctl(file.rawValue, EPOLL_CTL_MOD, socket.rawValue, &event) != -1 else {
-                    throw SocketError.makeFailed("epoll_ctl EPOLL_CTL_MOD")
-                }
-            }
-        } else if !events.isEmpty {
-            guard epoll_ctl(file.rawValue, EPOLL_CTL_ADD, socket.rawValue, &event) != -1 else {
-                throw SocketError.makeFailed("epoll_ctl EPOLL_CTL_ADD")
-            }
-        }
+        let recorded = existing[socket] != nil
+        // Record the change before making it. If it fails because the descriptor was closed
+        // while registered, the epoll set has dropped it already.
+        existing[socket] = events.isEmpty ? nil : events
 
         if events.isEmpty {
-            existing[socket] = nil
-        } else {
-            existing[socket] = events
+            guard recorded else { return }
+            guard epoll_ctl(file.rawValue, EPOLL_CTL_DEL, socket.rawValue, &event) != -1 else {
+                throw SocketError.makeFailed("epoll_ctl EPOLL_CTL_DEL")
+            }
+        } else if epoll_ctl(file.rawValue, recorded ? EPOLL_CTL_MOD : EPOLL_CTL_ADD, socket.rawValue, &event) == -1 {
+            // The epoll set can disagree with the record once a descriptor closed while
+            // registered is reused: modifying it then fails with ENOENT, adding with EEXIST.
+            var retry: Int32?
+            if recorded, errno == ENOENT {
+                retry = EPOLL_CTL_ADD
+            } else if !recorded, errno == EEXIST {
+                retry = EPOLL_CTL_MOD
+            }
+            guard let retry, epoll_ctl(file.rawValue, retry, socket.rawValue, &event) != -1 else {
+                existing[socket] = nil
+                throw SocketError.makeFailed(recorded ? "epoll_ctl EPOLL_CTL_MOD" : "epoll_ctl EPOLL_CTL_ADD")
+            }
         }
     }
 

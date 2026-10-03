@@ -20,7 +20,11 @@ let package = Package(
     targets: [
         .target(
             name: "FlyingFox",
-            dependencies: ["FlyingSocks"],
+            dependencies: [
+                "FlyingSocks",
+                // Workaround for SwiftPM omitting dependent aliases when both Swift modules are aliased.
+                .target(name: "CSystemLinux", condition: .when(platforms: [.linux, .android]))
+            ],
             path: "FlyingFox/Sources",
             swiftSettings: .upcomingFeatures
         ),
