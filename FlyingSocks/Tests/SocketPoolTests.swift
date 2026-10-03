@@ -175,6 +175,65 @@ struct SocketPoolTests {
         }
     }
 
+#if canImport(Darwin) || canImport(CSystemLinux)
+    @Test
+    func reusedDescriptor_IsWoken_AfterTheSuspendedSocketIsReplacedAndCancelled() async throws {
+        let pool = SocketPool.make(maxEvents: 4)
+        try await pool.prepare()
+        let run = Task { try await pool.run() }
+        defer { run.cancel() }
+
+        let (old, oldPeer) = try Socket.makeNonBlockingPair()
+        defer { try? oldPeer.close() }
+        let suspended = Task { try await pool.suspendSocket(old, untilReadyFor: .read) }
+        try await Task.sleep(seconds: 0.1)
+
+        // closing the socket drops it from the queue; cancelling its suspension then fails
+        // to remove it, and a socket given the same descriptor must still be woken
+        let (reused, peer) = try Socket.makeNonBlockingPair(replacing: old)
+        defer {
+            try? reused.close()
+            try? peer.close()
+        }
+        suspended.cancel()
+        _ = try? await suspended.value
+
+        _ = try peer.write(Data([1]))
+        let woken = Task(timeout: 1) { try await pool.suspendSocket(reused, untilReadyFor: .read) }
+        await #expect(throws: Never.self) {
+            try await woken.value
+        }
+    }
+
+    @Test
+    func reusedDescriptor_IsWoken_WhileTheReplacedSocketIsStillSuspended() async throws {
+        let pool = SocketPool.make(maxEvents: 4)
+        try await pool.prepare()
+        let run = Task { try await pool.run() }
+        defer { run.cancel() }
+
+        let (old, oldPeer) = try Socket.makeNonBlockingPair()
+        defer { try? oldPeer.close() }
+        let suspended = Task { try await pool.suspendSocket(old, untilReadyFor: .read) }
+        defer { suspended.cancel() }
+        try await Task.sleep(seconds: 0.1)
+
+        // the socket is closed and its descriptor given to another before its suspension
+        // ends; the new socket's own suspension must still register with the queue
+        let (reused, peer) = try Socket.makeNonBlockingPair(replacing: old)
+        defer {
+            try? reused.close()
+            try? peer.close()
+        }
+
+        _ = try peer.write(Data([1]))
+        let woken = Task(timeout: 1) { try await pool.suspendSocket(reused, untilReadyFor: .read) }
+        await #expect(throws: Never.self) {
+            try await woken.value
+        }
+    }
+#endif
+
     @Test
     func waiting_IsEmpty() async {
         let cn = await Continuation.make()
@@ -252,6 +311,22 @@ struct SocketPoolTests {
         )
     }
 }
+
+#if canImport(Darwin) || canImport(CSystemLinux)
+private extension Socket {
+    /// A connected pair whose first socket takes over `socket`'s descriptor, closing it, as
+    /// a new socket can be given the descriptor of one just closed. `dup2` closes and
+    /// replaces in one step, so no other socket can be given the descriptor in between.
+    static func makeNonBlockingPair(replacing socket: Socket) throws -> (Socket, Socket) {
+        let (first, second) = try Socket.makeNonBlockingPair()
+        guard dup2(first.file.rawValue, socket.file.rawValue) != -1 else {
+            throw SocketError.makeFailed("dup2")
+        }
+        try first.close()
+        return (Socket(file: socket.file), second)
+    }
+}
+#endif
 
 private extension SocketPool where Queue == MockEventQueue  {
     static func make() -> Self {
