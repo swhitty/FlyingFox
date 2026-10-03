@@ -419,6 +419,52 @@ struct SocketTests {
         #expect(type == Int32(IPV6_PKTINFO))
         #endif
     }
+
+    @Test
+    func withPacketInfoControl_IP4_SetsSourceAddressInSpecDst() throws {
+        // ip(7): sendmsg(2) takes the source address from ipi_spec_dst; ipi_addr is the
+        // destination of a received packet. The address is also passed as a
+        // sockaddr_storage, which an existential holds boxed rather than inline.
+        let loopback = try sockaddr_in.inet(ip4: "127.0.0.1", port: 0)
+        for address in [loopback as any SocketAddress, loopback.makeStorage()] {
+            let info = Socket.withPacketInfoControl(
+                family: sa_family_t(AF_INET),
+                interfaceIndex: 7,
+                address: address
+            ) { header, _ in
+                UnsafeRawPointer(header!)
+                    .advanced(by: MemoryLayout<cmsghdr>.size)
+                    .loadUnaligned(as: in_pktinfo.self)
+            }
+            #expect(info.ipi_spec_dst.s_addr == loopback.sin_addr.s_addr)
+            #expect(info.ipi_addr.s_addr == 0)
+            #expect(info.ipi_ifindex == 7)
+        }
+    }
+
+    @Test
+    func withPacketInfoControl_IP6_SetsSourceAddress() {
+        // RFC 3542 §6.1: on output, ipi6_addr is the source address. A sockaddr_in6 is too
+        // large to be held inline in an existential, so this also checks the address is
+        // read from the value, not from the existential's own storage.
+        let loopback = sockaddr_in6.loopback(port: 0)
+        for address in [loopback as any SocketAddress, loopback.makeStorage()] {
+            let info = Socket.withPacketInfoControl(
+                family: sa_family_t(AF_INET6),
+                interfaceIndex: 7,
+                address: address
+            ) { header, _ in
+                UnsafeRawPointer(header!)
+                    .advanced(by: MemoryLayout<cmsghdr>.size)
+                    .loadUnaligned(as: in6_pktinfo.self)
+            }
+            #expect(
+                withUnsafeBytes(of: info.ipi6_addr) { Array($0) } ==
+                    withUnsafeBytes(of: loopback.sin6_addr) { Array($0) }
+            )
+            #expect(info.ipi6_ifindex == 7)
+        }
+    }
     #endif
 }
 
