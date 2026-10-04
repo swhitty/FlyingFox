@@ -52,5 +52,27 @@ struct HTTPClientTests {
         // then
         #expect(response.statusCode == .notFound)
     }
+
+    @Test
+    func client_receives_headers_and_body_larger_than_read_buffer() async throws {
+        // given
+        let body = Data((0..<20_000).map { UInt8(truncatingIfNeeded: $0) })
+        let server = HTTPServer(address: .loopback(port: 0))
+        await server.appendRoute("GET /large") { _ in
+            HTTPResponse(statusCode: .ok, headers: [HTTPHeader("X-Marker"): "fish"], body: body)
+        }
+        let task = Task { try await server.run() }
+        defer { task.cancel() }
+        var client = HTTPClient()
+
+        // when
+        let port = try await server.waitForListeningPort()
+        let response = try await client.sendHTTPRequest(.make(path: "/large"), to: .loopback(port: port))
+
+        // then
+        #expect(response.statusCode == .ok)
+        #expect(response.headers[HTTPHeader("X-Marker")] == "fish")
+        #expect(try await response.bodyData == body)
+    }
 }
 #endif

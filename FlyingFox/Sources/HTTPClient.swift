@@ -48,7 +48,11 @@ public struct HTTPClient: ~Copyable {
         let socket = try await AsyncSocket.connected(to: address)
         _lastSocket = socket
         try await socket.writeRequest(request)
-        return try await socket.readResponse()
+        // The socket carries this one response and nothing after it, so its bytes
+        // can be read through a buffer. Unbuffered, the HTTP decoder pulls one byte
+        // per syscall through `iterator.next()` while parsing the status line and
+        // headers.
+        return try await socket.readResponse(from: AsyncBufferingSequence(socket.bytes))
     }
 
     deinit {
@@ -62,6 +66,10 @@ package extension AsyncSocket {
     }
 
     func readResponse() async throws -> HTTPResponse {
+        try await readResponse(from: bytes)
+    }
+
+    func readResponse(from bytes: some AsyncBufferedSequence<UInt8>) async throws -> HTTPResponse {
         try await HTTPDecoder(sharedRequestBufferSize: 4096, sharedRequestReplaySize: 102_400).decodeResponse(from: bytes)
     }
 
