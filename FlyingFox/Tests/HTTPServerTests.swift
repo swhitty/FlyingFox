@@ -121,8 +121,25 @@ actor HTTPServerTests {
 
         task.cancel()
 
-        await #expect(throws: (any Error).self) {
+        await #expect(throws: CancellationError.self) {
             try await task.value
+        }
+    }
+
+    @Test
+    func taskCanBeCancelled_WhileWaitingForConnections() async throws {
+        // Once the socket pool waits on its event queue, cancelling it stops the queue under
+        // that wait. The server should still end with CancellationError rather than the
+        // wait's failure (EBADF from kevent). The two race, so try several times.
+        for _ in 0..<5 {
+            let server = HTTPServer.make(address: .loopback(port: 0))
+            let task = try await startServer(server)
+            try await Task.sleep(nanoseconds: 200_000_000)
+            task.cancel()
+
+            await #expect(throws: CancellationError.self) {
+                try await task.value
+            }
         }
     }
 
