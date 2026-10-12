@@ -30,6 +30,7 @@
 //
 
 @testable import FlyingFox
+@testable import FlyingSocks
 import Foundation
 import Testing
 
@@ -114,6 +115,7 @@ struct WSHandlerTests {
         let handler = MessageFrameWSHandler.make(handler: messages)
 
         let frames = try await handler.makeFrames(for: [.fish, .ping, .pong, .chips, .close])
+        let collected = Task { try await frames.collectAll() }
 
         #expect(
             try await messages.input.takeNext() == .text("Fish")
@@ -124,8 +126,62 @@ struct WSHandlerTests {
         )
 
         #expect(
-            try await frames.collectAll() == [.pong, .close]
+            try await collected.value == [.pong, .close]
         )
+    }
+
+    @Test
+    func closeFrame_IsEchoed_AndDeliveredAsFinalMessage() async throws {
+        let messages = Messages()
+        let handler = MessageFrameWSHandler.make(handler: messages)
+
+        let frames = try await handler.makeFrames(for: [.close])
+
+        #expect(
+            try await frames.collectAll() == [.close]
+        )
+        #expect(
+            try await messages.input.collectAll() == [.close(WSCloseCode(1002, reason: "Bye"))]
+        )
+    }
+
+    @Test
+    func clientFrames_AreRead_OnlyAsMessagesAreTaken() async throws {
+        let read = Mutex(0)
+        let messages = Messages()
+        let handler = MessageFrameWSHandler.make(handler: messages)
+
+        let frames = try await handler.makeFrames(for: AsyncThrowingStream {
+            read.withLock { $0 += 1 }
+            return .fish
+        })
+
+        #expect(
+            try await messages.input.takeNext() == .text("Fish")
+        )
+        // The frame taken has been read, and at most one more waits to be taken.
+        #expect(read.withLock { $0 } <= 2)
+        withExtendedLifetime(frames) { }
+    }
+
+    @Test
+    func messagesOut_ArePulled_OnlyAsFramesAreTaken() async throws {
+        let pulled = Mutex(0)
+        let handler = MessageFrameWSHandler.make(handler: UnfoldingMessages {
+            pulled.withLock { $0 += 1 }
+            return .text("Hello")
+        })
+        let (clientFrames, clientContinuation) = AsyncThrowingStream<WSFrame, any Error>.makeStream()
+        defer { clientContinuation.finish() }
+
+        let frames = try await handler.makeFrames(for: clientFrames)
+
+        var iterator = frames.makeAsyncIterator()
+        #expect(
+            try await iterator.next() == .make(fin: true, opcode: .text, payload: "Hello".data(using: .utf8)!)
+        )
+        // The message taken has been pulled, and at most one more waits to be taken.
+        #expect(pulled.withLock { $0 } <= 2)
     }
 
     @Test
@@ -183,6 +239,17 @@ extension MessageFrameWSHandler {
 
     func makeFrames(for frames: [WSFrame]) async throws -> AsyncStream<WSFrame> {
         try await makeFrames(for: .make(frames))
+    }
+}
+
+// Produces each outgoing message when asked for it, as a handler that must
+// wait for a message to be taken before producing the next one would.
+private struct UnfoldingMessages: WSMessageHandler {
+
+    let next: @Sendable () async -> WSMessage?
+
+    func makeMessages(for client: AsyncStream<WSMessage>) async throws -> AsyncStream<WSMessage> {
+        AsyncStream(unfolding: next)
     }
 }
 
