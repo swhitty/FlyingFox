@@ -39,6 +39,10 @@ public extension HTTPServer {
         public var timeout: TimeInterval
         public var sharedRequestBufferSize: Int
         public var sharedRequestReplaySize: Int
+        /// Largest WebSocket frame payload accepted from a client, in bytes.
+        /// A frame declaring a larger payload closes the connection with 1009
+        /// (Message Too Big) before any of the payload is read.
+        public var webSocketMaxFrameSize: Int
         public var pool: any AsyncSocketPool
         public var logger: any Logging
 
@@ -46,12 +50,14 @@ public extension HTTPServer {
                     timeout: TimeInterval = 15,
                     sharedRequestBufferSize: Int = 4_096,
                     sharedRequestReplaySize: Int = 2_097_152,
+                    webSocketMaxFrameSize: Int = 16_777_216,
                     pool: any AsyncSocketPool = HTTPServer.defaultPool(),
                     logger: any Logging = HTTPServer.defaultLogger()) {
             self.address = address
             self.timeout = timeout
             self.sharedRequestBufferSize = sharedRequestBufferSize
             self.sharedRequestReplaySize = sharedRequestReplaySize
+            self.webSocketMaxFrameSize = webSocketMaxFrameSize
             self.pool = pool
             self.logger = logger
         }

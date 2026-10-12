@@ -106,6 +106,47 @@ struct WSFrameValidatorTests {
     }
 
     @Test
+    func closeFrames_AreAccepted_WhenPayloadIsValid() async throws {
+        let frames: [WSFrame] = [
+            .make(opcode: .close),
+            .close(code: .normalClosure),
+            .close(code: .internalServerError),
+            .close(code: WSCloseCode(1014)),
+            .close(code: WSCloseCode(3000, reason: "Fish")),
+            .close(code: WSCloseCode(4999, reason: "Chips🍟"))
+        ]
+        #expect(
+            try await WSFrameValidator.validate(frames).collectAll() == frames
+        )
+    }
+
+    @Test
+    func closeFrames_ThrowError_WhenStatusCodeIsIncomplete() async {
+        // RFC 6455 §5.5.1: a non-empty payload begins with a 2 byte status code.
+        await #expect(throws: WSFrameValidator.Error.self) {
+            try await WSFrameValidator.validate([.make(opcode: .close, payload: Data([0x03]))]).collectAll()
+        }
+    }
+
+    @Test
+    func closeFrames_ThrowError_WhenStatusCodeIsInvalid() async {
+        // RFC 6455 §7.4: 1005, 1006 and 1015 are never sent; codes below 1000,
+        // 1004 and 1016–2999 are undefined.
+        for code: UInt16 in [0, 999, 1004, 1005, 1006, 1015, 1016, 2999] {
+            await #expect(throws: WSFrameValidator.Error.self) {
+                try await WSFrameValidator.validate([.close(code: WSCloseCode(code))]).collectAll()
+            }
+        }
+    }
+
+    @Test
+    func closeFrames_ThrowError_WhenReasonIsNotUTF8() async {
+        await #expect(throws: WSFrameValidator.Error.self) {
+            try await WSFrameValidator.validate([.make(opcode: .close, payload: Data([0x03, 0xE8, 0xFF, 0xFE]))]).collectAll()
+        }
+    }
+
+    @Test
     func controlFrames_ThrowError_WhenNotFin() async {
         await #expect(throws: WSFrameValidator.Error.self) {
             try await WSFrameValidator.validate([.make(fin: false, opcode: .ping)]).collectAll()

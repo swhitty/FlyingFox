@@ -39,12 +39,14 @@ struct HTTPConnection: Sendable {
     private let bytes: AsyncBufferingSequence<AsyncSocketReadSequence>
     private let decoder: HTTPDecoder
     private let logger: any Logging
+    private let webSocketMaxFrameSize: Int
     let requests: HTTPRequestSequence<AsyncBufferingSequence<AsyncSocketReadSequence>>
 
-    init(socket: AsyncSocket, decoder: HTTPDecoder, logger: some Logging) {
+    init(socket: AsyncSocket, decoder: HTTPDecoder, logger: some Logging, webSocketMaxFrameSize: Int) {
         self.socket = socket
         self.decoder = decoder
         self.logger = logger
+        self.webSocketMaxFrameSize = webSocketMaxFrameSize
 
         // Wrap socket.bytes once per connection so header parsing, body
         // reading, and any subsequent protocol upgrade all share a single
@@ -92,10 +94,11 @@ struct HTTPConnection: Sendable {
     func switchToWebSocket(with handler: some WSHandler, response: Data) async throws {
         // Reuse the connection-wide buffered stream so any bytes already
         // pulled past the upgrade request remain available to the WS framer.
-        // Client frames must be masked (RFC 6455 §5.1); an unmasked frame
-        // fails the stream. MessageFrameWSHandler responds with a 1002 close
-        // frame; custom handlers own their error handling.
-        let client = AsyncThrowingStream.decodingClientFrames(from: bytes)
+        // Client frames must be masked (RFC 6455 §5.1) and no larger than
+        // webSocketMaxFrameSize; a frame that is not fails the stream.
+        // MessageFrameWSHandler responds with a 1002 or 1009 close frame;
+        // custom handlers own their error handling.
+        let client = AsyncThrowingStream.decodingClientFrames(from: bytes, maxPayloadSize: webSocketMaxFrameSize)
         let server = try await handler.makeFrames(for: client)
         try await socket.write(response)
         logger.logSwitchProtocol(self, to: "websocket")

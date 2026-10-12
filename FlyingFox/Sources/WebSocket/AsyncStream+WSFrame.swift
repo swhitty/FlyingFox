@@ -45,13 +45,13 @@ extension AsyncThrowingStream<WSFrame, any Error> {
         }
     }
 
-    /// Decodes client → server frames via `WSFrameEncoder.decodeClientFrame(from:)`,
-    /// throwing when a frame is unmasked (RFC 6455 §5.1). A clean disconnect
-    /// ends the stream without error.
-    static func decodingClientFrames(from bytes: some AsyncBufferedSequence<UInt8>) -> Self {
+    /// Decodes client → server frames via `WSFrameEncoder.decodeClientFrame(from:maxPayloadSize:)`,
+    /// throwing when a frame is unmasked (RFC 6455 §5.1) or its payload is larger
+    /// than `maxPayloadSize`. A clean disconnect ends the stream without error.
+    static func decodingClientFrames(from bytes: some AsyncBufferedSequence<UInt8>, maxPayloadSize: Int = .max) -> Self {
         AsyncThrowingStream<WSFrame, any Error> {
             do {
-                return try await WSFrameEncoder.decodeClientFrame(from: bytes)
+                return try await WSFrameEncoder.decodeClientFrame(from: bytes, maxPayloadSize: maxPayloadSize)
             } catch SocketError.disconnected, is SequenceTerminationError {
                 return nil
             } catch {
@@ -72,6 +72,9 @@ extension AsyncStream<WSFrame> {
         return AsyncStream<WSFrame> {
             do {
                 return try await iterator.next()
+            } catch let error as WSFrameEncoder.Error {
+                iterator.close()
+                return .close(code: error.closeCode)
             } catch {
                 iterator.close()
                 return .close(message: "Protocol Error")

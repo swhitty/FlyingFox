@@ -67,9 +67,15 @@ struct WSFrameEncoder {
         return data
     }
 
-    static func decodeFrame(from bytes: some AsyncBufferedSequence<UInt8>) async throws -> WSFrame {
+    /// Decodes a single frame. A frame whose declared payload length exceeds
+    /// `maxPayloadSize` is rejected before any of its payload is read, so a
+    /// peer cannot make the decoder buffer more than this many bytes.
+    static func decodeFrame(from bytes: some AsyncBufferedSequence<UInt8>, maxPayloadSize: Int = .max) async throws -> WSFrame {
         var frame = try await decodeFrame(from: bytes.take())
         let (length, mask) = try await decodeLengthMask(from: bytes)
+        guard length <= maxPayloadSize else {
+            throw Error("Payload length \(length) exceeds maximum \(maxPayloadSize)", closeCode: .messageTooBig)
+        }
         // The payload is stored unmasked; the mask is preserved so servers can
         // enforce RFC 6455 §5.1 — "a client MUST mask all frames that it sends
         // to the server."
@@ -91,8 +97,8 @@ struct WSFrameEncoder {
     /// The mask is cleared on the returned frame so handlers can safely echo
     /// frames (e.g. ping → pong) — "A server MUST NOT mask any frames that it
     /// sends to the client." (§5.1)
-    static func decodeClientFrame(from bytes: some AsyncBufferedSequence<UInt8>) async throws -> WSFrame {
-        var frame = try await decodeFrame(from: bytes)
+    static func decodeClientFrame(from bytes: some AsyncBufferedSequence<UInt8>, maxPayloadSize: Int = .max) async throws -> WSFrame {
+        var frame = try await decodeFrame(from: bytes, maxPayloadSize: maxPayloadSize)
         guard frame.mask != nil else {
             throw Error("Incoming client frames must be masked")
         }
@@ -209,8 +215,12 @@ extension WSFrameEncoder {
     struct Error: LocalizedError {
         var errorDescription: String?
 
-        init(_ description: String) {
+        /// Status code for the close frame a handler sends in response to the error.
+        var closeCode: WSCloseCode
+
+        init(_ description: String, closeCode: WSCloseCode = .protocolError) {
             self.errorDescription = description
+            self.closeCode = closeCode
         }
     }
 }

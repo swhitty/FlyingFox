@@ -55,6 +55,10 @@ struct WSFrameValidator: Sendable {
                 break
             }
 
+            if frame.opcode == .close {
+                try validateClosePayload(frame.payload)
+            }
+
             if frame.opcode == .continuation {
                 try appendContinuation(frame)
                 guard let last = last, frame.fin else {
@@ -90,6 +94,33 @@ struct WSFrameValidator: Sendable {
             }
             last!.fin = continuation.fin
             last!.payload.append(continuation.payload)
+        }
+
+        // RFC 6455 §5.5.1: a close payload is empty, or a 2 byte status code
+        // followed by an optional UTF-8 reason.
+        func validateClosePayload(_ payload: Data) throws {
+            guard !payload.isEmpty else { return }
+            guard payload.count >= 2 else {
+                throw Error("Close frame payload must contain a status code")
+            }
+            let code = UInt16(payload[payload.startIndex]) << 8 | UInt16(payload[payload.startIndex + 1])
+            guard WSFrameValidator.isValidCloseCode(code) else {
+                throw Error("Invalid close status code \(code)")
+            }
+            guard String(data: payload.dropFirst(2), encoding: .utf8) != nil else {
+                throw Error("Close frame reason is not valid UTF-8")
+            }
+        }
+    }
+
+    // RFC 6455 §7.4: codes an endpoint may send. 1005, 1006 and 1015 are
+    // reserved for local use, 1004 and 1016–2999 for future revisions.
+    static func isValidCloseCode(_ code: UInt16) -> Bool {
+        switch code {
+        case 1000...1003, 1007...1014, 3000...4999:
+            return true
+        default:
+            return false
         }
     }
 }

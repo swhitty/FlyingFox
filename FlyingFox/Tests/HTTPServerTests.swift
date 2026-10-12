@@ -382,6 +382,39 @@ actor HTTPServerTests {
         )
     }
 
+    @Test
+    func server_ClosesWebSocket_WhenFrameExceedsConfiguredMaxSize() async throws {
+        let address = Socket.makeAddressUnix(path: "foxing-max-frame")
+        try? Socket.unlink(address)
+        let server = HTTPServer(
+            config: .init(address: address, webSocketMaxFrameSize: 16, logger: .disabled)
+        )
+        await server.appendRoute("GET /socket", to: .webSocket(EchoWSMessageHandler()))
+        try await startServer(server)
+
+        let socket = try await AsyncSocket.connected(to: address)
+        defer { try? socket.close() }
+
+        var request = HTTPRequest.make(path: "/socket")
+        request.headers[.host] = "localhost"
+        request.headers[.upgrade] = "websocket"
+        request.headers[.connection] = "Keep-Alive, Upgrade"
+        request.headers[.webSocketVersion] = "13"
+        request.headers[.webSocketKey] = "ABCDEFGHIJKLMNOP".data(using: .utf8)!.base64EncodedString()
+        try await socket.writeRequest(request)
+        _ = try await socket.readResponse()
+
+        try await socket.writeFrame(.make(opcode: .text, mask: .mock, payload: Data(repeating: .ascii("a"), count: 16)))
+        #expect(
+            try await socket.readFrame() == .make(opcode: .text, payload: Data(repeating: .ascii("a"), count: 16))
+        )
+
+        try await socket.writeFrame(.make(opcode: .text, mask: .mock, payload: Data(repeating: .ascii("a"), count: 17)))
+        #expect(
+            try await socket.readFrame() == .close(code: .messageTooBig)
+        )
+    }
+
 #if canImport(Darwin)
     @Test
     func defaultLogger_IsOSLog() async throws {

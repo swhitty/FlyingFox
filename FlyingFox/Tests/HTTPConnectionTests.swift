@@ -201,6 +201,29 @@ struct HTTPConnectionTests {
     }
 
     @Test
+    func webSocket_OversizedClientFrame_ClosesWithMessageTooBig() async throws {
+        // RFC 6455 §7.4.1: 1009 indicates a message too big to process. The
+        // frame's declared length is checked before its payload is read.
+        let (s1, s2) = try await AsyncSocket.makePair()
+        let connection = HTTPConnection(socket: s1, webSocketMaxFrameSize: 1024)
+
+        let response = Task {
+            try await connection.sendResponse(HTTPResponse(webSocket: MessageFrameWSHandler.make()))
+        }
+
+        _ = try await s2.readResponse()
+        try await s2.writeFrame(.make(opcode: .binary, mask: .mock, payload: Data(count: 1025)))
+
+        #expect(
+            try await s2.readFrame() == .close(code: .messageTooBig)
+        )
+        try await response.value
+
+        try s1.close()
+        try s2.close()
+    }
+
+    @Test
     func webSocket_MaskedClientFrames_AreDeliveredToHandlerUnmasked() async throws {
         // Wire masks are consumed by `decodeClientFrame`; handlers receive
         // frames with `mask == nil` and the payload already unmasked.
@@ -271,11 +294,12 @@ private struct MaskReportingWSHandler: WSHandler {
 }
 
 private extension HTTPConnection {
-    init(socket: AsyncSocket) {
+    init(socket: AsyncSocket, webSocketMaxFrameSize: Int = 16_777_216) {
         self.init(
             socket: socket,
             decoder: HTTPDecoder.make(),
-            logger: .disabled
+            logger: .disabled,
+            webSocketMaxFrameSize: webSocketMaxFrameSize
         )
     }
 }
