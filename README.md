@@ -184,6 +184,8 @@ enum WSMessage {
 }
 ```
 
+Nothing is buffered between the streams and the connection: a frame is read from the client only when the handler takes the previous message, and a message is taken from the handler's stream only when the connection is ready to write the previous one. A handler that produces its messages on demand, for example with `AsyncStream(unfolding:)`, is therefore paced by the client.
+
 Raw WebSocket frames can also be [provided](#websockets).
 
 ### RoutedHTTPHandler
