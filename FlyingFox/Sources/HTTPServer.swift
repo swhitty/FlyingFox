@@ -217,7 +217,8 @@ public final actor HTTPServer {
         HTTPConnection(
             socket: socket,
             decoder: HTTPDecoder(sharedRequestBufferSize: config.sharedRequestBufferSize, sharedRequestReplaySize: config.sharedRequestReplaySize),
-            logger: config.logger
+            logger: config.logger,
+            webSocketMaxFrameSize: config.webSocketMaxFrameSize
         )
     }
 

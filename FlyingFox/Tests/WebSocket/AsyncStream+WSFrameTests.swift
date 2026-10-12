@@ -81,6 +81,31 @@ struct WSFrameSequenceTests {
     }
 
     @Test
+    func clientSequence_RejectsOversizedFrames() async throws {
+        let frames: [WSFrame] = [.fish.masked(), .chips.masked()]
+        #expect(
+            try await AsyncThrowingStream.makeClient(frames, maxPayloadSize: 5).collectAll() == [.fish, .chips]
+        )
+        await #expect(throws: WSFrameEncoder.Error.self) {
+            try await AsyncThrowingStream.makeClient(frames, maxPayloadSize: 4).collectAll()
+        }
+    }
+
+    @Test
+    func protocolFrames_CloseStream_WithErrorsCloseCode() async throws {
+        let (stream, continuation) = AsyncThrowingStream<WSFrame, any Error>.makeStream()
+
+        continuation.yield(.fish)
+        continuation.finish(throwing: WSFrameEncoder.Error("Too Big", closeCode: .messageTooBig))
+
+        #expect(
+            try await AsyncStream.protocolFrames(from: stream).collectAll() == [
+                .fish, .close(code: .messageTooBig)
+            ]
+        )
+    }
+
+    @Test
     func protocolFrames_CatchErrors_AndCloseStream() async throws {
         let (stream, continuation) = AsyncThrowingStream<WSFrame, any Error>.makeStream()
 
@@ -110,9 +135,9 @@ extension AsyncThrowingStream where Element == WSFrame, Failure == any Error {
         return AsyncThrowingStream.decodingFrames(from: bytes)
     }
 
-    static func makeClient(_ frames: [WSFrame]) -> Self {
+    static func makeClient(_ frames: [WSFrame], maxPayloadSize: Int = .max) -> Self {
         let bytes = ConsumingAsyncSequence(frames.flatMap(WSFrameEncoder.encodeFrame))
-        return AsyncThrowingStream.decodingClientFrames(from: bytes)
+        return AsyncThrowingStream.decodingClientFrames(from: bytes, maxPayloadSize: maxPayloadSize)
     }
 }
 

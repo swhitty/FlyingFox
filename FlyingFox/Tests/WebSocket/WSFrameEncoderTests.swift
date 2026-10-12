@@ -190,6 +190,29 @@ struct WSFrameEncoderTests {
     }
 
     @Test
+    func decodeFrame_ThrowsError_WhenPayloadExceedsMaxSize() async throws {
+        // The declared length is checked before the payload is read, so the
+        // frame is rejected although none of its 256 payload bytes are present.
+        do {
+            _ = try await WSFrameEncoder.decodeFrame(0b10000001, 0x7E, 0x01, 0x00, maxPayloadSize: 255)
+            Issue.record("Expected error")
+        } catch let error as WSFrameEncoder.Error {
+            #expect(error.closeCode == .messageTooBig)
+        }
+    }
+
+    @Test
+    func decodeFrame_DecodesPayload_WhenAtMaxSize() async throws {
+        #expect(
+            try await WSFrameEncoder.decodeFrame(0b10000001, 3, .ascii("A"), .ascii("b"), .ascii("c"), maxPayloadSize: 3) == .make(
+                fin: true,
+                opcode: .text,
+                payload: "Abc".data(using: .utf8)!
+            )
+        )
+    }
+
+    @Test
     func decodeFrame0() {
         #expect(
             WSFrameEncoder.decodeFrame(from: 0b10000000) == .make(
@@ -451,8 +474,8 @@ struct WSFrameEncoderTests {
 
 private extension WSFrameEncoder {
 
-    static func decodeFrame(_ bytes: UInt8...) async throws -> WSFrame {
-        try await decodeFrame(from: ConsumingAsyncSequence(bytes))
+    static func decodeFrame(_ bytes: UInt8..., maxPayloadSize: Int = .max) async throws -> WSFrame {
+        try await decodeFrame(from: ConsumingAsyncSequence(bytes), maxPayloadSize: maxPayloadSize)
     }
 
     static func decodeClientFrame(_ bytes: UInt8...) async throws -> WSFrame {
