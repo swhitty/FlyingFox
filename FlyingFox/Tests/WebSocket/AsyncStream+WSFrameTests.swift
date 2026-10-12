@@ -30,7 +30,7 @@
 //
 
 @testable import FlyingFox
-import FlyingSocks
+@testable import FlyingSocks
 import Foundation
 import Testing
 
@@ -103,6 +103,37 @@ struct WSFrameSequenceTests {
                 .fish, .close(code: .messageTooBig)
             ]
         )
+    }
+
+    @Test
+    func protocolFrames_CallOnTermination_WhenReleasedBeforeTheEnd() async throws {
+        let terminated = Mutex(false)
+        var frames: AsyncStream<WSFrame>? = AsyncStream.protocolFrames(from: AsyncThrowingStream.make([.fish, .chips])) {
+            terminated.withLock { $0 = true }
+        }
+        var iterator = frames?.makeAsyncIterator()
+
+        #expect(
+            try await iterator?.next() == .fish
+        )
+        #expect(terminated.withLock { !$0 })
+
+        iterator = nil
+        frames = nil
+        #expect(terminated.withLock { $0 })
+    }
+
+    @Test
+    func protocolFrames_CallOnTermination_WhenReadToTheEnd() async throws {
+        let terminated = Mutex(false)
+        let frames = AsyncStream.protocolFrames(from: AsyncThrowingStream.make([.fish])) {
+            terminated.withLock { $0 = true }
+        }
+
+        #expect(
+            try await frames.collectAll() == [.fish]
+        )
+        #expect(terminated.withLock { $0 })
     }
 
     @Test
