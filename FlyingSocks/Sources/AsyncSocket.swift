@@ -48,6 +48,22 @@ public protocol AsyncSocketPool: Sendable {
     ///   - socket: Socket that is blocked and is waiting for events
     ///   - events: The events the socket is waiting to become available
     func suspendSocket(_ socket: Socket, untilReadyFor events: Socket.Events) async throws
+
+    /// Closes a socket, first resuming each of its suspensions by throwing `SocketError.disconnected`.
+    ///
+    /// The kernel drops a closed descriptor from an event queue without reporting an event, so a
+    /// suspension on a socket that is simply closed is never woken. Closing through the pool resumes
+    /// the socket's suspensions and removes their events while the descriptor is still open.
+    /// - Parameter socket: Socket to close
+    func close(_ socket: Socket) async throws
+}
+
+public extension AsyncSocketPool {
+
+    /// Closes the socket without resuming its suspensions, for a pool that does not track them.
+    func close(_ socket: Socket) async throws {
+        try socket.close()
+    }
 }
 
 public extension AsyncSocketPool where Self == SocketPool<Poll> {
@@ -282,8 +298,16 @@ public struct AsyncSocket: Sendable {
     }
 #endif
 
+    /// Closes the socket. A read, write, accept or connect suspended on it is not woken: use
+    /// `disconnect()` to close a socket that another task may be using.
     public func close() throws {
         try socket.close()
+    }
+
+    /// Closes the socket, first waking each read, write, accept or connect suspended on it by
+    /// throwing `SocketError.disconnected`.
+    public func disconnect() async throws {
+        try await pool.close(socket)
     }
 
     public var bytes: AsyncSocketReadSequence {

@@ -75,6 +75,37 @@ struct AsyncSocketTests {
     }
 
     @Test
+    func disconnect_WakesASuspendedRead() async throws {
+        let (s1, s2) = try await AsyncSocket.makePair()
+        defer { try? s1.close() }
+
+        let reading = Task(timeout: 1) { try await s2.read() }
+        try await Task.sleep(seconds: 0.1)
+        try await s2.disconnect()
+
+        await #expect(throws: SocketError.disconnected) {
+            try await reading.value
+        }
+        // and the peer sees the end of the stream
+        await #expect(throws: SocketError.disconnected) {
+            try await s1.read()
+        }
+    }
+
+    @Test
+    func disconnect_Closes_WhenThePoolDoesNotTrackSuspensions() async throws {
+        let (s1, s2) = try Socket.makeNonBlockingPair()
+        defer { try? s1.close() }
+        let socket = try AsyncSocket(socket: s2, pool: DisconnectedPool())
+
+        try await socket.disconnect()
+
+        #expect(throws: SocketError.self) {
+            try s2.close()
+        }
+    }
+
+    @Test
     func connected_ThrowsError_WhenConnectFails() async throws {
         await #expect(throws: SocketError.self) {
             _ = try await AsyncSocket.connected(

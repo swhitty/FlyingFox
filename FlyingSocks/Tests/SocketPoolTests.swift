@@ -232,6 +232,57 @@ struct SocketPoolTests {
             try await woken.value
         }
     }
+
+    @Test
+    func close_ResumesTheSocketsSuspensions() async throws {
+        let pool = SocketPool.make(maxEvents: 4)
+        try await pool.prepare()
+        let run = Task { try await pool.run() }
+        defer { run.cancel() }
+
+        let (socket, peer) = try Socket.makeNonBlockingPair()
+        defer { try? peer.close() }
+        let reading = Task(timeout: 1) { try await pool.suspendSocket(socket, untilReadyFor: .read) }
+        let readingAgain = Task(timeout: 1) { try await pool.suspendSocket(socket, untilReadyFor: .read) }
+        try await Task.sleep(seconds: 0.1)
+
+        // closed outright, the socket's suspensions would never be woken
+        try await pool.close(socket)
+
+        await #expect(throws: SocketError.disconnected) {
+            try await reading.value
+        }
+        await #expect(throws: SocketError.disconnected) {
+            try await readingAgain.value
+        }
+    }
+
+    @Test
+    func close_LeavesOtherSocketsSuspended() async throws {
+        let pool = SocketPool.make(maxEvents: 4)
+        try await pool.prepare()
+        let run = Task { try await pool.run() }
+        defer { run.cancel() }
+
+        let (closed, closedPeer) = try Socket.makeNonBlockingPair()
+        let (other, otherPeer) = try Socket.makeNonBlockingPair()
+        defer {
+            try? closedPeer.close()
+            try? other.close()
+            try? otherPeer.close()
+        }
+        let closedReading = Task { try await pool.suspendSocket(closed, untilReadyFor: .read) }
+        let otherReading = Task(timeout: 1) { try await pool.suspendSocket(other, untilReadyFor: .read) }
+        try await Task.sleep(seconds: 0.1)
+
+        try await pool.close(closed)
+        _ = try? await closedReading.value
+
+        _ = try otherPeer.write(Data([1]))
+        await #expect(throws: Never.self) {
+            try await otherReading.value
+        }
+    }
 #endif
 
     @Test
