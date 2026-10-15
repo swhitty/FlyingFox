@@ -101,7 +101,9 @@ public final actor HTTPServer {
             state = (socket: socket, task: task)
             try await task.getValue(cancelling: .whenParentIsCancelled)
         } catch {
-            logger.logCritical("server error: \(error.localizedDescription)")
+            if !(error is CancellationError) {
+                logger.logCritical("server error: \(error.localizedDescription)")
+            }
             if let state = self.state {
                 try? state.socket.close()
             }
