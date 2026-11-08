@@ -94,6 +94,7 @@ public final actor HTTPServer {
             logger.logCritical("server error: already started")
             throw SocketError.unsupportedAddress
         }
+        startFailure = nil
         defer { state = nil }
         do {
             let socket = try await prepareListeningSocket()
@@ -126,11 +127,14 @@ public final actor HTTPServer {
             }
         } catch {
             logger.logCritical("server error: \(error.localizedDescription)")
+            failWaitingContinuations(with: error)
             throw error
         }
     }
 
     var waiting = [Continuation.ID: Continuation]()
+    /// Error thrown by the most recent `run()` that failed before the server started listening.
+    var startFailure: (any Error)?
     private(set) var state: (socket: AsyncSocket, task: Task<Void, any Error>)? {
         didSet { isListeningDidUpdate(from: oldValue != nil ) }
     }

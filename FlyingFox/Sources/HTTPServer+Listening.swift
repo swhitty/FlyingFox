@@ -44,6 +44,9 @@ extension HTTPServer {
 
     private func doWaitUntilListening() async throws {
         guard !isListening else { return }
+        if let error = startFailure {
+            throw error
+        }
         try await withIdentifiableThrowingContinuation(isolation: self) {
             appendContinuation($0)
         } onCancel: { id in
@@ -68,6 +71,16 @@ extension HTTPServer {
 
         for continuation in waiting.values {
             continuation.resume()
+        }
+    }
+
+    func failWaitingContinuations(with error: any Error) {
+        startFailure = error
+        let waiting = self.waiting
+        self.waiting = [:]
+
+        for continuation in waiting.values {
+            continuation.resume(throwing: error)
         }
     }
 
