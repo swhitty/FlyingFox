@@ -105,13 +105,19 @@ actor HTTPServerTests {
     @Test
     func restarts_AfterStopped() async throws {
         let server = HTTPServer.make()
-        try await startServer(server)
-        await server.stop()
+        await server.appendRoute("/fish") { _ in HTTPResponse(statusCode: .ok) }
+        let first = try await startServer(server)
 
-        let task = Task { try await startServer(server) }
-        await #expect(throws: Never.self) {
-            try await task.value
+        await server.stop()
+        await #expect(throws: SocketError.disconnected) {
+            try await first.value
         }
+        #expect(await server.isListening == false)
+
+        let port = try await startServerWithPort(server)
+        let request = URLRequest(url: URL(string: "http://127.0.0.1:\(port)/fish")!)
+        let (_, response) = try await URLSession.shared.data(for: request)
+        #expect((response as? HTTPURLResponse)?.statusCode == 200)
     }
 
     @Test
@@ -603,8 +609,52 @@ actor HTTPServerTests {
             return true
         }
 
-        await #expect(throws: (any Error).self) {
+        await #expect {
             try await waiting.value
+        } throws: { error in
+            guard case .timeout = error as? SocketError else { return false }
+            return true
+        }
+    }
+
+    @Test
+    func waitUntilListing_ThrowsBindError_WhenPortIsInUse() async throws {
+        let server = HTTPServer.make()
+        let port = try await startServerWithPort(server)
+
+        let other = HTTPServer.make(port: port)
+        let waiting = Task<Bool, any Error> {
+            try await other.waitUntilListening(timeout: 5)
+            return true
+        }
+        let running = Task { try await other.run() }
+
+        await #expect {
+            try await waiting.value
+        } throws: { error in
+            guard case .failed(type: "Bind", _, _) = error as? SocketError else { return false }
+            return true
+        }
+        await #expect(throws: SocketError.self) {
+            try await running.value
+        }
+    }
+
+    @Test
+    func waitUntilListing_ThrowsBindError_WhenRunHasAlreadyFailed() async throws {
+        let server = HTTPServer.make()
+        let port = try await startServerWithPort(server)
+
+        let other = HTTPServer.make(port: port)
+        await #expect(throws: SocketError.self) {
+            try await other.run()
+        }
+
+        await #expect {
+            try await other.waitUntilListening(timeout: 5)
+        } throws: { error in
+            guard case .failed(type: "Bind", _, _) = error as? SocketError else { return false }
+            return true
         }
     }
 
