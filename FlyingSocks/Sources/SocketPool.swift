@@ -136,6 +136,12 @@ public final actor SocketPool<Queue: EventQueue>: AsyncSocketPool {
         }
     }
 
+    public func removeSocket(_ socket: Socket) async {
+        for id in waiting.continuationIDs(for: socket.file) {
+            resumeContinuation(id: id, with: .failure(SocketError.disconnected), for: socket.file)
+        }
+    }
+
     private func getNotifications() async throws -> [EventNotification] {
         try Task.checkCancellation()
         nonisolated(unsafe) let queue = queue
@@ -279,6 +285,10 @@ public final actor SocketPool<Queue: EventQueue>: AsyncSocketPool {
                 $0.union($1.events)
             }
             return events.filter { !remaining.contains($0) }
+        }
+
+        func continuationIDs(for socket: Socket.FileDescriptor) -> [Continuation.ID] {
+            Array((storage[socket] ?? [:]).keys)
         }
 
         func continuationIDs(for socket: Socket.FileDescriptor, events: Socket.Events) -> [Continuation.ID] {

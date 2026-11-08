@@ -127,6 +127,22 @@ actor HTTPServerTests {
     }
 
     @Test
+    func stop_ReturnsBeforeTimeout_WhenServerIsIdle() async throws {
+        let server = HTTPServer.make()
+        let task = try await startServer(server)
+        // allow the accept loop to suspend on the listening socket
+        try await Task.sleep(seconds: 0.2)
+
+        let start = Date()
+        await server.stop(timeout: 10)
+        #expect(Date().timeIntervalSince(start) < 5)
+
+        await #expect(throws: SocketError.disconnected) {
+            try await task.value
+        }
+    }
+
+    @Test
     func taskCanBeCancelled_AfterServerIsStopped() async throws {
         let server = HTTPServer.make()
         let task = try await startServer(server)
@@ -251,12 +267,12 @@ actor HTTPServerTests {
         let port = try await startServerWithPort(server)
 
         let socket = try await AsyncSocket.connected(to: .inet(ip4: "127.0.0.1", port: port))
-        defer { try? socket.close() }
 
         try await socket.writeRequest(.make("/missing"))
         let response = try await socket.readResponse()
         #expect(response.statusCode == .notFound)
         #expect(Self.isIMFFixdate(response.headers[.date]))
+        try? await socket.close()
     }
 
     @Test
@@ -267,12 +283,12 @@ actor HTTPServerTests {
         let port = try await startServerWithPort(server)
 
         let socket = try await AsyncSocket.connected(to: .inet(ip4: "127.0.0.1", port: port))
-        defer { try? socket.close() }
 
         try await socket.writeRequest(.make("/error"))
         let response = try await socket.readResponse()
         #expect(response.statusCode == .internalServerError)
         #expect(Self.isIMFFixdate(response.headers[.date]))
+        try? await socket.close()
     }
 
     @Test
@@ -284,12 +300,12 @@ actor HTTPServerTests {
         let port = try await startServerWithPort(server)
 
         let socket = try await AsyncSocket.connected(to: .inet(ip4: "127.0.0.1", port: port))
-        defer { try? socket.close() }
 
         try await socket.writeRequest(.make("/slow"))
         let response = try await socket.readResponse()
         #expect(response.statusCode == .internalServerError)
         #expect(Self.isIMFFixdate(response.headers[.date]))
+        try? await socket.close()
     }
 
     static func isIMFFixdate(_ value: String?) -> Bool {
@@ -354,7 +370,6 @@ actor HTTPServerTests {
         try await startServer(server)
 
         let socket = try await AsyncSocket.connected(to: address)
-        defer { try? socket.close() }
 
         var request = HTTPRequest.make(path: "/socket")
         request.headers[.host] = "localhost"
@@ -380,6 +395,7 @@ actor HTTPServerTests {
                 payload: "FlyingFox".data(using: .utf8)!
             )
         )
+        try? await socket.close()
     }
 
     @Test
@@ -393,7 +409,6 @@ actor HTTPServerTests {
         try await startServer(server)
 
         let socket = try await AsyncSocket.connected(to: address)
-        defer { try? socket.close() }
 
         var request = HTTPRequest.make(path: "/socket")
         request.headers[.host] = "localhost"
@@ -413,6 +428,7 @@ actor HTTPServerTests {
         #expect(
             try await socket.readFrame() == .close(code: .messageTooBig)
         )
+        try? await socket.close()
     }
 
 #if canImport(Darwin)
@@ -437,12 +453,12 @@ actor HTTPServerTests {
         try await startServer(server)
 
         let socket = try await AsyncSocket.connected(to: address)
-        defer { try? socket.close() }
         try await socket.writeRequest(.make())
 
         #expect(
             try await socket.readResponse().statusCode == .accepted
         )
+        try? await socket.close()
     }
 
     @Test
@@ -454,13 +470,13 @@ actor HTTPServerTests {
         let port = try await startServerWithPort(server)
 
         let socket = try await AsyncSocket.connected(to: .inet(ip4: "127.0.0.1", port: port))
-        defer { try? socket.close() }
 
         try await socket.writeRequest(.make())
 
         #expect(
             try await socket.readResponse().statusCode == .accepted
         )
+        try? await socket.close()
     }
 
     #if !canImport(WinSDK)
@@ -474,7 +490,6 @@ actor HTTPServerTests {
         }
         let port = try await startServerWithPort(server)
         let socket = try await AsyncSocket.connected(to: .inet(ip4: "127.0.0.1", port: port))
-        defer { try? socket.close() }
 
         try await socket.writeRequest(.make())
         try await Task.sleep(seconds: 0.1)
@@ -484,6 +499,7 @@ actor HTTPServerTests {
             socket.readResponse().statusCode == .ok
         )
         await taskStop.value
+        try? await socket.close()
     }
     #endif
 
@@ -493,7 +509,6 @@ actor HTTPServerTests {
 
         let port = try await startServerWithPort(server)
         let socket = try await AsyncSocket.connected(to: .inet(ip4: "127.0.0.1", port: port))
-        defer { try? socket.close() }
 
         try await Task.sleep(seconds: 0.1)
         #expect(await server.connections.count == 1)
@@ -503,6 +518,7 @@ actor HTTPServerTests {
 
         #expect(await server.connections.count == 0)
         await taskStop.value
+        try? await socket.close()
     }
 
     @Test
@@ -604,7 +620,6 @@ actor HTTPServerTests {
         let port = try await startServerWithPort(server)
 
         let socket = try await AsyncSocket.connected(to: .inet(ip4: "127.0.0.1", port: port))
-        defer { try? socket.close() }
 
         try await socket.writeRequest(.make("/fish/🐟", headers: [.connection: "keep-alive"]))
 
@@ -617,6 +632,7 @@ actor HTTPServerTests {
         #expect(
             try await socket.readResponse().bodyString == "Hello 🍟"
         )
+        try? await socket.close()
     }
 
     @Test
@@ -630,12 +646,12 @@ actor HTTPServerTests {
         let port = try await startServerWithPort(server)
 
         let socket = try await AsyncSocket.connected(to: .inet(ip4: "127.0.0.1", port: port))
-        defer { try? socket.close() }
 
         try await socket.writeRequest(.make("/echo"))
         #expect(
             try await socket.readResponse().bodyString != "nil"
         )
+        try? await socket.close()
     }
 }
 

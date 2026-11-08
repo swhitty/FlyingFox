@@ -48,6 +48,16 @@ public protocol AsyncSocketPool: Sendable {
     ///   - socket: Socket that is blocked and is waiting for events
     ///   - events: The events the socket is waiting to become available
     func suspendSocket(_ socket: Socket, untilReadyFor events: Socket.Events) async throws
+
+    /// Removes a socket from the pool, resuming every task suspended waiting for it with
+    /// `SocketError.disconnected`. Called before a socket is closed: kqueue and epoll silently
+    /// drop a closed descriptor, so a task suspended on it would otherwise never resume.
+    /// - Parameter socket: Socket that is about to be closed
+    func removeSocket(_ socket: Socket) async
+}
+
+public extension AsyncSocketPool {
+    func removeSocket(_ socket: Socket) async { }
 }
 
 public extension AsyncSocketPool where Self == SocketPool<Poll> {
@@ -282,6 +292,15 @@ public struct AsyncSocket: Sendable {
     }
 #endif
 
+    /// Closes the socket, resuming any tasks suspended waiting for it with `SocketError.disconnected`.
+    public func close() async throws {
+        // a closed descriptor silently leaves kqueue/epoll, so the pool must wake tasks suspended on it first
+        await pool.removeSocket(socket)
+        try socket.close()
+    }
+
+    /// Closes the socket without resuming tasks suspended waiting for it.
+    @available(*, deprecated, message: "use close() async, which resumes tasks suspended on the socket")
     public func close() throws {
         try socket.close()
     }

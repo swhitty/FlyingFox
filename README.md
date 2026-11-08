@@ -402,7 +402,7 @@ import FlyingSocks
 
 let socket = try await AsyncSocket.connected(to: .inet(ip4: "192.168.0.100", port: 80))
 try await socket.write(Data([0x01, 0x02, 0x03]))
-try socket.close()
+try await socket.close()
 ```
 
 ## Socket

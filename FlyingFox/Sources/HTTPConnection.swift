@@ -108,8 +108,8 @@ struct HTTPConnection: Sendable {
         }
     }
 
-    func close() throws {
-        try socket.close()
+    func close() async throws {
+        try await socket.close()
     }
 
     struct Error: LocalizedError {

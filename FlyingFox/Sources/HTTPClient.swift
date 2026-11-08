@@ -42,7 +42,7 @@ public struct HTTPClient: ~Copyable {
 
     public mutating func sendHTTPRequest(_ request: HTTPRequest, to address: some SocketAddress) async throws -> HTTPResponse {
 
-        try? _lastSocket?.close()
+        try? await _lastSocket?.close()
         _lastSocket = nil
 
         let socket = try await AsyncSocket.connected(to: address)
@@ -56,7 +56,9 @@ public struct HTTPClient: ~Copyable {
     }
 
     deinit {
-        try? _lastSocket?.close()
+        if let socket = _lastSocket {
+            Task { try? await socket.close() }
+        }
     }
 }
 

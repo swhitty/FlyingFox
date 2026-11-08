@@ -434,7 +434,6 @@ struct WSFrameEncoderTests {
     func webSocketConnectionToVI() async throws {
         let addr = try Socket.makeAddressINET(fromIP4: "192.236.209.31", port: 80)
         let socket = try await AsyncSocket.connected(to: addr)
-        defer { try? socket.close() }
 
         let key = WebSocketHTTPHandler.makeSecWebSocketKeyValue()
 
@@ -460,6 +459,7 @@ struct WSFrameEncoderTests {
 
         frame = WSFrame.close(mask: .mock)
         try await socket.writeFrame(frame)
+        try? await socket.close()
     }
 
     @Test
