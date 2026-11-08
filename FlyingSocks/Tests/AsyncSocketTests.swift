@@ -44,8 +44,8 @@ struct AsyncSocketTests {
         let v2 = try await d2
         #expect(v2 == 10)
 
-        try s1.close()
-        try s2.close()
+        try await s1.close()
+        try await s2.close()
     }
 
     @Test
@@ -87,7 +87,7 @@ struct AsyncSocketTests {
     @Test(.disabled("problematic test as file descriptor can be re-opened by another parallel test"))
     func socketReadByte_ThrowsDisconnected_WhenSocketIsClosed() async throws {
         let s1 = try await AsyncSocket.make()
-        try s1.close()
+        try await s1.close()
 
         await #expect(throws: SocketError.self) {
             try await s1.read()
@@ -111,10 +111,26 @@ struct AsyncSocketTests {
         }
     }
 
+    @Test
+    func close_ResumesSuspendedRead_WithDisconnected() async throws {
+        let (s1, s2) = try await AsyncSocket.makePair()
+
+        let read = Task { try await s1.read() }
+        try await Task.sleep(seconds: 0.1)
+
+        // a closed descriptor silently leaves kqueue/epoll, so the pool must wake the suspended read
+        try await s1.close()
+
+        await #expect(throws: SocketError.disconnected) {
+            try await read.value
+        }
+        try? await s2.close()
+    }
+
     @Test(.disabled("problematic test as file descriptor can be re-opened by another parallel test"))
     func socketReadChunk_ThrowsDisconnected_WhenSocketIsClosed() async throws {
         let s1 = try await AsyncSocket.make()
-        try s1.close()
+        try await s1.close()
 
         await #expect(throws: SocketError.self) {
             try await s1.read(bytes: 5)
@@ -133,7 +149,7 @@ struct AsyncSocketTests {
     @Test(.disabled("problematic test as file descriptor can be re-opened by another parallel test"))
     func socketBytesReadChunk_Throws_WhenSocketIsClosed() async throws {
         let s1 = try await AsyncSocket.make()
-        try s1.close()
+        try await s1.close()
 
         let bytes = s1.bytes
         await #expect(throws: SocketError.self) {
@@ -154,7 +170,7 @@ struct AsyncSocketTests {
     @Test(.disabled("problematic test as file descriptor can be re-opened by another parallel test"))
     func socketWrite_ThrowsDisconnected_WhenSocketIsClosed() async throws {
         let s1 = try await AsyncSocket.make()
-        try s1.close()
+        try await s1.close()
 
         await #expect(throws: SocketError.disconnected) {
             try await s1.writeString("Fish")
@@ -174,9 +190,9 @@ struct AsyncSocketTests {
     func socket_Throws_WhenAlreadyClosed() async throws {
         let s1 = try await AsyncSocket.make()
 
-        try s1.close()
-        #expect(throws: SocketError.self) {
-            try s1.close()
+        try await s1.close()
+        await #expect(throws: SocketError.self) {
+            try await s1.close()
         }
     }
 
@@ -206,8 +222,8 @@ struct AsyncSocketTests {
         let v2 = try await d2
         #expect(String(data: Data(v2.1), encoding: .utf8) == "Swift")
 
-        try s1.close()
-        try s2.close()
+        try await s1.close()
+        try await s2.close()
         try? Socket.unlink(addr)
     }
 

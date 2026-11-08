@@ -65,8 +65,8 @@ struct HTTPConnectionTests {
             )
         )
 
-        try s1.close()
-        try s2.close()
+        try await s1.close()
+        try await s2.close()
     }
 
     @Test
@@ -92,8 +92,8 @@ struct HTTPConnectionTests {
         let count = try await connection.requests.reduce(0, { count, _ in count + 1 })
         #expect(count == 3)
 
-        try s1.close()
-        try s2.close()
+        try await s1.close()
+        try await s2.close()
     }
 
     @Test
@@ -142,21 +142,21 @@ struct HTTPConnectionTests {
             response.range(of: expected, options: .regularExpression) != nil
         )
 
-        try s1.close()
-        try s2.close()
+        try await s1.close()
+        try await s2.close()
     }
 
     @Test
     func connectionDisconnects_WhenErrorIsReceived() async throws {
         let (s1, s2) = try await AsyncSocket.makePair()
 
-        try s2.close()
+        try await s2.close()
         let connection = HTTPConnection(socket: s1)
 
         let count = try await connection.requests.reduce(0, { count, _ in count + 1 })
         #expect(count == 0)
 
-        try connection.close()
+        try await connection.close()
     }
 
     @Test
@@ -196,8 +196,8 @@ struct HTTPConnectionTests {
         )
         try await response.value
 
-        try s1.close()
-        try s2.close()
+        try await s1.close()
+        try await s2.close()
     }
 
     @Test
@@ -219,8 +219,8 @@ struct HTTPConnectionTests {
         )
         try await response.value
 
-        try s1.close()
-        try s2.close()
+        try await s1.close()
+        try await s2.close()
     }
 
     @Test
@@ -245,8 +245,8 @@ struct HTTPConnectionTests {
         )
 
         response.cancel()
-        try s1.close()
-        try s2.close()
+        try await s1.close()
+        try await s2.close()
     }
 
     @Test
@@ -262,11 +262,11 @@ struct HTTPConnectionTests {
         }
 
         _ = try await s2.readResponse()
-        try s2.close()
+        try await s2.close()
 
         try await response.value
 
-        try s1.close()
+        try await s1.close()
     }
 }
 

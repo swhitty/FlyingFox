@@ -64,7 +64,7 @@ public final actor HTTPServer {
     }
 
     public var listeningAddress: Socket.Address? {
-        try? state?.socket.sockname()
+        try? state?.socket.socket.sockname()
     }
 
     public func appendRoute(_ route: HTTPRoute, to handler: some HTTPHandler) {
@@ -96,14 +96,14 @@ public final actor HTTPServer {
         }
         defer { state = nil }
         do {
-            let socket = try await preparePoolAndSocket()
+            let socket = try await prepareListeningSocket()
             let task = Task { try await start(on: socket, pool: config.pool) }
             state = (socket: socket, task: task)
             try await task.getValue(cancelling: .whenParentIsCancelled)
         } catch {
             logger.logCritical("server error: \(error.localizedDescription)")
             if let state = self.state {
-                try? state.socket.close()
+                try? await state.socket.close()
             }
             throw error
         }
@@ -114,10 +114,16 @@ public final actor HTTPServer {
         try await run()
     }
 
-    func preparePoolAndSocket() async throws -> Socket {
+    func prepareListeningSocket() async throws -> AsyncSocket {
         do {
             try await config.pool.prepare()
-            return try makeSocketAndListen()
+            let socket = try makeSocketAndListen()
+            do {
+                return try AsyncSocket(socket: socket, pool: config.pool)
+            } catch {
+                try? socket.close()
+                throw error
+            }
         } catch {
             logger.logCritical("server error: \(error.localizedDescription)")
             throw error
@@ -125,7 +131,7 @@ public final actor HTTPServer {
     }
 
     var waiting = [Continuation.ID: Continuation]()
-    private(set) var state: (socket: Socket, task: Task<Void, any Error>)? {
+    private(set) var state: (socket: AsyncSocket, task: Task<Void, any Error>)? {
         didSet { isListeningDidUpdate(from: oldValue != nil ) }
     }
 
@@ -136,7 +142,9 @@ public final actor HTTPServer {
     public func stop(timeout: TimeInterval = 0) async {
         guard let (socket, task) = state else { return }
         state = nil
-        try? socket.close()
+        // closing wakes the accept suspended on the listening socket, ending the server task
+        // once existing connections have completed
+        try? await socket.close()
         for connection in connections {
             await connection.complete()
         }
@@ -163,15 +171,13 @@ public final actor HTTPServer {
         return socket
     }
 
-    func start(on socket: Socket, pool: some AsyncSocketPool) async throws {
-        let asyncSocket = try AsyncSocket(socket: socket, pool: pool)
-
+    func start(on socket: AsyncSocket, pool: some AsyncSocketPool) async throws {
         try await withThrowingTaskGroup(of: Void.self) { group in
             group.addTask {
                 try await pool.run()
             }
             group.addTask {
-                try await self.listenForConnections(on: asyncSocket)
+                try await self.listenForConnections(on: socket)
             }
             try await group.next()
         }
@@ -241,7 +247,7 @@ public final actor HTTPServer {
             logger.logError(error, on: connection)
         }
         connections.remove(connection)
-        try? connection.close()
+        try? await connection.close()
         logger.logCloseConnection(connection)
     }
 

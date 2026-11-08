@@ -175,7 +175,49 @@ struct SocketPoolTests {
         }
     }
 
+    @Test
+    func removeSocket_ResumesSuspendedSocket_WithDisconnected() async throws {
+        let pool = SocketPool.make()
+        try await pool.prepare()
+        let task = Task { try await pool.run() }
+        defer { task.cancel() }
+
+        let socket = try Socket(domain: AF_UNIX, type: .stream)
+        let suspension = Task {
+            try await pool.suspendSocket(socket, untilReadyFor: .read)
+        }
+        try await Task.sleep(seconds: 0.1)
+
+        await pool.removeSocket(socket)
+
+        await #expect(throws: SocketError.disconnected) {
+            try await suspension.value
+        }
+    }
+
 #if canImport(Darwin) || canImport(CSystemLinux)
+    @Test
+    func removeSocket_WakesSuspendedSocket_BeforeItIsClosed() async throws {
+        let pool = SocketPool.make(maxEvents: 4)
+        try await pool.prepare()
+        let run = Task { try await pool.run() }
+        defer { run.cancel() }
+
+        let (socket, peer) = try Socket.makeNonBlockingPair()
+        defer { try? peer.close() }
+        let suspended = Task(timeout: 1) { try await pool.suspendSocket(socket, untilReadyFor: .read) }
+        try await Task.sleep(seconds: 0.1)
+
+        // closing the socket would silently drop it from the queue leaving the suspension
+        // waiting forever, so the pool must wake it before the socket is closed
+        await pool.removeSocket(socket)
+        try socket.close()
+
+        await #expect(throws: SocketError.disconnected) {
+            try await suspended.value
+        }
+    }
+
     @Test
     func reusedDescriptor_IsWoken_AfterTheSuspendedSocketIsReplacedAndCancelled() async throws {
         let pool = SocketPool.make(maxEvents: 4)
