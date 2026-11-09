@@ -29,8 +29,10 @@
 import FlyingSocks
 
 /// Has a connection once the response to its request is written, as after a successful
-/// CONNECT (RFC 9110 Section 9.3.6) or another protocol that takes over the connection.
-/// The connection is closed when the handler returns.
+/// CONNECT (RFC 9110 Section 9.3.6) or another protocol that assumes the connection.
+/// The connection is closed when the handler returns. The handler is called whatever the
+/// response's status: with a non-2xx status, what to do with the connection is left to the
+/// handler, which may simply return.
 public protocol HTTPTunnelHandler: Sendable {
     /// - Parameters:
     ///   - bytes: what the client sends after its request, beginning with any bytes already
