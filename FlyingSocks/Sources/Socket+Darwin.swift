@@ -50,6 +50,8 @@ extension Socket {
     static let in_addr_any = Darwin.in_addr(s_addr: Darwin.in_addr_t(0))
     static let ipproto_ip = Int32(IPPROTO_IP)
     static let ipproto_ipv6 = Int32(IPPROTO_IPV6)
+    static let ipproto_tcp = Int32(IPPROTO_TCP)
+    static let tcp_nodelay = Int32(TCP_NODELAY)
     static let ip_pktinfo = Int32(IP_PKTINFO)
     // Swift cannot define __APPLE_USE_RFC_3542 before importing Darwin, so
     // the RFC 3542 values from <netinet6/in6.h> are hardcoded:

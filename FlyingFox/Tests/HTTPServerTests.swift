@@ -485,6 +485,25 @@ actor HTTPServerTests {
         try? await socket.close()
     }
 
+    @Test
+    func server_SetsTCPNoDelay_OnAcceptedConnections() async throws {
+        let server = HTTPServer.make(address: .inet(port: 0))
+        await server.appendRoute("*") { _ in
+            return HTTPResponse.make(statusCode: .accepted)
+        }
+        let port = try await startServerWithPort(server)
+
+        let socket = try await AsyncSocket.connected(to: .inet(ip4: "127.0.0.1", port: port))
+        try await socket.writeRequest(.make())
+        #expect(
+            try await socket.readResponse().statusCode == .accepted
+        )
+
+        let connection = try #require(await server.connections.first)
+        #expect(try connection.socket.socket.getValue(for: .tcpNoDelay))
+        try? await socket.close()
+    }
+
     #if !canImport(WinSDK)
     // FIXME: This test fails non-deterministically on Windows
     @Test

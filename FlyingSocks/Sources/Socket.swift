@@ -605,6 +605,11 @@ public extension SocketOption where Self == BoolSocketOption {
         BoolSocketOption(level: Socket.ipproto_ipv6, name: Socket.ipv6_recvpktinfo)
     }
 
+    /// Sends small writes at once rather than waiting to coalesce them (Nagle's algorithm); TCP only.
+    static var tcpNoDelay: Self {
+        BoolSocketOption(level: Socket.ipproto_tcp, name: Socket.tcp_nodelay)
+    }
+
     #if canImport(WinSDK)
     static var exclusiveLocalAddressReuse: Self {
         BoolSocketOption(name: ~SO_REUSEADDR) // SO_EXCLUSIVEADDRUSE macro

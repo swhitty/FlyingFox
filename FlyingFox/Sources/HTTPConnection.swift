@@ -35,7 +35,7 @@ import Foundation
 struct HTTPConnection: Sendable {
 
     let hostname: String
-    private let socket: AsyncSocket
+    let socket: AsyncSocket
     private let bytes: AsyncBufferingSequence<AsyncSocketReadSequence>
     private let decoder: HTTPDecoder
     private let logger: any Logging

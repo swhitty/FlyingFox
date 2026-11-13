@@ -224,7 +224,19 @@ public final actor HTTPServer {
     }
 
     private func makeConnection(socket: AsyncSocket) -> HTTPConnection {
-        HTTPConnection(
+        // A response or WebSocket frame written in more than one piece would otherwise wait
+        // for the client's delayed ACK (Nagle's algorithm), commonly 40 ms.
+        switch Int32(config.address.family) {
+        case AF_INET, AF_INET6:
+            do {
+                try socket.socket.setValue(true, for: .tcpNoDelay)
+            } catch {
+                logger.logWarning("failed to set TCP_NODELAY: \(error)")
+            }
+        default:
+            break
+        }
+        return HTTPConnection(
             socket: socket,
             decoder: HTTPDecoder(sharedRequestBufferSize: config.sharedRequestBufferSize, sharedRequestReplaySize: config.sharedRequestReplaySize),
             logger: config.logger,
