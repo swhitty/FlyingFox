@@ -66,20 +66,26 @@ public struct MessageFrameWSHandler: WSHandler {
 
     private let handler: any WSMessageHandler
     private let frameSize: Int
+    private let capacity: Int
 
     public init(handler: some WSMessageHandler, frameSize: Int = 16384) {
+        self.init(handler: handler, frameSize: frameSize, capacity: 16)
+    }
+
+    init(handler: some WSMessageHandler, frameSize: Int, capacity: Int) {
         self.handler = handler
         self.frameSize = frameSize
+        self.capacity = capacity
     }
 
     public func makeFrames(for client: AsyncThrowingStream<WSFrame, any Error>) async throws -> AsyncStream<WSFrame> {
         let framesIn = WSFrameValidator.validateFrames(from: client)
 
-        // Neither handoff buffers: a client frame is read only when the handler
-        // takes the previous message, and a message is taken from the handler
-        // only when the connection is ready to write the previous frame.
-        let messagesIn = AsyncHandoff<WSMessage>()
-        let framesOut = AsyncHandoff<WSFrame>()
+        // Each handoff holds up to `capacity` elements: client frames are read
+        // while fewer messages than that wait for the handler, and messages are
+        // read from the handler while fewer frames wait for the connection.
+        let messagesIn = AsyncHandoff<WSMessage>(capacity: capacity)
+        let framesOut = AsyncHandoff<WSFrame>(capacity: capacity)
 
         // messagesIn is never finished with an error.
         let messagesOut = try await handler.makeMessages(for: AsyncStream { try? await messagesIn.next() })
@@ -135,11 +141,13 @@ public struct MessageFrameWSHandler: WSHandler {
                     // send throws only when cancelled or once framesOut has finished.
                 }
             }
+            // The connection ends with either loop, even while the other waits
+            // on a handler that does not respond to cancellation.
             await group.next()
+            await messagesIn.finish()
+            await framesOut.finish()
             group.cancelAll()
         }
-        await messagesIn.finish()
-        await framesOut.finish()
     }
 
     func makeMessage(for frame: WSFrame) throws -> WSMessage? {

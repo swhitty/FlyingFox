@@ -115,7 +115,6 @@ struct WSHandlerTests {
         let handler = MessageFrameWSHandler.make(handler: messages)
 
         let frames = try await handler.makeFrames(for: [.fish, .ping, .pong, .chips, .close])
-        let collected = Task { try await frames.collectAll() }
 
         #expect(
             try await messages.input.takeNext() == .text("Fish")
@@ -126,7 +125,51 @@ struct WSHandlerTests {
         )
 
         #expect(
-            try await collected.value == [.pong, .close]
+            try await frames.collectAll() == [.pong, .close]
+        )
+    }
+
+    @Test
+    func ping_IsAnswered_WhileHandlerIgnoresItsInput() async throws {
+        let messages = Messages()
+        let handler = MessageFrameWSHandler.make(handler: messages)
+        let (clientFrames, clientContinuation) = AsyncThrowingStream<WSFrame, any Error>.makeStream()
+        defer { clientContinuation.finish() }
+
+        let frames = try await handler.makeFrames(for: clientFrames)
+        clientContinuation.yield(.fish)
+        clientContinuation.yield(.chips)
+        clientContinuation.yield(.ping)
+
+        var iterator = frames.makeAsyncIterator()
+        #expect(
+            try await iterator.next() == .pong
+        )
+    }
+
+    @Test
+    func close_IsEchoed_WhileHandlerIgnoresItsInput() async throws {
+        let handler = MessageFrameWSHandler.make()
+        let frames = try await handler.makeFrames(for: [.fish, .chips, .close])
+
+        #expect(
+            try await frames.collectAll() == [.close]
+        )
+    }
+
+    @Test
+    func frames_End_WhenClientEnds_WhileHandlerIgnoresCancellation() async throws {
+        let gate = Gate()
+        defer { gate.open() }
+        let handler = MessageFrameWSHandler.make(handler: UnfoldingMessages {
+            await gate.wait()
+            return nil
+        })
+
+        let frames = try await handler.makeFrames(for: [.fish])
+
+        #expect(
+            try await frames.collectAll() == []
         )
     }
 
@@ -146,10 +189,10 @@ struct WSHandlerTests {
     }
 
     @Test
-    func clientFrames_AreRead_OnlyAsMessagesAreTaken() async throws {
+    func clientFrames_AreRead_OnlyAsMessagesAreReceived() async throws {
         let read = Mutex(0)
         let messages = Messages()
-        let handler = MessageFrameWSHandler.make(handler: messages)
+        let handler = MessageFrameWSHandler.make(handler: messages, capacity: 2)
 
         let frames = try await handler.makeFrames(for: AsyncThrowingStream {
             read.withLock { $0 += 1 }
@@ -159,18 +202,19 @@ struct WSHandlerTests {
         #expect(
             try await messages.input.takeNext() == .text("Fish")
         )
-        // The frame taken has been read, and at most one more waits to be taken.
-        #expect(read.withLock { $0 } <= 2)
+        try await Task.sleep(seconds: 0.05)
+        // Besides the message received, 2 wait in the buffer and 1 waits for space.
+        #expect(read.withLock { $0 } <= 4)
         withExtendedLifetime(frames) { }
     }
 
     @Test
-    func messagesOut_ArePulled_OnlyAsFramesAreTaken() async throws {
+    func messagesOut_ArePulled_OnlyAsFramesAreRead() async throws {
         let pulled = Mutex(0)
         let handler = MessageFrameWSHandler.make(handler: UnfoldingMessages {
             pulled.withLock { $0 += 1 }
             return .text("Hello")
-        })
+        }, capacity: 2)
         let (clientFrames, clientContinuation) = AsyncThrowingStream<WSFrame, any Error>.makeStream()
         defer { clientContinuation.finish() }
 
@@ -180,8 +224,9 @@ struct WSHandlerTests {
         #expect(
             try await iterator.next() == .make(fin: true, opcode: .text, payload: "Hello".data(using: .utf8)!)
         )
-        // The message taken has been pulled, and at most one more waits to be taken.
-        #expect(pulled.withLock { $0 } <= 2)
+        try await Task.sleep(seconds: 0.05)
+        // Besides the frame received, 2 wait in the buffer and 1 waits for space.
+        #expect(pulled.withLock { $0 } <= 4)
     }
 
     @Test
@@ -198,7 +243,9 @@ struct WSHandlerTests {
     func messagesOut_Ends_WhenCloseMessageIsSent() async throws {
         let messages = Messages()
         let handler = MessageFrameWSHandler.make(handler: messages)
-        let frames = try await handler.makeFrames(for: [])
+        let (clientFrames, clientContinuation) = AsyncThrowingStream<WSFrame, any Error>.makeStream()
+        defer { clientContinuation.finish() }
+        let frames = try await handler.makeFrames(for: clientFrames)
 
         messages.output.yield(.close(.normalClosure))
 
@@ -232,9 +279,11 @@ struct WSHandlerTests {
 extension MessageFrameWSHandler {
 
     static func make(handler: some WSMessageHandler = Messages(),
-                     frameSize: Int = 1024) -> Self {
+                     frameSize: Int = 1024,
+                     capacity: Int = 16) -> Self {
         MessageFrameWSHandler(handler: handler,
-                              frameSize: frameSize)
+                              frameSize: frameSize,
+                              capacity: capacity)
     }
 
     func makeFrames(for frames: [WSFrame]) async throws -> AsyncStream<WSFrame> {
@@ -243,13 +292,38 @@ extension MessageFrameWSHandler {
 }
 
 // Produces each outgoing message when asked for it, as a handler that must
-// wait for a message to be taken before producing the next one would.
+// wait for a message to be sent before producing the next one would.
 private struct UnfoldingMessages: WSMessageHandler {
 
     let next: @Sendable () async -> WSMessage?
 
     func makeMessages(for client: AsyncStream<WSMessage>) async throws -> AsyncStream<WSMessage> {
         AsyncStream(unfolding: next)
+    }
+}
+
+// Suspends its waiters, ignoring cancellation, until it is opened.
+private final class Gate: Sendable {
+
+    private let state = Mutex((isOpen: false, waiters: [CheckedContinuation<Void, Never>]()))
+
+    func wait() async {
+        await withCheckedContinuation { continuation in
+            let isOpen = state.withLock {
+                if !$0.isOpen { $0.waiters.append(continuation) }
+                return $0.isOpen
+            }
+            if isOpen { continuation.resume() }
+        }
+    }
+
+    func open() {
+        let waiters = state.withLock {
+            $0.isOpen = true
+            defer { $0.waiters = [] }
+            return $0.waiters
+        }
+        for waiter in waiters { waiter.resume() }
     }
 }
 
