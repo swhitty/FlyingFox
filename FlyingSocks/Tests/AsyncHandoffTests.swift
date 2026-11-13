@@ -137,4 +137,71 @@ struct AsyncHandoffTests {
 
         #expect(try await receiver.value == nil)
     }
+
+    @Test
+    func send_DoesNotSuspend_WhileBufferHasSpace() async throws {
+        let handoff = AsyncHandoff<Int>(capacity: 2)
+        try await handoff.send(1)
+        try await handoff.send(2)
+
+        let sent = Mutex(false)
+        let sender = Task {
+            try await handoff.send(3)
+            sent.withLock { $0 = true }
+        }
+
+        #expect(try await handoff.next() == 1)
+        try await sender.value
+        #expect(sent.withLock { $0 })
+        #expect(try await handoff.next() == 2)
+        #expect(try await handoff.next() == 3)
+    }
+
+    @Test
+    func send_Suspends_WhileBufferIsFull() async throws {
+        let handoff = AsyncHandoff<Int>(capacity: 1)
+        let sent = Mutex([Int]())
+        let sender = Task {
+            for element in 1...3 {
+                try await handoff.send(element)
+                sent.withLock { $0.append(element) }
+            }
+        }
+
+        #expect(try await handoff.next() == 1)
+        // 2 may be buffered, but 3 waits until 2 is received.
+        #expect(sent.withLock { !$0.contains(3) })
+        #expect(try await handoff.next() == 2)
+        #expect(try await handoff.next() == 3)
+        try await sender.value
+        #expect(sent.withLock { $0 } == [1, 2, 3])
+    }
+
+    @Test
+    func finish_DeliversBufferedElements_BeforeFinalElement() async throws {
+        let handoff = AsyncHandoff<String>(capacity: 2)
+        try await handoff.send("Fish")
+        try await handoff.send("Chips")
+        await handoff.finish(with: .success("Peas"))
+
+        #expect(try await handoff.next() == "Fish")
+        #expect(try await handoff.next() == "Chips")
+        #expect(try await handoff.next() == "Peas")
+        #expect(try await handoff.next() == nil)
+    }
+
+    @Test
+    func send_ThrowsCancellationError_WhenSenderIsCancelled_WhileBufferIsFull() async throws {
+        let handoff = AsyncHandoff<String>(capacity: 1)
+        try await handoff.send("Fish")
+        let sender = Task { try await handoff.send("Chips") }
+        sender.cancel()
+
+        await #expect(throws: CancellationError.self) {
+            try await sender.value
+        }
+        await handoff.finish()
+        #expect(try await handoff.next() == "Fish")
+        #expect(try await handoff.next() == nil)
+    }
 }
