@@ -29,22 +29,28 @@
 //  SOFTWARE.
 //
 
-/// Passes elements from one task to another, one at a time. `send(_:)` suspends
-/// until `next()` returns the element, so a sender gets no further ahead than its
-/// receiver and nothing is buffered between them.
+/// Passes elements from one task to another in order, holding at most `capacity`
+/// of them. `send(_:)` suspends while the buffer is full, so a sender gets no
+/// further ahead than `capacity` elements of its receiver. With a capacity of 0,
+/// `send(_:)` suspends until `next()` returns the element and nothing is buffered.
 package actor AsyncHandoff<Element: Sendable> {
 
     private typealias Sender = (element: Element, continuation: IdentifiableContinuation<Void, any Error>)
     private typealias Receiver = IdentifiableContinuation<Element?, any Error>
 
+    private let capacity: Int
+    private var buffer = [Element]()
     private var senders = [Sender]()
     private var receivers = [Receiver]()
     private var isFinished = false
     private var result: Result<Element?, any Error> = .success(nil)
 
-    package init() { }
+    package init(capacity: Int = 0) {
+        precondition(capacity >= 0, "capacity must not be negative")
+        self.capacity = capacity
+    }
 
-    /// Hands `element` to the receiver, suspending until it is received.
+    /// Hands `element` to the receiver, suspending until it is received or buffered.
     /// Throws `AsyncHandoffFinishedError` if the handoff is finished before then,
     /// or `CancellationError` if the sending task is cancelled.
     package func send(_ element: Element) async throws {
@@ -55,6 +61,10 @@ package actor AsyncHandoff<Element: Sendable> {
             receivers.removeFirst().resume(returning: element)
             return
         }
+        if buffer.count < capacity {
+            buffer.append(element)
+            return
+        }
         try await withIdentifiableThrowingContinuation(isolation: self) {
             senders.append((element, $0))
         } onCancel: { id in
@@ -63,8 +73,14 @@ package actor AsyncHandoff<Element: Sendable> {
     }
 
     /// Returns the next element, suspending until one is sent. Once finished,
-    /// returns the final element or error, then nil. Returns nil if cancelled.
+    /// returns the buffered elements, the final element or error, then nil.
+    /// Returns nil if cancelled.
     package func next() async throws -> Element? {
+        if !buffer.isEmpty {
+            let element = buffer.removeFirst()
+            admitSender()
+            return element
+        }
         if !senders.isEmpty {
             let sender = senders.removeFirst()
             sender.continuation.resume()
@@ -81,8 +97,8 @@ package actor AsyncHandoff<Element: Sendable> {
         }
     }
 
-    /// Ends the handoff. The receiver gets `result`, a last element or an error,
-    /// before nil; senders still waiting throw `AsyncHandoffFinishedError`.
+    /// Ends the handoff. The receiver gets the buffered elements and `result`, a last
+    /// element or an error, before nil; senders still waiting throw `AsyncHandoffFinishedError`.
     package func finish(with result: Result<Element?, any Error> = .success(nil)) {
         guard !isFinished else { return }
         isFinished = true
@@ -103,6 +119,14 @@ package actor AsyncHandoff<Element: Sendable> {
 
     package func finish(throwing error: any Error) {
         finish(with: .failure(error))
+    }
+
+    // Buffers the first waiting sender's element in the space just freed.
+    private func admitSender() {
+        guard !senders.isEmpty else { return }
+        let sender = senders.removeFirst()
+        buffer.append(sender.element)
+        sender.continuation.resume()
     }
 
     private func cancelSender(id: IdentifiableContinuation<Void, any Error>.ID) {
