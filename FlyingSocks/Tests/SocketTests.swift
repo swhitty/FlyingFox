@@ -189,6 +189,17 @@ struct SocketTests {
     }
 
     @Test
+    func socket_Sets_And_Gets_TCPNoDelayOption() throws {
+        let socket = try Socket(domain: AF_INET, type: .stream)
+
+        try socket.setValue(true, for: .tcpNoDelay)
+        #expect(try socket.getValue(for: .tcpNoDelay))
+
+        try socket.setValue(false, for: .tcpNoDelay)
+        #expect(try socket.getValue(for: .tcpNoDelay) == false)
+    }
+
+    @Test
     func socket_Sets_And_Gets_BoolOption() throws {
         let socket = try Socket(domain: AF_UNIX, type: .stream)
 

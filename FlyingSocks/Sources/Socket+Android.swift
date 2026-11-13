@@ -53,6 +53,8 @@ extension Socket {
     static let in_addr_any = Android.in_addr(s_addr: Android.in_addr_t(0))
     static let ipproto_ip = Int32(IPPROTO_IP)
     static let ipproto_ipv6 = Int32(IPPROTO_IPV6)
+    static let ipproto_tcp = Int32(IPPROTO_TCP)
+    static let tcp_nodelay = Int32(TCP_NODELAY)
     static let ip_pktinfo = Int32(IP_PKTINFO)
     static let ipv6_pktinfo = Int32(IPV6_PKTINFO)
     static let ipv6_recvpktinfo = Int32(IPV6_RECVPKTINFO)
