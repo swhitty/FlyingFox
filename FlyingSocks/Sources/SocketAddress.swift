@@ -63,6 +63,16 @@ extension SocketAddress {
         withSockAddr { addr, _ in addr.pointee.sa_family }
     }
 
+    /// `true` for IPv4 and IPv6 addresses.
+    package var isIP: Bool {
+        switch Int32(family) {
+        case AF_INET, AF_INET6:
+            return true
+        default:
+            return false
+        }
+    }
+
     public func makeStorage() -> sockaddr_storage {
         var storage = sockaddr_storage()
 

@@ -38,10 +38,13 @@ import WinSDK.WinSock2
 public final actor HTTPServer {
 
     private let config: Configuration
+    /// Accepted connections share the listening address's family, so this is fixed for the server's lifetime.
+    private let isTCP: Bool
     private var handlers: RoutedHTTPHandler
 
     init(config: Configuration, handler: RoutedHTTPHandler) {
         self.config = config
+        self.isTCP = config.address.isIP
         self.handlers = Self.makeRootHandler(to: handler)
     }
 
@@ -60,6 +63,7 @@ public final actor HTTPServer {
             pool: pool,
             logger: logger
         )
+        self.isTCP = address.isIP
         self.handlers = Self.makeRootHandler(to: handler)
     }
 
@@ -224,24 +228,26 @@ public final actor HTTPServer {
     }
 
     private func makeConnection(socket: AsyncSocket) -> HTTPConnection {
-        // A response or WebSocket frame written in more than one piece would otherwise wait
-        // for the client's delayed ACK (Nagle's algorithm), commonly 40 ms.
-        switch Int32(config.address.family) {
-        case AF_INET, AF_INET6:
-            do {
-                try socket.socket.setValue(true, for: .tcpNoDelay)
-            } catch {
-                logger.logWarning("failed to set TCP_NODELAY: \(error)")
-            }
-        default:
-            break
-        }
+        configureAcceptedSocket(socket.socket)
         return HTTPConnection(
             socket: socket,
             decoder: HTTPDecoder(sharedRequestBufferSize: config.sharedRequestBufferSize, sharedRequestReplaySize: config.sharedRequestReplaySize),
             logger: config.logger,
             webSocketMaxFrameSize: config.webSocketMaxFrameSize
         )
+    }
+
+    /// Applies options to the socket of each accepted connection.
+    private func configureAcceptedSocket(_ socket: Socket) {
+        if isTCP {
+            // A response or WebSocket frame written in more than one piece would otherwise wait
+            // for the client's delayed ACK (Nagle's algorithm), commonly 40 ms.
+            do {
+                try socket.setValue(true, for: .tcpNoDelay)
+            } catch {
+                logger.logWarning("failed to set TCP_NODELAY: \(error)")
+            }
+        }
     }
 
     private(set) var connections: Set<HTTPConnection> = []
