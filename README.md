@@ -184,7 +184,7 @@ enum WSMessage {
 }
 ```
 
-Nothing is buffered between the streams and the connection: a frame is read from the client only when the handler takes the previous message, and a message is taken from the handler's stream only when the connection is ready to write the previous one. A handler that produces its messages on demand, for example with `AsyncStream(unfolding:)`, is therefore paced by the client.
+At most 16 messages from the client wait for the handler, and at most 16 frames wait to be written to the client. Beyond that, frames are not read from the client until the handler catches up, and no more messages are read from the handler's stream until the client does, so a slow handler or client holds the connection back instead of queueing without limit. Pings are answered while fewer messages wait; a handler that does not need the client's messages should still read and discard them. A handler that produces its messages on demand, for example with `AsyncStream(unfolding:onCancel:)`, is paced by the client, and should return when the connection ends and cancels it.
 
 Raw WebSocket frames can also be [provided](#websockets).
 
