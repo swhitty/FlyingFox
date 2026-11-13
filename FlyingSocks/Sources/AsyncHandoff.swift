@@ -29,12 +29,10 @@
 //  SOFTWARE.
 //
 
-import FlyingSocks
-
 /// Passes elements from one task to another, one at a time. `send(_:)` suspends
-/// until `next()` takes the element, so a sender gets no further ahead than its
+/// until `next()` returns the element, so a sender gets no further ahead than its
 /// receiver and nothing is buffered between them.
-actor AsyncHandoff<Element: Sendable> {
+package actor AsyncHandoff<Element: Sendable> {
 
     private typealias Sender = (element: Element, continuation: IdentifiableContinuation<Void, any Error>)
     private typealias Receiver = IdentifiableContinuation<Element?, any Error>
@@ -44,11 +42,14 @@ actor AsyncHandoff<Element: Sendable> {
     private var isFinished = false
     private var result: Result<Element?, any Error> = .success(nil)
 
-    /// Hands `element` to the receiver, suspending until it is taken.
-    /// Throws `CancellationError` if cancelled or finished before then.
-    func send(_ element: Element) async throws {
+    package init() { }
+
+    /// Hands `element` to the receiver, suspending until it is received.
+    /// Throws `AsyncHandoffFinishedError` if the handoff is finished before then,
+    /// or `CancellationError` if the sending task is cancelled.
+    package func send(_ element: Element) async throws {
         guard !isFinished else {
-            throw CancellationError()
+            throw AsyncHandoffFinishedError()
         }
         if !receivers.isEmpty {
             receivers.removeFirst().resume(returning: element)
@@ -61,9 +62,9 @@ actor AsyncHandoff<Element: Sendable> {
         }
     }
 
-    /// Takes the next element, suspending until one is sent. Once finished,
+    /// Returns the next element, suspending until one is sent. Once finished,
     /// returns the final element or error, then nil. Returns nil if cancelled.
-    func next() async throws -> Element? {
+    package func next() async throws -> Element? {
         if !senders.isEmpty {
             let sender = senders.removeFirst()
             sender.continuation.resume()
@@ -81,13 +82,13 @@ actor AsyncHandoff<Element: Sendable> {
     }
 
     /// Ends the handoff. The receiver gets `result`, a last element or an error,
-    /// before nil; senders still waiting are cancelled.
-    func finish(with result: Result<Element?, any Error> = .success(nil)) {
+    /// before nil; senders still waiting throw `AsyncHandoffFinishedError`.
+    package func finish(with result: Result<Element?, any Error> = .success(nil)) {
         guard !isFinished else { return }
         isFinished = true
         self.result = result
         for sender in senders {
-            sender.continuation.resume(throwing: CancellationError())
+            sender.continuation.resume(throwing: AsyncHandoffFinishedError())
         }
         senders = []
         if !receivers.isEmpty {
@@ -100,7 +101,7 @@ actor AsyncHandoff<Element: Sendable> {
         receivers = []
     }
 
-    func finish(throwing error: any Error) {
+    package func finish(throwing error: any Error) {
         finish(with: .failure(error))
     }
 
@@ -113,4 +114,10 @@ actor AsyncHandoff<Element: Sendable> {
         guard let index = receivers.firstIndex(where: { $0.id == id }) else { return }
         receivers.remove(at: index).resume(returning: nil)
     }
+}
+
+/// Thrown by `AsyncHandoff.send(_:)` once the handoff is finished, so that a
+/// sender can tell the receiver ending apart from its own cancellation.
+package struct AsyncHandoffFinishedError: Error, Equatable {
+    package init() { }
 }

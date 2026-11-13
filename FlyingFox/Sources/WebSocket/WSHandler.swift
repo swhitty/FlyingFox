@@ -29,6 +29,7 @@
 //  SOFTWARE.
 //
 
+import FlyingSocks
 import Foundation
 
 public protocol WSHandler: Sendable {
@@ -115,7 +116,7 @@ public struct MessageFrameWSHandler: WSHandler {
                     try? await framesOut.send(frame)
                     await framesOut.finish()
                     await messagesIn.finish(with: Result { try makeMessage(for: frame) })
-                } catch is CancellationError {
+                } catch is CancellationError, is AsyncHandoffFinishedError {
                 } catch {
                     await framesOut.finish(throwing: error)
                 }
@@ -131,7 +132,7 @@ public struct MessageFrameWSHandler: WSHandler {
                         }
                     }
                 } catch {
-                    // send throws only once framesOut has finished.
+                    // send throws only when cancelled or once framesOut has finished.
                 }
             }
             await group.next()
