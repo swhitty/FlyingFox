@@ -29,15 +29,14 @@
 //  SOFTWARE.
 //
 
-@testable import FlyingFox
-@testable import FlyingSocks
+import FlyingSocks
 import Foundation
 import Testing
 
 struct AsyncHandoffTests {
 
     @Test
-    func send_Suspends_UntilElementIsTaken() async throws {
+    func send_Suspends_UntilElementIsReceived() async throws {
         let handoff = AsyncHandoff<Int>()
         let sent = Mutex([Int]())
         let sender = Task {
@@ -48,7 +47,7 @@ struct AsyncHandoffTests {
         }
 
         #expect(try await handoff.next() == 1)
-        // The second send cannot complete until the receiver takes it.
+        // The second send cannot complete until the receiver has it.
         #expect(sent.withLock { !$0.contains(2) })
         #expect(try await handoff.next() == 2)
         #expect(try await handoff.next() == 3)
@@ -95,15 +94,25 @@ struct AsyncHandoffTests {
     }
 
     @Test
-    func finish_CancelsWaitingSenders() async throws {
+    func finish_EndsWaitingSenders() async throws {
         let handoff = AsyncHandoff<String>()
         let sender = Task { try await handoff.send("Fish") }
         await handoff.finish()
 
-        await #expect(throws: CancellationError.self) {
+        await #expect(throws: AsyncHandoffFinishedError.self) {
             try await sender.value
         }
         #expect(try await handoff.next() == nil)
+    }
+
+    @Test
+    func send_ThrowsFinishedError_WhenFinished() async throws {
+        let handoff = AsyncHandoff<String>()
+        await handoff.finish()
+
+        await #expect(throws: AsyncHandoffFinishedError.self) {
+            try await handoff.send("Fish")
+        }
     }
 
     @Test
