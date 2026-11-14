@@ -45,6 +45,58 @@ struct kQueueTests {
     }
 
     @Test
+    func stop_WakesWaitingNotifications() async throws {
+        var queue = try kQueue.make()
+        defer { try? queue.close() }
+        let (s1, s2) = try Socket.makeNonBlockingPair()
+        defer {
+            try? s1.close()
+            try? s2.close()
+        }
+        try queue.addEvents([.read], for: s1.file)
+
+        // stop a copy sharing the descriptor once the wait below is under way
+        let stopping = Transferring(queue)
+        DispatchQueue.global().asyncAfter(deadline: .now() + 0.1) {
+            var queue = stopping.value
+            try? queue.stop()
+        }
+
+        await #expect(throws: SocketError.disconnected) {
+            try await queue.getEvents()
+        }
+    }
+
+    @Test
+    func stop_WakesNotificationsStartedAfterwards() throws {
+        var queue = try kQueue.make()
+        defer { try? queue.close() }
+        // a copy taken before stop, like a wait queued but not yet started
+        let pending = queue
+        try queue.stop()
+
+        #expect(throws: SocketError.disconnected) {
+            try pending.getNotifications()
+        }
+        #expect(throws: SocketError.disconnected) {
+            try pending.getNotifications()
+        }
+    }
+
+    @Test
+    func stop_LeavesDescriptorOpen_UntilClosed() throws {
+        var queue = try kQueue.make()
+        let file = queue.file
+        try queue.stop()
+        #expect(fcntl(file.rawValue, F_GETFD) != -1)
+
+        // the closed descriptor can be reused at once by a test running in parallel,
+        // so only the queue's own state is checked
+        try queue.close()
+        #expect(queue.file == .invalid)
+    }
+
+    @Test
     func queueThrowsError_Closes() throws {
         #expect(throws: SocketError.self) {
             try kQueue.closeQueue(file: .validMock)
