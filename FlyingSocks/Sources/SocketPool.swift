@@ -145,15 +145,20 @@ public final actor SocketPool<Queue: EventQueue>: AsyncSocketPool {
     private func getNotifications() async throws -> [EventNotification] {
         try Task.checkCancellation()
         nonisolated(unsafe) let queue = queue
-        return try await withIdentifiableThrowingContinuation { continuation in
-            dispatchQueue.async {
-                let result = Result {
-                    try queue.getNotifications()
+        do {
+            return try await withIdentifiableThrowingContinuation { continuation in
+                dispatchQueue.async {
+                    let result = Result {
+                        try queue.getNotifications()
+                    }
+                    continuation.resume(with: result)
                 }
-                continuation.resume(with: result)
+            } onCancel: { _ in
+                Task { await self.stopQueue() }
             }
-        } onCancel: { _ in
-            Task { await self.stopQueue() }
+        } catch where Task.isCancelled {
+            // cancelling stops the queue, failing the wait with the queue's own error
+            throw CancellationError()
         }
     }
 
