@@ -184,7 +184,11 @@ enum WSMessage {
 }
 ```
 
-At most 16 messages from the client wait for the handler, and at most 16 frames wait to be written to the client. Beyond that, frames are not read from the client until the handler catches up, and no more messages are read from the handler's stream until the client does, so a slow handler or client holds the connection back instead of queueing without limit. Pings are answered while fewer messages wait; a handler that does not need the client's messages should still read and discard them. A handler that produces its messages on demand, for example with `AsyncStream(unfolding:onCancel:)`, is paced by the client, and should return when the connection ends and cancels it.
+By default at most 16 messages from the client wait for the handler, and at most 16 frames wait to be written to the client. Beyond that, frames are not read from the client until the handler catches up, and no more messages are read from the handler's stream until the client does, so a slow handler or client holds the connection back instead of queueing without limit. Pings are answered while fewer messages wait; a handler that does not need the client's messages should still read and discard them, or not keep the `client` stream at all. Once the task reading the stream is cancelled, or the stream is released, further messages from the client are dropped.
+
+The limit can be changed with `capacity`, for example `.webSocket(handler, capacity: 32)`. A larger capacity gives a bursty client more slack, but lets every connection hold more in memory: each waiting message can be as large as the server's `webSocketMaxFrameSize`.
+
+A handler that produces its messages on demand, for example with `AsyncStream(unfolding:onCancel:)`, is paced by the client, and should return when the connection ends and cancels it.
 
 Raw WebSocket frames can also be [provided](#websockets).
 

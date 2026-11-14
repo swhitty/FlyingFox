@@ -68,11 +68,18 @@ public struct MessageFrameWSHandler: WSHandler {
     private let frameSize: Int
     private let capacity: Int
 
-    public init(handler: some WSMessageHandler, frameSize: Int = 16384) {
-        self.init(handler: handler, frameSize: frameSize, capacity: 16)
-    }
-
-    init(handler: some WSMessageHandler, frameSize: Int, capacity: Int) {
+    /// - Parameters:
+    ///   - handler: Receives the client's messages and provides the messages sent to the client.
+    ///   - frameSize: The largest payload of a frame sent to the client. Longer messages are split into continuation frames.
+    ///   - capacity: How many client messages may wait for the handler, and how many frames may wait to be written
+    ///     to the client. Past that, no more frames are read from the client until the handler catches up, and no
+    ///     more messages are read from the handler until the client does. Pings and closes from the client are only
+    ///     answered while frames are being read, so a handler that does not need the client's messages should still
+    ///     read and discard them, or not keep its input stream at all. Once the task reading the stream is cancelled,
+    ///     or the stream is released, later client messages are dropped. Each waiting message can be as large as the
+    ///     server's `webSocketMaxFrameSize`.
+    public init(handler: some WSMessageHandler, frameSize: Int = 16384, capacity: Int = 16) {
+        precondition(capacity >= 0, "capacity must not be negative")
         self.handler = handler
         self.frameSize = frameSize
         self.capacity = capacity
@@ -87,8 +94,14 @@ public struct MessageFrameWSHandler: WSHandler {
         let messagesIn = AsyncHandoff<WSMessage>(capacity: capacity)
         let framesOut = AsyncHandoff<WSFrame>(capacity: capacity)
 
-        // messagesIn is never finished with an error.
-        let messagesOut = try await handler.makeMessages(for: AsyncStream { try? await messagesIn.next() })
+        // Once the handler's input stream ends, is cancelled or is released,
+        // messagesIn is finished and later client messages are dropped, so
+        // frames are still read and pings and closes are still answered.
+        let input = HandlerInput(messagesIn)
+        let messagesOut = try await handler.makeMessages(for: AsyncStream {
+            // messagesIn is never finished with an error.
+            try? await input.messages.next()
+        })
         let task = Task {
             await start(framesIn: framesIn, framesOut: framesOut,
                         messagesIn: messagesIn, messagesOut: messagesOut)
@@ -111,21 +124,32 @@ public struct MessageFrameWSHandler: WSHandler {
                         if frame.opcode == .close {
                             throw FrameError.closed(frame)
                         } else if let message = try makeMessage(for: frame) {
-                            try await messagesIn.send(message)
+                            do {
+                                try await messagesIn.send(message)
+                            } catch is AsyncHandoffFinishedError {
+                                // The handler no longer reads its input.
+                            }
                         } else if let frame = try makeResponseFrames(for: frame) {
                             try await framesOut.send(frame)
                         }
                     }
                 } catch FrameError.closed(let frame) {
-                    // Echo the close and end the frames before telling the
-                    // handler, so the closing handshake does not wait on it.
+                    // RFC 6455 §5.5.1: an endpoint that receives a Close frame
+                    // sends one in response. Echo it and end the frames before
+                    // telling the handler, so the closing handshake does not wait on it.
                     try? await framesOut.send(frame)
                     await framesOut.finish()
-                    await messagesIn.finish(with: Result { try makeMessage(for: frame) })
+                    // WSFrameValidator has already checked the close payload, so
+                    // makeMessage does not throw here.
+                    await messagesIn.finish(with: .success(try? makeMessage(for: frame)))
+                    return
                 } catch is CancellationError, is AsyncHandoffFinishedError {
                 } catch {
                     await framesOut.finish(throwing: error)
                 }
+                // Only this loop ends the handler's input, so a close it is
+                // still delivering is not lost when the other loop ends first.
+                await messagesIn.finish()
             }
             group.addTask {
                 do {
@@ -142,9 +166,9 @@ public struct MessageFrameWSHandler: WSHandler {
                 }
             }
             // The connection ends with either loop, even while the other waits
-            // on a handler that does not respond to cancellation.
+            // on a handler that does not respond to cancellation. Cancelling
+            // the frame loop ends the handler's input.
             await group.next()
-            await messagesIn.finish()
             await framesOut.finish()
             group.cancelAll()
         }
@@ -218,6 +242,20 @@ extension MessageFrameWSHandler {
     enum FrameError: Error {
         case closed(WSFrame)
         case invalid(String)
+    }
+
+    // Held by the handler's input stream, which releases it when the stream
+    // ends, is cancelled or is no longer referenced.
+    private final class HandlerInput: Sendable {
+        let messages: AsyncHandoff<WSMessage>
+
+        init(_ messages: AsyncHandoff<WSMessage>) {
+            self.messages = messages
+        }
+
+        deinit {
+            Task { [messages] in await messages.finish() }
+        }
     }
 }
 
