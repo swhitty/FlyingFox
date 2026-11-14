@@ -182,12 +182,13 @@ struct SocketPoolTests {
         let task = Task { try await pool.run() }
 
         let socket = try Socket(domain: AF_UNIX, type: .stream)
+        defer { try? socket.close() }
         let suspension = Task {
             try await pool.suspendSocket(socket, untilReadyFor: .read)
         }
         defer { suspension.cancel() }
 
-        await pool.queue.waitUntilWaiting()
+        try await pool.queue.waitUntilWaiting()
         task.cancel()
 
         await #expect(throws: CancellationError.self) {
@@ -442,13 +443,20 @@ private extension SocketPool where Queue == MockEventQueue  {
     }
 }
 
-final class MockEventQueue: EventQueue, @unchecked Sendable {
+final class MockEventQueue: EventQueue, Sendable {
 
-    private var isWaiting: Bool = false
+    private let storage = Mutex(Storage())
     private let semaphore = DispatchSemaphore(value: 0)
-    private var result: Result<[EventNotification], any Error>?
 
-    private(set) var state: State?
+    private struct Storage {
+        var state: State?
+        var isWaiting = false
+        var result: Result<[EventNotification], any Error>?
+    }
+
+    var state: State? {
+        storage.withLock { $0.state }
+    }
 
     enum State {
         case open
@@ -457,23 +465,19 @@ final class MockEventQueue: EventQueue, @unchecked Sendable {
     }
 
     func sendResult(returning success: [EventNotification]) {
-        result = .success(success)
-        if isWaiting {
-            semaphore.signal()
-        }
+        deliver(.success(success))
     }
 
     func sendResult(throwing error: some Error) {
-        result = .failure(error)
-        if isWaiting {
-            semaphore.signal()
-        }
+        deliver(.failure(error))
     }
 
     /// Suspends until `getNotifications()` is blocked waiting for a result.
-    func waitUntilWaiting() async {
-        while !isWaiting {
-            await Task.yield()
+    func waitUntilWaiting(timeout: TimeInterval = 5) async throws {
+        let deadline = Date().addingTimeInterval(timeout)
+        while !storage.withLock({ $0.isWaiting }) {
+            guard Date() < deadline else { throw TimeoutError() }
+            try await Task.sleep(nanoseconds: 1_000_000)
         }
     }
 
@@ -486,39 +490,60 @@ final class MockEventQueue: EventQueue, @unchecked Sendable {
     }
 
     func open() throws {
-        guard (state == nil || state == .closed) else { throw InvalidStateError() }
-        state = .open
+        try storage.withLock {
+            guard ($0.state == nil || $0.state == .closed) else { throw InvalidStateError() }
+            $0.state = .open
+        }
     }
 
     func stop() throws {
-        guard state == .open else { throw InvalidStateError() }
-        state = .stopped
+        try storage.withLock {
+            guard $0.state == .open else { throw InvalidStateError() }
+            $0.state = .stopped
+        }
         // as kQueue and ePoll fail a stopped wait
-        result = .failure(SocketError.disconnected)
-        if isWaiting {
+        deliver(.failure(SocketError.disconnected))
+    }
+
+    func close() throws {
+        try storage.withLock {
+            guard $0.state == .stopped else { throw InvalidStateError() }
+            $0.state = .closed
+        }
+    }
+
+    func getNotifications() throws -> [EventNotification] {
+        let mustWait = storage.withLock {
+            guard $0.result == nil else { return false }
+            $0.isWaiting = true
+            return true
+        }
+        if mustWait {
+            semaphore.wait()
+        }
+        let result = storage.withLock {
+            defer { $0.result = nil }
+            return $0.result!
+        }
+        return try result.get()
+    }
+
+    // Stores the result, waking getNotifications() if it is blocked. Clearing isWaiting
+    // here means a waiter is only ever signalled once.
+    private func deliver(_ result: Result<[EventNotification], any Error>) {
+        let shouldSignal = storage.withLock {
+            $0.result = result
+            guard $0.isWaiting else { return false }
+            $0.isWaiting = false
+            return true
+        }
+        if shouldSignal {
             semaphore.signal()
         }
     }
 
-    func close() throws {
-        guard state == .stopped else { throw InvalidStateError() }
-        state = .closed
-    }
-
-    func getNotifications() throws -> [EventNotification] {
-        defer {
-            result = nil
-        }
-        if let result = result {
-            return try result.get()
-        } else {
-            isWaiting = true
-            semaphore.wait()
-            return try result!.get()
-        }
-    }
-
     private struct InvalidStateError: Error { }
+    private struct TimeoutError: Error { }
 }
 
 
