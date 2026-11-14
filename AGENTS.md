@@ -55,10 +55,9 @@ container run --rm --mount src="$(pwd)",target=/flyingfox,type=bind swift:6.4 \
 
 ### Known flaky tests
 
-- `HTTPServerTests.restarts_AfterStopped` sometimes gets `CancellationError`, or an EBADF from `Accept` or `kqueue add kevent`, instead of `.disconnected`. If `stop()` runs before the listener is waiting on `accept()`, the listener uses the closed socket. `stop()` also defaults to a timeout of 0, which cancels the server task at once. The test is sensitive to how quickly `waitUntilListening()` returns.
 - `WSFrameEncoderTests.webSocketConnectionToVI` connects to an external server (ws.vi-server.org) and can fail without network access.
 
-If one of these fails, run it on `main` before blaming your change.
+If it fails, run it on `main` before blaming your change.
 
 ## Concurrency primitives
 
