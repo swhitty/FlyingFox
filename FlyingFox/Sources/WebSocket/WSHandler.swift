@@ -29,6 +29,7 @@
 //  SOFTWARE.
 //
 
+import FlyingSocks
 import Foundation
 
 public protocol WSHandler: Sendable {
@@ -65,73 +66,86 @@ public struct MessageFrameWSHandler: WSHandler {
 
     private let handler: any WSMessageHandler
     private let frameSize: Int
+    private let capacity: Int
 
     public init(handler: some WSMessageHandler, frameSize: Int = 16384) {
+        self.init(handler: handler, frameSize: frameSize, capacity: 16)
+    }
+
+    init(handler: some WSMessageHandler, frameSize: Int, capacity: Int) {
         self.handler = handler
         self.frameSize = frameSize
+        self.capacity = capacity
     }
 
     public func makeFrames(for client: AsyncThrowingStream<WSFrame, any Error>) async throws -> AsyncStream<WSFrame> {
         let framesIn = WSFrameValidator.validateFrames(from: client)
 
-        var messagesIn: AsyncStream<WSMessage>.Continuation!
-        let messages = AsyncStream<WSMessage> {
-            messagesIn = $0
+        // Each handoff holds up to `capacity` elements: client frames are read
+        // while fewer messages than that wait for the handler, and messages are
+        // read from the handler while fewer frames wait for the connection.
+        let messagesIn = AsyncHandoff<WSMessage>(capacity: capacity)
+        let framesOut = AsyncHandoff<WSFrame>(capacity: capacity)
+
+        // messagesIn is never finished with an error.
+        let messagesOut = try await handler.makeMessages(for: AsyncStream { try? await messagesIn.next() })
+        let task = Task {
+            await start(framesIn: framesIn, framesOut: framesOut,
+                        messagesIn: messagesIn, messagesOut: messagesOut)
         }
 
-        let messagesOut = try await handler.makeMessages(for: messages)
-        let serverFrames = AsyncThrowingStream<WSFrame, any Error> { [messagesIn] continuation in
-            let task = Task {
-                await start(framesIn: framesIn, framesOut: continuation,
-                            messagesIn: messagesIn!, messagesOut: messagesOut)
-            }
-            continuation.onTermination = { @Sendable _ in task.cancel() }
-        }
-
-        return AsyncStream.protocolFrames(from: serverFrames)
+        let serverFrames = AsyncThrowingStream<WSFrame, any Error> { try await framesOut.next() }
+        return AsyncStream.protocolFrames(from: serverFrames, onTermination: { task.cancel() })
     }
 
     func start<S: AsyncSequence & Sendable>(
         framesIn: S,
-        framesOut: AsyncThrowingStream<WSFrame, any Error>.Continuation,
-        messagesIn: AsyncStream<WSMessage>.Continuation,
+        framesOut: AsyncHandoff<WSFrame>,
+        messagesIn: AsyncHandoff<WSMessage>,
         messagesOut: AsyncStream<WSMessage>
     ) async where S.Element == WSFrame {
-        defer {
-            messagesIn.finish()
-            framesOut.finish()
-        }
         await withTaskGroup(of: Void.self) { group in
             group.addTask {
                 do {
                     for try await frame in framesIn {
-                        if let message = try makeMessage(for: frame) {
-                            messagesIn.yield(message)
-                        } else if let frame = try makeResponseFrames(for: frame) {
-                            framesOut.yield(frame)
-                        }
                         if frame.opcode == .close {
                             throw FrameError.closed(frame)
+                        } else if let message = try makeMessage(for: frame) {
+                            try await messagesIn.send(message)
+                        } else if let frame = try makeResponseFrames(for: frame) {
+                            try await framesOut.send(frame)
                         }
                     }
                 } catch FrameError.closed(let frame) {
-                    framesOut.yield(frame)
-                } catch is CancellationError {
+                    // Echo the close and end the frames before telling the
+                    // handler, so the closing handshake does not wait on it.
+                    try? await framesOut.send(frame)
+                    await framesOut.finish()
+                    await messagesIn.finish(with: Result { try makeMessage(for: frame) })
+                } catch is CancellationError, is AsyncHandoffFinishedError {
                 } catch {
-                    framesOut.finish(throwing: error)
+                    await framesOut.finish(throwing: error)
                 }
             }
             group.addTask {
-                for await message in messagesOut {
-                    for frame in makeFrames(for: message) {
-                        framesOut.yield(frame)
-                        if frame.opcode == .close {
-                            return
+                do {
+                    for await message in messagesOut {
+                        for frame in makeFrames(for: message) {
+                            try await framesOut.send(frame)
+                            if frame.opcode == .close {
+                                return
+                            }
                         }
                     }
+                } catch {
+                    // send throws only when cancelled or once framesOut has finished.
                 }
             }
+            // The connection ends with either loop, even while the other waits
+            // on a handler that does not respond to cancellation.
             await group.next()
+            await messagesIn.finish()
+            await framesOut.finish()
             group.cancelAll()
         }
     }

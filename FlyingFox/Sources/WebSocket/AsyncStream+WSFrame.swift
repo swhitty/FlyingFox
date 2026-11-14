@@ -67,8 +67,14 @@ extension AsyncStream<WSFrame> {
     typealias SendableMetatype = Any
 #endif
 
-    static func protocolFrames<S: AsyncSequence & SendableMetatype>(from frames: S) -> Self where S.Element == WSFrame {
-        let iterator = Iterator(from: frames)
+    /// Converts an error from `frames` into a close frame that ends the stream.
+    /// `onTermination` runs when the stream ends, or when it is released without
+    /// being read to the end.
+    static func protocolFrames<S: AsyncSequence & SendableMetatype>(
+        from frames: S,
+        onTermination: (@Sendable () -> Void)? = nil
+    ) -> Self where S.Element == WSFrame {
+        let iterator = Iterator(from: frames, onTermination: onTermination)
         return AsyncStream<WSFrame> {
             do {
                 return try await iterator.next()
@@ -84,9 +90,15 @@ extension AsyncStream<WSFrame> {
 
     private final class Iterator<S: AsyncSequence>: @unchecked Sendable where S.Element == WSFrame {
         var iterator: S.AsyncIterator?
+        let onTermination: (@Sendable () -> Void)?
 
-        init(from frames: S){
+        init(from frames: S, onTermination: (@Sendable () -> Void)?) {
             self.iterator = frames.makeAsyncIterator()
+            self.onTermination = onTermination
+        }
+
+        deinit {
+            onTermination?()
         }
 
         func next() async throws -> WSFrame? {
