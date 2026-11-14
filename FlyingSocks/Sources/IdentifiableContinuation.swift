@@ -29,6 +29,10 @@
 //  SOFTWARE.
 //
 
+#if !canImport(Darwin) && compiler(>=6.1)
+import Synchronization  // Mutex is used from @inlinable code
+#endif
+
 /// Invokes the passed in closure with an `IdentifableContinuation` for the current task.
 ///
 /// The body of the closure executes synchronously on the calling actor. Once it returns the calling task is suspended.

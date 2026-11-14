@@ -10,13 +10,6 @@
 //  Distributed under the permissive MIT license.
 //
 
-private extension Transferring where Value: AsyncBufferedIteratorProtocol {
-    mutating func nextBuffer(suggested count: Int) async throws -> Transferring<Value.Buffer>? {
-        guard let buffer = try await value.nextBuffer(suggested: count) else { return nil }
-        return Transferring<Value.Buffer>(buffer)
-    }
-}
-
 /// AsyncBufferedSequence that adds a shared in-memory buffer over a base
 /// sequence. Bytes pulled from the base by one iterator remain available to
 /// subsequent iterators on the same wrapper — required when a consumer
@@ -70,13 +63,13 @@ extension AsyncBufferingSequence {
     /// between iterators.
     final actor Storage {
 
-        private var iterator: Base.AsyncIterator?    // nil after EOF (or transiently during refill)
+        private var iterator: Disconnected<Base.AsyncIterator>?    // nil after EOF (or transiently during refill)
         private var buffer: [Element] = []
         private var consumed: Int = 0
         private let suggestedBufferSize: Int
 
         init(base: Base, suggestedBufferSize: Int) {
-            self.iterator = base.makeAsyncIterator()
+            self.iterator = Disconnected(base.makeAsyncIterator())
             self.suggestedBufferSize = suggestedBufferSize
         }
 
@@ -104,26 +97,23 @@ extension AsyncBufferingSequence {
         }
 
         // Returns true when bytes were pulled into the buffer, false at EOF.
-        // Wraps the iterator in `Transferring` to call a mutating async on a
-        // value-type iterator without tripping actor-isolation/sendability.
-        // Same idiom as AsyncSharedReplaySequence.requestNextChunk.
+        // The iterator is stored `Disconnected` so it can be taken out of the actor
+        // and its mutating async `nextBuffer` called away from the actor's isolation.
         private func refill(suggested count: Int) async throws -> Bool {
-            guard let iter = iterator else { return false }
-            iterator = nil
-            var transferring = Transferring(iter)
-            let chunk: Base.AsyncIterator.Buffer?
+            guard let stored = iterator.take() else { return false }
+            var iter = stored.consume()
+            let chunk: [Element]?
             do {
-                chunk = try await transferring.nextBuffer(suggested: count)?.value
+                chunk = try await iter.nextElements(suggested: count)
             } catch {
-                iterator = transferring.value
+                iterator = Disconnected(iter)
                 throw error
             }
-            iterator = transferring.value
             guard let chunk, !chunk.isEmpty else {
-                iterator = nil   // EOF
-                return false
+                return false   // EOF, iterator stays nil
             }
-            buffer = Array(chunk)
+            iterator = Disconnected(iter)
+            buffer = chunk
             consumed = 0
             return true
         }

@@ -44,6 +44,17 @@ public protocol AsyncBufferedIteratorProtocol<Element>: AsyncIteratorProtocol {
     mutating func nextBuffer(suggested count: Int) async throws -> Buffer?
 }
 
+extension AsyncBufferedIteratorProtocol where Element: Sendable {
+
+    /// `nextBuffer(suggested:)` with the elements copied into an Array, which is Sendable,
+    /// so an actor can receive it from the nonisolated call. Swift 6.0 rejects a
+    /// non-Sendable `Buffer` crossing into an actor, and it can't be wrapped in
+    /// `Disconnected` because it shares the iterator's region.
+    mutating func nextElements(suggested count: Int) async throws -> [Element]? {
+        try await nextBuffer(suggested: count).map(Array.init)
+    }
+}
+
 public extension AsyncBufferedIteratorProtocol {
 
     /// Retrieves n elements from sequence in a single array.

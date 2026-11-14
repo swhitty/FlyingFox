@@ -37,8 +37,13 @@ extension HTTPServer {
     public var isListening: Bool { state != nil }
 
     public func waitUntilListening(timeout: TimeInterval = 5) async throws {
-        try await withThrowingTimeout(seconds: timeout) {
-            try await self.doWaitUntilListening()
+        do {
+            try await withDeadline(in: timeout) {
+                try await self.doWaitUntilListening()
+            }
+        } catch is CancellationError where !Task.isCancelled {
+            // the deadline expired before the server started listening
+            throw SocketError.makeTaskTimeout(seconds: timeout)
         }
     }
 

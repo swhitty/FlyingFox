@@ -53,8 +53,8 @@ struct TaskTimeoutTests {
             try await Task.sleep(seconds: 10)
         }
 
-        // then
-        await #expect(throws: SocketError.makeTaskTimeout(seconds: 0.01)) {
+        // then the operation is cancelled
+        await #expect(throws: CancellationError.self) {
             _ = try await task.value
         }
     }
@@ -109,7 +109,7 @@ struct TaskTimeoutTests {
             try await Task.sleep(seconds: 10)
         }
 
-        await #expect(throws: SocketError.makeTaskTimeout(seconds: 0.1)) {
+        await #expect(throws: CancellationError.self) {
             try await task.getValue(cancelling: .afterTimeout(seconds: 0.1))
         }
     }
@@ -143,7 +143,7 @@ struct TaskTimeoutTests {
 
     @Test @MainActor
     func mainActor_ReturnsValue() async throws {
-        let val = try await withThrowingTimeout(seconds: 1) {
+        let val = try await withDeadline(in: 1) {
             MainActor.assertIsolated()
             try await Task.sleep(nanoseconds: 1_000)
             MainActor.assertIsolated()
@@ -154,8 +154,8 @@ struct TaskTimeoutTests {
 
     @Test
     func mainActorThrowsError_WhenTimeoutExpires() async {
-        await #expect(throws: SocketError.makeTaskTimeout(seconds: 0.05)) { @MainActor in
-            try await withThrowingTimeout(seconds: 0.05) {
+        await #expect(throws: CancellationError.self) { @MainActor in
+            try await withDeadline(in: 0.05) {
                 MainActor.assertIsolated()
                 defer { MainActor.assertIsolated() }
                 try await Task.sleep(nanoseconds: 60_000_000_000)
@@ -166,7 +166,7 @@ struct TaskTimeoutTests {
     @Test
     func sendable_ReturnsValue() async throws {
         let sendable = TestActor()
-        let value = try await withThrowingTimeout(seconds: 1) {
+        let value = try await withDeadline(in: 1) {
             sendable
         }
         #expect(value === sendable)
@@ -174,7 +174,7 @@ struct TaskTimeoutTests {
 
     @Test
     func nonSendable_ReturnsValue() async throws {
-        let ns = try await withThrowingTimeout(seconds: 1) {
+        let ns = try await withDeadline(in: 1) {
             NonSendable("chips")
         }
         #expect(ns.value == "chips")
@@ -189,8 +189,8 @@ struct TaskTimeoutTests {
 
     @Test
     func actorThrowsError_WhenTimeoutExpires() async {
-        await #expect(throws: SocketError.makeTaskTimeout(seconds: 0.05)) {
-            try await withThrowingTimeout(seconds: 0.05) {
+        await #expect(throws: CancellationError.self) {
+            try await withDeadline(in: 0.05) {
                 try await TestActor().returningValue(after: 60, timeout: 0.05)
             }
         }
@@ -199,7 +199,7 @@ struct TaskTimeoutTests {
     @Test
     func timeout_cancels() async {
         let task = Task {
-            try await withThrowingTimeout(seconds: 1) {
+            try await withDeadline(in: 1) {
                 try await Task.sleep(nanoseconds: 1_000_000_000)
             }
         }
@@ -210,6 +210,56 @@ struct TaskTimeoutTests {
             try await task.value
         }
     }
+
+    @Test
+    func deadline_ReturnsValue_WhenBodyCompletesAfterExpiring() async throws {
+        // as in SE-0526, expiring cancels the body but its result is still returned
+        let value = try await withDeadline(in: 0.01) {
+            try? await Task.sleep(seconds: 10)
+            return "Fish"
+        }
+        #expect(value == "Fish")
+    }
+
+    @Test
+    func deadline_ThrowsBodyError() async {
+        await #expect(throws: SocketError.disconnected) {
+            try await withDeadline(in: 1) {
+                throw SocketError.disconnected
+            }
+        }
+    }
+
+    @Test
+    func clockDeadline_ReturnsValue() async throws {
+        guard #available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *) else { return }
+        let clock = ContinuousClock()
+        let value = try await withDeadline(clock.now.advanced(by: .seconds(1)), clock: clock) {
+            "Fish"
+        }
+        #expect(value == "Fish")
+    }
+
+    @Test
+    func clockDeadline_CancelsBody_WhenExpired() async {
+        guard #available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *) else { return }
+        let clock = SuspendingClock()
+        await #expect(throws: CancellationError.self) {
+            try await withDeadline(clock.now.advanced(by: .milliseconds(10)), clock: clock) {
+                try await Task.sleep(seconds: 10)
+            }
+        }
+    }
+
+    @Test
+    func durationDeadline_CancelsBody_WhenExpired() async {
+        guard #available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *) else { return }
+        await #expect(throws: CancellationError.self) {
+            try await withDeadline(in: .milliseconds(10)) {
+                try await Task.sleep(seconds: 10)
+            }
+        }
+    }
 }
 
 extension Task where Success: Sendable, Failure == any Error {
@@ -218,7 +268,7 @@ extension Task where Success: Sendable, Failure == any Error {
     init(priority: TaskPriority? = nil, timeout: TimeInterval, operation: @escaping @Sendable () async throws -> Success) {
         self = Task(priority: priority) {
             do {
-                return try await withThrowingTimeout(seconds: timeout) {
+                return try await withDeadline(in: timeout) {
                     try await operation()
                 }
             } catch {
@@ -257,7 +307,7 @@ private final actor TestActor<T: Sendable> {
     }
 
     func returningValue(after sleep: TimeInterval = 0, timeout: TimeInterval = 1) async throws -> T {
-        try await withThrowingTimeout(seconds: timeout) {
+        try await withDeadline(in: timeout) {
             try await Task.sleep(nanoseconds: UInt64(sleep * 1_000_000_000))
             self.assertIsolated()
             return self.value

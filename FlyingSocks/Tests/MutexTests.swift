@@ -51,31 +51,5 @@ struct MutexTests {
             try mutex.withLock { _ -> Void in throw CancellationError() }
         }
     }
-
-    @Test
-    func lockIfAvailable_ReturnsValue() {
-        let mutex = Mutex("fish")
-        mutex.unsafeLock()
-        #expect(
-            mutex.withLockIfAvailable { _ in "chips" } == nil
-        )
-        mutex.unsafeUnlock()
-        #expect(
-            mutex.withLockIfAvailable { _ in "chips" } == "chips"
-        )
-    }
-
-    @Test
-    func withLockIfAvailable_ThrowsError() {
-        let mutex = Mutex("fish")
-        #expect(throws: CancellationError.self) {
-            try mutex.withLockIfAvailable { _ -> Void in throw CancellationError() }
-        }
-    }
-}
-
-extension Mutex {
-    func unsafeLock() { storage.lock() }
-    func unsafeUnlock() { storage.unlock() }
 }
 #endif

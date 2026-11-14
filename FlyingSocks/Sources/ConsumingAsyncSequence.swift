@@ -67,7 +67,7 @@ extension ConsumingAsyncSequence {
 
     final class SharedBuffer: @unchecked Sendable {
 
-        private(set) var state: Mutex<State>
+        let state: Mutex<State>
 
         init(_ sequence: Base) {
             self.state = Mutex(.initial(sequence))
