@@ -521,9 +521,9 @@ final class MockEventQueue: EventQueue, Sendable {
         if mustWait {
             semaphore.wait()
         }
-        let result = storage.withLock {
-            defer { $0.result = nil }
-            return $0.result!
+        let result = storage.withLock { storage in
+            defer { storage.result = nil }
+            return storage.result!
         }
         return try result.get()
     }
