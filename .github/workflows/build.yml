@@ -158,6 +158,20 @@ jobs:
       - name: Test
         run: swift test --skip-build
 
+  linux_swift_6_4:
+    runs-on: ubuntu-latest
+    container: swift:6.4
+    timeout-minutes: 4
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Version
+        run: swift --version
+      - name: Build
+        run: swift build --build-tests
+      - name: Test
+        run: swift test --skip-build
+
   linux_swift_6_3_musl:
     runs-on: ubuntu-latest
     container: swift:6.3.3
@@ -175,20 +189,33 @@ jobs:
       - name: Build
         run: swift build --swift-sdk x86_64-swift-linux-musl
 
-  linux_swift_6_1_android:
+  linux_swift_6_4_android:
     runs-on: ubuntu-latest
-    container: swift:6.1.2
+    container: swift:6.4.2
     steps:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Version
         run: swift --version
+      - name: Install NDK
+        run: |
+          apt-get update && apt-get install -y curl unzip
+          curl -sSL -o /tmp/ndk.zip https://dl.google.com/android/repository/android-ndk-r27d-linux.zip
+          unzip -q /tmp/ndk.zip -d /opt
+          echo "ANDROID_NDK_HOME=/opt/android-ndk-r27d" >> $GITHUB_ENV
       - name: Install SDK
-        run: swift sdk install https://github.com/finagolfin/swift-android-sdk/releases/download/6.1.2/swift-6.1.2-RELEASE-android-24-0.1.artifactbundle.tar.gz --checksum 6d817c947870e8c85e6cab9a6ab6d7313b50fa5a20b890c396723c0b16ab32d9
+        # download with curl: swift sdk install aborts on exit after a remote download in 6.4.2
+        run: |
+          curl -sSL -o /tmp/android-sdk.tar.gz https://download.swift.org/swift-6.4.2-release/android-sdk/swift-6.4.2-RELEASE/swift-6.4.2-RELEASE_android.artifactbundle.tar.gz
+          echo "4d6ad63ea74becd58e123ff58b1b48c3be5ec0db0dff0ea5abe37ac007dd3233  /tmp/android-sdk.tar.gz" | sha256sum -c
+          swift sdk install /tmp/android-sdk.tar.gz
+          # SwiftPM installs under the user's home directory (/root), not $HOME
+          SDK_BUNDLE=$(find /root "$HOME" -maxdepth 3 -type d -name swift-6.4.2-RELEASE_android.artifactbundle -print -quit 2>/dev/null)
+          "$SDK_BUNDLE/swift-android/scripts/setup-android-sdk.sh"
       - name: Build
         run: swift build --swift-sdk aarch64-unknown-linux-android24
 
-  windows_swift_6_2:
+  windows_swift_6_4:
     runs-on: windows-latest
     steps:
       - name: Checkout
@@ -196,7 +223,7 @@ jobs:
       - name: Install Swift
         uses: SwiftyLab/setup-swift@latest
         with:
-          swift-version: "6.2"
+          swift-version: "6.4"
       - name: Version
         run: swift --version
       - name: Build

@@ -51,7 +51,8 @@ extension HTTPDecoder {
             return standardizePathDarwinFallback(path)
             #endif
         #else
-        return URL(string: path)?.standardized.path
+        // swift-corelibs-foundation 6.4 no longer removes leading "/.." segments
+        return URL(string: path.removingDotSegments)?.standardized.path
         #endif
     }
 
