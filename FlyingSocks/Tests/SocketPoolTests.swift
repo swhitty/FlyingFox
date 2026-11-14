@@ -197,6 +197,28 @@ struct SocketPoolTests {
 
 #if canImport(Darwin) || canImport(CSystemLinux)
     @Test
+    func pool_CanBeStoppedAndRestarted_Repeatedly() async throws {
+        // stop() leaves the queue's wake triggered, so each restart must reset it
+        let pool = SocketPool.make(maxEvents: 4)
+        let (socket, peer) = try Socket.makeNonBlockingPair()
+        defer {
+            try? socket.close()
+            try? peer.close()
+        }
+
+        for _ in 0..<100 {
+            try await pool.prepare()
+            let run = Task { try await pool.run() }
+            let suspended = Task { try await pool.suspendSocket(socket, untilReadyFor: .read) }
+            await Task.yield()
+            run.cancel()
+
+            #expect(await run.completes(within: 2))
+            #expect(await suspended.completes(within: 2))
+        }
+    }
+
+    @Test
     func removeSocket_WakesSuspendedSocket_BeforeItIsClosed() async throws {
         let pool = SocketPool.make(maxEvents: 4)
         try await pool.prepare()
@@ -369,6 +391,30 @@ private extension Socket {
     }
 }
 #endif
+
+private extension Task where Failure == any Error {
+
+    /// Whether the task completes within the timeout. Unlike `withThrowingTimeout`, this returns
+    /// on timeout without waiting for the task, so a task that never completes fails the test
+    /// instead of hanging it.
+    func completes(within seconds: TimeInterval) async -> Bool {
+        let (stream, continuation) = AsyncStream<Bool>.makeStream()
+        let waiter = Task<Void, Never> {
+            _ = await result
+            continuation.yield(true)
+        }
+        let timer = Task<Void, Never> {
+            try? await Task<Never, Never>.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+            continuation.yield(false)
+        }
+        var iterator = stream.makeAsyncIterator()
+        let completed = await iterator.next() ?? false
+        continuation.finish()
+        timer.cancel()
+        _ = waiter
+        return completed
+    }
+}
 
 private extension SocketPool where Queue == MockEventQueue  {
     static func make() -> Self {

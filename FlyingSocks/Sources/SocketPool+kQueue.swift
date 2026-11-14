@@ -46,32 +46,54 @@ public struct kQueue: EventQueue {
 
     private(set) var file: Socket.FileDescriptor
     private(set) var existing: [Socket.FileDescriptor: Socket.Events]
+    private(set) var isStopped: Bool
     private let eventsLimit: Int
     private let logger: any Logging
+
+    /// Identifier of the EVFILT_USER event that `stop()` triggers to wake `getNotifications()`.
+    static let wakeIdent: UInt = 0
 
     public init(maxEvents limit: Int, logger: some Logging = .disabled) {
         self.file = .invalid
         self.existing = [:]
+        self.isStopped = false
         self.eventsLimit = limit
         self.logger = logger
     }
 
     public mutating func open() throws {
         existing = [:]
-        self.file = try Self.makeQueue()
+        isStopped = false
+        let file = try Self.makeQueue()
+        do {
+            try Self.addWakeEvent(to: file)
+        } catch {
+            try? Self.closeQueue(file: file)
+            throw error
+        }
+        self.file = file
     }
 
+    /// Wakes any `getNotifications()` waiting on the queue without closing it.
+    ///
+    /// The wake event is left triggered, so every later wait returns at once. Closing the
+    /// queue here instead would race a wait that is about to start: its descriptor could be
+    /// reused by another queue before `kevent` is called, which would then wait on, and take
+    /// events from, a queue it does not own.
     public mutating func stop() throws {
         existing = [:]
-        guard file != .invalid else {
+        guard file != .invalid, !isStopped else {
             throw SocketError.disconnected
         }
-        defer { file = .invalid }
-        try Self.closeQueue(file: file)
+        isStopped = true
+        try Self.triggerWakeEvent(on: file)
     }
 
+    /// Closes the queue. Call only once no `getNotifications()` can still be waiting on it.
     public mutating func close() throws {
-        // stop closes
+        guard file != .invalid else { return }
+        defer { file = .invalid }
+        try Self.closeQueue(file: file)
     }
 
     public mutating func addEvents(_ events: Socket.Events, for socket: Socket.FileDescriptor) throws {
@@ -128,6 +150,9 @@ public struct kQueue: EventQueue {
     }
 
     public func getNotifications() throws -> [EventNotification] {
+        guard file != .invalid, !isStopped else {
+            throw SocketError.disconnected
+        }
         var events = Array(repeating: kevent(), count: eventsLimit)
         let status = kevent(file.rawValue, nil, 0, &events, Int32(eventsLimit), nil)
         guard status > 0 else {
@@ -139,9 +164,11 @@ public struct kQueue: EventQueue {
             throw SocketError.makeFailed("kqueue kevent")
         }
 
-        return events
-            .prefix(Int(status))
-            .compactMap(EventNotification.make)
+        let received = events.prefix(Int(status))
+        if received.contains(where: \.isWakeEvent) {
+            throw SocketError.disconnected
+        }
+        return received.compactMap(EventNotification.make)
     }
 
     static func makeQueue(file: Int32 = Darwin.kqueue()) throws -> Socket.FileDescriptor {
@@ -152,11 +179,46 @@ public struct kQueue: EventQueue {
         return file
     }
 
+    static func addWakeEvent(to file: Socket.FileDescriptor) throws {
+        // Without EV_CLEAR the event stays triggered once `stop()` triggers it.
+        var event = Darwin.kevent(
+            ident: wakeIdent,
+            filter: Int16(EVFILT_USER),
+            flags: UInt16(EV_ADD | EV_ENABLE),
+            fflags: 0,
+            data: 0,
+            udata: nil
+        )
+        guard kevent(file.rawValue, &event, 1, nil, 0, nil) != -1 else {
+            throw SocketError.makeFailed("kqueue add wake kevent")
+        }
+    }
+
+    static func triggerWakeEvent(on file: Socket.FileDescriptor) throws {
+        var event = Darwin.kevent(
+            ident: wakeIdent,
+            filter: Int16(EVFILT_USER),
+            flags: 0,
+            fflags: UInt32(NOTE_TRIGGER),
+            data: 0,
+            udata: nil
+        )
+        guard kevent(file.rawValue, &event, 1, nil, 0, nil) != -1 else {
+            throw SocketError.makeFailed("kqueue trigger wake kevent")
+        }
+    }
+
     static func closeQueue(file: Socket.FileDescriptor) throws {
         guard file != .invalid else { return }
         guard Socket.close(file.rawValue) >= 0 else {
             throw SocketError.makeFailed("kqueue")
         }
+    }
+}
+
+extension kevent {
+    var isWakeEvent: Bool {
+        filter == Int16(EVFILT_USER) && ident == kQueue.wakeIdent
     }
 }
 
