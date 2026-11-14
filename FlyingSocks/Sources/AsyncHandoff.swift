@@ -54,6 +54,7 @@ package actor AsyncHandoff<Element: Sendable> {
     /// Throws `AsyncHandoffFinishedError` if the handoff is finished before then,
     /// or `CancellationError` if the sending task is cancelled.
     package func send(_ element: Element) async throws {
+        try Task.checkCancellation()
         guard !isFinished else {
             throw AsyncHandoffFinishedError()
         }
