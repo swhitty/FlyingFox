@@ -199,7 +199,7 @@ jobs:
         run: swift --version
       - name: Install NDK
         run: |
-          apt-get update && apt-get install -y unzip
+          apt-get update && apt-get install -y curl unzip
           curl -sSL -o /tmp/ndk.zip https://dl.google.com/android/repository/android-ndk-r27d-linux.zip
           unzip -q /tmp/ndk.zip -d /opt
           echo "ANDROID_NDK_HOME=/opt/android-ndk-r27d" >> $GITHUB_ENV
