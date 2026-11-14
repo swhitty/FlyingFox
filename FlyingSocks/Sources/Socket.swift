@@ -157,13 +157,17 @@ public struct Socket: Sendable, Hashable {
     }
 
     public func getValue<O: SocketOption>(for option: O) throws -> O.Value {
-        let valuePtr = UnsafeMutablePointer<O.SocketValue>.allocate(capacity: 1)
+        let size = MemoryLayout<O.SocketValue>.size
+        let valuePtr = UnsafeMutableRawPointer.allocate(byteCount: size, alignment: MemoryLayout<O.SocketValue>.alignment)
         defer { valuePtr.deallocate() }
-        var length = socklen_t(MemoryLayout<O.SocketValue>.size)
+        // Zeroed because the option may be shorter than SocketValue,
+        // e.g. WinSock writes a 1 byte BOOLEAN for TCP_NODELAY.
+        valuePtr.initializeMemory(as: UInt8.self, repeating: 0, count: size)
+        var length = socklen_t(size)
         guard Socket.getsockopt(file.rawValue, option.level, option.name, valuePtr, &length) >= 0 else {
             throw SocketError.makeFailed("GetOption")
         }
-        return option.makeValue(from: valuePtr.pointee)
+        return option.makeValue(from: valuePtr.load(as: O.SocketValue.self))
     }
 
     public func bind(to address: some SocketAddress) throws {
