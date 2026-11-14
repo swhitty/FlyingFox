@@ -209,7 +209,9 @@ jobs:
           curl -sSL -o /tmp/android-sdk.tar.gz https://download.swift.org/swift-6.4.2-release/android-sdk/swift-6.4.2-RELEASE/swift-6.4.2-RELEASE_android.artifactbundle.tar.gz
           echo "4d6ad63ea74becd58e123ff58b1b48c3be5ec0db0dff0ea5abe37ac007dd3233  /tmp/android-sdk.tar.gz" | sha256sum -c
           swift sdk install /tmp/android-sdk.tar.gz
-          ~/.swiftpm/swift-sdks/swift-6.4.2-RELEASE_android.artifactbundle/swift-android/scripts/setup-android-sdk.sh
+          # SwiftPM installs under the user's home directory (/root), not $HOME
+          SDK_BUNDLE=$(find /root "$HOME" -maxdepth 3 -type d -name swift-6.4.2-RELEASE_android.artifactbundle -print -quit 2>/dev/null)
+          "$SDK_BUNDLE/swift-android/scripts/setup-android-sdk.sh"
       - name: Build
         run: swift build --swift-sdk aarch64-unknown-linux-android24
 
