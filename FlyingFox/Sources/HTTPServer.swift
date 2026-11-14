@@ -99,12 +99,20 @@ public final actor HTTPServer {
             throw SocketError.unsupportedAddress
         }
         startFailure = nil
-        defer { state = nil }
+        var runTask: Task<Void, any Error>?
+        // stop() clears the state, after which run() may already have been called again
+        defer { if state?.task == runTask { state = nil } }
         do {
             let socket = try await prepareListeningSocket()
             let task = Task { try await start(on: socket, pool: config.pool) }
             state = (socket: socket, task: task)
+            runTask = task
             try await task.getValue(cancelling: .whenParentIsCancelled)
+        } catch where runTask != nil && state?.task != runTask {
+            // stop() was called. Closing the listening socket can reach the listener before it
+            // suspends on accept(), failing with EBADF instead, and stop(timeout: 0) cancels the
+            // task, but either way the server was disconnected.
+            throw SocketError.disconnected
         } catch {
             logger.logCritical("server error: \(error.localizedDescription)")
             if let state = self.state {
@@ -180,14 +188,20 @@ public final actor HTTPServer {
     }
 
     func start(on socket: AsyncSocket, pool: some AsyncSocketPool) async throws {
-        try await withThrowingTaskGroup(of: Void.self) { group in
-            group.addTask {
-                try await pool.run()
+        do {
+            try await withThrowingTaskGroup(of: Void.self) { group in
+                group.addTask {
+                    try await pool.run()
+                }
+                group.addTask {
+                    try await self.listenForConnections(on: socket)
+                }
+                try await group.next()
             }
-            group.addTask {
-                try await self.listenForConnections(on: socket)
-            }
-            try await group.next()
+        } catch where Task.isCancelled {
+            // whichever child ends first decides the error, and a pool or socket stopped by the
+            // cancellation can fail with its own error rather than CancellationError
+            throw CancellationError()
         }
     }
 

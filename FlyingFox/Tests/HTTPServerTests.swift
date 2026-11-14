@@ -121,6 +121,36 @@ actor HTTPServerTests {
     }
 
     @Test
+    func stop_ThrowsDisconnected_WhenCalledAsSoonAsListening() async throws {
+        // stop() can close the listening socket before the listener suspends on accept(),
+        // and stop(timeout: 0) cancels the server task, yet run() should still end disconnected
+        for _ in 0..<50 {
+            let server = HTTPServer.make(address: .loopback(port: 0))
+            let task = try await startServer(server)
+
+            await server.stop()
+            await #expect(throws: SocketError.disconnected) {
+                try await task.value
+            }
+            #expect(await server.isListening == false)
+        }
+    }
+
+    @Test
+    func taskCanBeCancelled_AsSoonAsListening() async throws {
+        for _ in 0..<50 {
+            let server = HTTPServer.make(address: .loopback(port: 0))
+            let task = try await startServer(server)
+
+            task.cancel()
+            await #expect(throws: CancellationError.self) {
+                try await task.value
+            }
+            #expect(await server.isListening == false)
+        }
+    }
+
+    @Test
     func taskCanBeCancelled() async throws {
         let server = HTTPServer.make()
         let task = try await startServer(server)
