@@ -121,12 +121,14 @@ struct SocketTests {
     }
 
     @Test
-    func socketRead_ThrowsDisconnected_WhenSocketIsClosed() throws {
+    func socketRead_ThrowsDisconnected_WhenPeerIsClosed() throws {
+        // Reading s1 after closing it would use a descriptor that a test running in parallel
+        // may already have been given, and a blocking one would hang the read.
         let (s1, s2) = try Socket.makeNonBlockingPair()
-        try s1.close()
+        defer { try? s1.close() }
         try s2.close()
 
-        #expect(throws: (any Error).self) {
+        #expect(throws: SocketError.disconnected) {
             try s1.read()
         }
     }
