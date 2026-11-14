@@ -285,7 +285,8 @@ public final actor HTTPServer {
 
     func handleRequest(_ request: HTTPRequest, timeout: TimeInterval) async -> HTTPResponse {
         do {
-            return try await withThrowingTimeout(seconds: timeout) { [handlers] in
+            // a handler still running at the deadline is cancelled; its error becomes a 500
+            return try await withDeadline(in: timeout) { [handlers] in
                 try await handlers.handleRequest(request)
             }
         } catch is HTTPUnhandledError {

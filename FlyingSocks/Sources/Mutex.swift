@@ -29,9 +29,11 @@
 //  SOFTWARE.
 //
 
-#if !canImport(WinSDK)
+#if canImport(Darwin) || !compiler(>=6.1)
 
-// Backports the Swift 6 type Mutex<Value> to all Darwin platforms
+// Backports Synchronization.Mutex<Value>. Used on Darwin, where Synchronization.Mutex
+// needs macOS 15, iOS 18, tvOS 18, watchOS 11 and visionOS 2, and with Swift 6.0,
+// whose compiler crashes storing Synchronization.Mutex in a generic class.
 @usableFromInline
 package struct Mutex<Value: ~Copyable>: ~Copyable {
     let storage: Storage<Value>
@@ -49,52 +51,9 @@ package struct Mutex<Value: ~Copyable>: ~Copyable {
         defer { storage.unlock() }
         return try body(&storage.value)
     }
-
-    @usableFromInline
-    package borrowing func withLockIfAvailable<Result, E: Error>(
-        _ body: (inout sending Value) throws(E) -> sending Result
-    ) throws(E) -> sending Result? {
-        guard storage.tryLock() else { return nil }
-        defer { storage.unlock() }
-        return try body(&storage.value)
-    }
 }
 
 extension Mutex: @unchecked Sendable where Value: ~Copyable { }
-
-#else
-
-// Windows doesn't support ~Copyable yet
-
-@usableFromInline
-package struct Mutex<Value>: @unchecked Sendable {
-    let storage: Storage<Value>
-
-    @usableFromInline
-    package init(_ initialValue: consuming sending Value) {
-        self.storage = Storage(initialValue)
-    }
-
-    @usableFromInline
-    package borrowing func withLock<Result, E: Error>(
-        _ body: (inout sending Value) throws(E) -> sending Result
-    ) throws(E) -> sending Result {
-        storage.lock()
-        defer { storage.unlock() }
-        return try body(&storage.value)
-    }
-
-    @usableFromInline
-    package borrowing func withLockIfAvailable<Result, E: Error>(
-        _ body: (inout sending Value) throws(E) -> sending Result
-    ) throws(E) -> sending Result? {
-        guard storage.tryLock() else { return nil }
-        defer { storage.unlock() }
-        return try body(&storage.value)
-    }
-}
-
-#endif
 
 #if canImport(Darwin)
 
@@ -102,7 +61,6 @@ import struct os.os_unfair_lock_t
 import struct os.os_unfair_lock
 import func os.os_unfair_lock_lock
 import func os.os_unfair_lock_unlock
-import func os.os_unfair_lock_trylock
 
 final class Storage<Value: ~Copyable> {
     private let _lock: os_unfair_lock_t
@@ -120,10 +78,6 @@ final class Storage<Value: ~Copyable> {
 
     func unlock() {
         os_unfair_lock_unlock(_lock)
-    }
-
-    func tryLock() -> Bool {
-        os_unfair_lock_trylock(_lock)
     }
 
     deinit {
@@ -166,9 +120,6 @@ final class Storage<Value: ~Copyable> {
         precondition(err == 0, "pthread_mutex_unlock error: \(err)")
     }
 
-    func tryLock() -> Bool {
-        pthread_mutex_trylock(_lock) == 0
-    }
 
     deinit {
         let err = pthread_mutex_destroy(self._lock)
@@ -182,12 +133,12 @@ final class Storage<Value: ~Copyable> {
 import ucrt
 import WinSDK
 
-final class Storage<Value> {
+final class Storage<Value: ~Copyable> {
     private let _lock: UnsafeMutablePointer<SRWLOCK>
 
     var value: Value
 
-    init(_ initialValue: Value) {
+    init(_ initialValue: consuming Value) {
         self._lock = .allocate(capacity: 1)
         InitializeSRWLock(self._lock)
         self.value = initialValue
@@ -201,10 +152,17 @@ final class Storage<Value> {
         ReleaseSRWLockExclusive(_lock)
     }
 
-    func tryLock() -> Bool {
-        TryAcquireSRWLockExclusive(_lock) != 0
-    }
 }
+
+#endif
+
+#else
+
+import Synchronization
+
+// Synchronization.Mutex is available on every other platform from Swift 6.1.
+@usableFromInline
+package typealias Mutex = Synchronization.Mutex
 
 #endif
 

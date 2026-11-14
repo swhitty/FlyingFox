@@ -55,10 +55,11 @@ struct kQueueTests {
         }
         try queue.addEvents([.read], for: s1.file)
 
-        // stop a copy sharing the descriptor once the wait below is under way
-        let stopping = Transferring(queue)
+        // stop a copy sharing the descriptor once the wait below is under way;
+        // the copy shares the queue's region, so it can't be sent as Disconnected
+        nonisolated(unsafe) let stopping = queue
         DispatchQueue.global().asyncAfter(deadline: .now() + 0.1) {
-            var queue = stopping.value
+            var queue = stopping
             try? queue.stop()
         }
 

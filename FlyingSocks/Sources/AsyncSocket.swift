@@ -131,16 +131,21 @@ public struct AsyncSocket: Sendable {
     public static func connected(to address: some SocketAddress,
                                  pool: some AsyncSocketPool,
                                  timeout: TimeInterval = 5) async throws -> Self {
-        try await withThrowingTimeout(seconds: timeout) {
-            let socket = try Socket(domain: Int32(type(of: address).family), type: .stream)
-            do {
-                let asyncSocket = try AsyncSocket(socket: socket, pool: pool)
-                try await asyncSocket.connect(to: address)
-                return asyncSocket
-            } catch {
-                try? socket.close()
-                throw error
+        do {
+            return try await withDeadline(in: timeout) {
+                let socket = try Socket(domain: Int32(type(of: address).family), type: .stream)
+                do {
+                    let asyncSocket = try AsyncSocket(socket: socket, pool: pool)
+                    try await asyncSocket.connect(to: address)
+                    return asyncSocket
+                } catch {
+                    try? socket.close()
+                    throw error
+                }
             }
+        } catch is CancellationError where !Task.isCancelled {
+            // the deadline expired and cancelled the connection attempt
+            throw SocketError.makeTaskTimeout(seconds: timeout)
         }
     }
 

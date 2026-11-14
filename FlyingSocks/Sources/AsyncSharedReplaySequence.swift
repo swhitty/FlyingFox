@@ -92,20 +92,17 @@ extension AsyncSharedReplaySequence {
 
     final actor SharedBuffer {
 
-        var state: State
+        // Stored `Disconnected` so it can be taken out of the actor and its mutating
+        // async `nextBuffer` called away from the actor's isolation.
+        private var iterator: Disconnected<Base.AsyncIterator>?
+        private var failure: (any Error)?
         let bufferCount: Int?
 
         var buffer = [Element]()
 
         init(base: Base, count: Int?) {
-            self.state = .initial(base)
+            self.iterator = Disconnected(base.makeAsyncIterator())
             self.bufferCount = count
-        }
-
-        enum State {
-            case initial(Base)
-            case iterating(Base.AsyncIterator)
-            case error(any Error)
         }
 
         func nextChunk(from index: Int, atMost count: Int) async throws -> ArraySlice<Element>? {
@@ -192,41 +189,22 @@ extension AsyncSharedReplaySequence {
         }
 
         private func requestNextChunk(atMost count: Int) async throws -> (some Collection<Element>)? {
+            if let failure {
+                throw failure
+            }
+            // requestNextChunkIfRequired allows only one request at a time
+            guard let stored = iterator.take() else {
+                throw SocketError.disconnected
+            }
+            var iter = stored.consume()
             do {
-                var iterator = try Transferring(state.makeAsyncIterator())
-                let chunk = try await iterator.nextBuffer(suggested: count)?.value
-                state = .iterating(iterator.value)
+                let chunk = try await iter.nextElements(suggested: count)
+                iterator = Disconnected(iter)
                 return chunk
             } catch {
-                state = .error(error)
+                failure = error
                 throw error
             }
-        }
-    }
-}
-
-private extension Transferring where Value: AsyncBufferedIteratorProtocol {
-
-    mutating func nextBuffer(suggested count: Int) async throws -> Transferring<Value.Buffer>? {
-        guard let buffer = try await value.nextBuffer(suggested: count) else { return nil }
-        return Transferring<Value.Buffer>(buffer)
-    }
-}
-
-extension AsyncSharedReplaySequence.SharedBuffer.State {
-
-    mutating func makeAsyncIterator() throws -> Base.AsyncIterator {
-        switch self {
-        case let .initial(sequence):
-            let iterator = sequence.makeAsyncIterator()
-            self = .iterating(iterator)
-            return iterator
-
-        case let .iterating(iterator):
-            return iterator
-
-        case let .error(error):
-            throw error
         }
     }
 }

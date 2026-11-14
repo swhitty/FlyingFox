@@ -38,37 +38,6 @@ import Foundation
 @available(*, unavailable, renamed: "SocketError.timeout")
 public typealias TimeoutError = SocketError
 
-package func withThrowingTimeout<T>(
-    isolation: isolated (any Actor)? = #isolation,
-    seconds: TimeInterval,
-    body: () async throws -> sending T
-) async throws -> sending T {
-    try await withoutActuallyEscaping(body) { escapingBody in
-        let bodyTask = Task {
-            defer { _ = isolation }
-            return try await Transferring(escapingBody())
-        }
-        let timeoutTask = Task {
-            defer { bodyTask.cancel() }
-            try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
-            throw SocketError.makeTaskTimeout(seconds: seconds)
-        }
-
-        let bodyResult = await withTaskCancellationHandler {
-            await bodyTask.result
-        } onCancel: {
-            bodyTask.cancel()
-        }
-        timeoutTask.cancel()
-
-        if case let .failure(SocketError.timeout(message: message)) = await timeoutTask.result {
-            throw SocketError.timeout(message: message)
-        } else {
-            return try bodyResult.get()
-        }
-    }.value
-}
-
 package extension Task {
 
     enum CancellationPolicy: Sendable {
@@ -92,7 +61,7 @@ package extension Task {
             }
         case .afterTimeout(let seconds):
             if seconds > 0 {
-                return try await withThrowingTimeout(seconds: seconds) {
+                return try await withDeadline(in: seconds) {
                     try await getValue(cancelling: .whenParentIsCancelled)
                 }
             } else {
