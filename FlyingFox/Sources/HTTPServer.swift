@@ -114,7 +114,9 @@ public final actor HTTPServer {
             // task, but either way the server was disconnected.
             throw SocketError.disconnected
         } catch {
-            logger.logCritical("server error: \(error.localizedDescription)")
+            if !Task.isCancelled {
+                logger.logCritical("server error: \(error.localizedDescription)")
+            }
             if let state = self.state {
                 try? await state.socket.close()
             }

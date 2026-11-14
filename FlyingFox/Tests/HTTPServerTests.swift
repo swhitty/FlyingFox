@@ -151,6 +151,19 @@ actor HTTPServerTests {
     }
 
     @Test
+    func taskCanBeCancelled_WithoutLoggingAnError() async throws {
+        let logger = ErrorRecordingLogger()
+        let server = HTTPServer.make(address: .loopback(port: 0), logger: logger)
+        let task = try await startServer(server)
+
+        task.cancel()
+        await #expect(throws: CancellationError.self) {
+            try await task.value
+        }
+        #expect(logger.errors == [])
+    }
+
+    @Test
     func taskCanBeCancelled() async throws {
         let server = HTTPServer.make()
         let task = try await startServer(server)
@@ -833,3 +846,22 @@ extension Task where Success == Never, Failure == Never {
     }
 }
 
+private final class ErrorRecordingLogger: Logging {
+    private let recorded = Mutex<[String]>([])
+
+    var errors: [String] { recorded.copy() }
+
+    func logDebug(_ debug: @autoclosure () -> String) { }
+    func logInfo(_ info: @autoclosure () -> String) { }
+    func logWarning(_ warning: @autoclosure () -> String) { }
+
+    func logError(_ error: @autoclosure () -> String) {
+        let message = error()
+        recorded.withLock { $0.append("error: \(message)") }
+    }
+
+    func logCritical(_ critical: @autoclosure () -> String) {
+        let message = critical()
+        recorded.withLock { $0.append("critical: \(message)") }
+    }
+}

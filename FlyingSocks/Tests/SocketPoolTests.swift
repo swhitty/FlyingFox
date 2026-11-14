@@ -176,6 +176,26 @@ struct SocketPoolTests {
     }
 
     @Test
+    func run_ThrowsCancellationError_WhenCancelledWhileWaiting() async throws {
+        let pool = SocketPool.make()
+        try await pool.prepare()
+        let task = Task { try await pool.run() }
+
+        let socket = try Socket(domain: AF_UNIX, type: .stream)
+        let suspension = Task {
+            try await pool.suspendSocket(socket, untilReadyFor: .read)
+        }
+        defer { suspension.cancel() }
+
+        await pool.queue.waitUntilWaiting()
+        task.cancel()
+
+        await #expect(throws: CancellationError.self) {
+            try await task.value
+        }
+    }
+
+    @Test
     func removeSocket_ResumesSuspendedSocket_WithDisconnected() async throws {
         let pool = SocketPool.make()
         try await pool.prepare()
@@ -450,6 +470,13 @@ final class MockEventQueue: EventQueue, @unchecked Sendable {
         }
     }
 
+    /// Suspends until `getNotifications()` is blocked waiting for a result.
+    func waitUntilWaiting() async {
+        while !isWaiting {
+            await Task.yield()
+        }
+    }
+
     func addEvents(_ events: Socket.Events, for socket: Socket.FileDescriptor) throws {
 
     }
@@ -466,7 +493,8 @@ final class MockEventQueue: EventQueue, @unchecked Sendable {
     func stop() throws {
         guard state == .open else { throw InvalidStateError() }
         state = .stopped
-        result = .failure(CancellationError())
+        // as kQueue and ePoll fail a stopped wait
+        result = .failure(SocketError.disconnected)
         if isWaiting {
             semaphore.signal()
         }
