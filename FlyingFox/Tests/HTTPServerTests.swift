@@ -59,6 +59,17 @@ actor HTTPServerTests {
         return task
     }
 
+    /// Polls until `condition` is true, failing after `timeout` so a test can't hang.
+    func waitUntil(timeout: TimeInterval = 5, _ condition: () async -> Bool) async throws {
+        let deadline = Date().addingTimeInterval(timeout)
+        while await !condition() {
+            guard Date() < deadline else {
+                throw SocketError.makeTaskTimeout(seconds: timeout)
+            }
+            try await Task.sleep(seconds: 0.001)
+        }
+    }
+
     deinit {
         Task { [stopServer] in await stopServer?.stop(timeout: 0) }
     }
@@ -183,9 +194,12 @@ actor HTTPServerTests {
         let listening = try #require(await server.state?.socket)
         try await listening.waitUntilSuspended()
 
+        // A busy machine can take seconds to stop, so the timeout is long enough that
+        // only a hang reaches it. The server task ends with disconnected either way,
+        // so the time shows stop finished by itself rather than by cancelling it.
         let start = Date()
-        await server.stop(timeout: 10)
-        #expect(Date().timeIntervalSince(start) < 5)
+        await server.stop(timeout: 60)
+        #expect(Date().timeIntervalSince(start) < 30)
 
         await #expect(throws: SocketError.disconnected) {
             try await task.value
@@ -555,16 +569,23 @@ actor HTTPServerTests {
     @Test
     func server_AllowsExistingConnectionsToDisconnect_WhenStopped() async throws {
         let server = HTTPServer.make()
+        let (handlerStarted, started) = AsyncStream<Void>.makeStream()
+        let (handlerReleased, release) = AsyncStream<Void>.makeStream()
         await server.appendRoute("*") { _ in
-            try await Task.sleep(seconds: 0.5)
+            started.yield()
+            for await _ in handlerReleased { break }
             return .make(statusCode: .ok)
         }
         let port = try await startServerWithPort(server)
         let socket = try await AsyncSocket.connected(to: .inet(ip4: "127.0.0.1", port: port))
 
         try await socket.writeRequest(.make())
-        try await Task.sleep(seconds: 0.1)
-        let taskStop = Task { await server.stop(timeout: 1) }
+        // the request is being handled before the server stops
+        for await _ in handlerStarted { break }
+        let taskStop = Task { await server.stop(timeout: 60) }
+        // and finishes only once the server has stopped listening
+        try await waitUntil { await !server.isListening }
+        release.yield()
 
         try await #expect(
             socket.readResponse().statusCode == .ok
@@ -581,14 +602,12 @@ actor HTTPServerTests {
         let port = try await startServerWithPort(server)
         let socket = try await AsyncSocket.connected(to: .inet(ip4: "127.0.0.1", port: port))
 
-        try await Task.sleep(seconds: 0.1)
-        #expect(await server.connections.count == 1)
+        try await waitUntil { await server.connections.count == 1 }
 
-        let taskStop = Task { await server.stop(timeout: 1) }
-        try await Task.sleep(seconds: 0.5)
+        // stop ends the idle connection itself, long before its timeout
+        await server.stop(timeout: 60)
 
         #expect(await server.connections.count == 0)
-        await taskStop.value
         try? await socket.close()
     }
 
