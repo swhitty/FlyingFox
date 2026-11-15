@@ -19,11 +19,11 @@ Source: WHATWG HTML Living Standard, §9.2 "Server-sent events".
 ### Response
 
 - **Status and type.** The client accepts only `200` with `Content-Type: text/event-stream`
-  (§9.2.3). Any other status or type *fails* the connection, and `EventSource` does not reconnect.
-  `204 No Content` is the documented way to tell a client to stop reconnecting. Redirects are
-  followed.
-- **Encoding.** The stream is always UTF-8. A `charset` parameter is ignored, and one leading BOM
-  is stripped (§9.2.5).
+  (§9.2.2). Any other status or type *fails* the connection, and `EventSource` does not reconnect.
+  `204 No Content` is the documented way to tell a client to stop reconnecting (§9.2.1). Redirects
+  are followed.
+- **Encoding.** The stream is always UTF-8. There's no way to specify another encoding (§9.2.1),
+  and the client strips one leading BOM when it decodes the stream (§9.2.6).
 - **Caching.** Send `Cache-Control: no-cache`. The spec's examples do, and intermediaries must not
   cache or coalesce the stream. Some proxies buffer responses. nginx, for example, needs
   `X-Accel-Buffering: no`, which the app can pass as a header.

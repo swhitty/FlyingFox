@@ -33,7 +33,7 @@ import Foundation
 
 /// An event sent to the client in a `text/event-stream` response.
 ///
-/// Fields are encoded as described in the WHATWG HTML Living Standard, "Server-sent events" §9.2.6.
+/// Fields are encoded as described in the WHATWG HTML Living Standard, "Server-sent events" §9.2.5 and §9.2.6.
 public struct SSEEvent: Sendable, Hashable {
 
     /// The `event` field. Clients dispatch the event with this type, or `message` when nil.
@@ -65,7 +65,7 @@ public struct SSEEvent: Sendable, Hashable {
     /// - Throws: `SSEEvent.InvalidField` when `event` or `id` contain a line break, `id` contains
     ///   NULL, or `retry` is negative.
     public init(event: String? = nil, data: String? = nil, id: String? = nil, retry: Int? = nil) throws {
-        // §9.2.6 lines end at CR, LF or CRLF, so a line break would end the field early.
+        // §9.2.5 lines end at CR, LF or CRLF, so a line break would end the field early.
         if let event, event.containsLineBreak {
             throw InvalidField.event
         }

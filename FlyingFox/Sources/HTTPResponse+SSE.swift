@@ -45,7 +45,7 @@ public extension HTTPResponse {
     ///   - events: The events to send. Throwing ends the response without completing it, so the
     ///     client reconnects.
     ///   - heartbeat: Seconds between empty comments that keep an idle connection open and detect
-    ///     a disconnected client, or nil for none.
+    ///     a disconnected client, or nil for none. Must be greater than zero.
     ///   - capacity: Events encoded and waiting to be written. The sequence is not read while
     ///     this many wait for a slow client.
     init<Events: AsyncSequence & Sendable>(
@@ -54,8 +54,10 @@ public extension HTTPResponse {
         heartbeat: TimeInterval? = 15,
         capacity: Int = 16
     ) where Events.Element == SSEEvent {
+        precondition(heartbeat.map { $0 > 0 } ?? true, "heartbeat must be greater than zero")
+        precondition(capacity >= 0, "capacity must not be negative")
         var headers = headers
-        // HTML §9.2.5: the stream is text/event-stream, always UTF-8.
+        // HTML §9.2.2: clients accept only text/event-stream, which §9.2.5 defines as UTF-8.
         if headers[.contentType] == nil {
             headers[.contentType] = "text/event-stream"
         }
@@ -151,7 +153,9 @@ struct SSEEventBytes<Events: AsyncSequence & Sendable>: AsyncBufferedSequence, S
                 if let heartbeat {
                     group.addTask {
                         let comment = SSEEvent.comment().encoded
-                        let nanoseconds = UInt64(Swift.max(heartbeat, 0.001) * 1_000_000_000)
+                        // clamped so a huge or infinite interval can't overflow UInt64
+                        let seconds = Swift.min(Swift.max(heartbeat, 0.001), 1_000_000_000)
+                        let nanoseconds = UInt64(seconds * 1_000_000_000)
                         do {
                             while true {
                                 try await Task.sleep(nanoseconds: nanoseconds)

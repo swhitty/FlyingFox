@@ -156,6 +156,14 @@ struct SSEEventTests {
     }
 
     @Test
+    func infiniteHeartbeat_doesNotTrap() async throws {
+        let bytes = SSEEventBytes(events: [SSEEvent(data: "a")].async, heartbeat: .infinity, capacity: 1)
+        var iterator = bytes.makeAsyncIterator()
+        #expect(try await iterator.nextString() == "data: a\n\n")
+        #expect(try await iterator.nextString() == nil)
+    }
+
+    @Test
     func slowReader_limitsEventsRead() async throws {
         let counter = CountingEvents()
         let bytes = SSEEventBytes(events: counter, heartbeat: nil, capacity: 4)
