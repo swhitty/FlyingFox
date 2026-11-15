@@ -46,7 +46,7 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           report_type: test_results
-          files: ./result.xml
+          files: ./result-swift-testing.xml
       - name: 📄 Summary
         uses: ./.github/actions/test-summary
         with:
