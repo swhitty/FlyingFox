@@ -224,7 +224,7 @@ private extension HTTPEncoder {
             for try await chunk in sequence {
                 data.append(chunk)
             }
-        case .webSocket:
+        case .webSocket, .tunnel:
             ()
         }
         return data

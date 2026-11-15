@@ -88,7 +88,18 @@ struct HTTPConnection: Sendable {
             }
         case .webSocket(let handler):
             try await switchToWebSocket(with: handler, response: header)
+        case .tunnel(let handler):
+            try await switchToTunnel(with: handler, response: header)
         }
+    }
+
+    func switchToTunnel(with handler: some HTTPTunnelHandler, response: Data) async throws {
+        try await socket.write(response)
+        logger.logSwitchProtocol(self, to: "tunnel")
+        await requests.complete()
+        // the connection-wide buffered stream, so bytes already read past the request reach
+        // the handler first
+        try await handler.handleTunnel(bytes: bytes, socket: socket)
     }
 
     func switchToWebSocket(with handler: some WSHandler, response: Data) async throws {

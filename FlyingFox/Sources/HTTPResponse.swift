@@ -40,6 +40,9 @@ public struct HTTPResponse: Sendable {
     public enum Payload: Sendable {
         case httpBody(HTTPBodySequence)
         case webSocket(any WSHandler)
+        /// The connection is handed to a handler once the response head is written, as a
+        /// successful CONNECT is (RFC 9110 Section 9.3.6).
+        case tunnel(any HTTPTunnelHandler)
 
         @available(*, unavailable, renamed: "httpBody")
         static func body(_ data: Data) -> Self {
@@ -52,7 +55,7 @@ public struct HTTPResponse: Sendable {
             switch payload {
             case .httpBody(let body):
                 return try await body.get()
-            case .webSocket:
+            case .webSocket, .tunnel:
                 return Data()
             }
         }
@@ -89,6 +92,17 @@ public struct HTTPResponse: Sendable {
         self.statusCode = .switchingProtocols
         self.headers = headers
         self.payload = .webSocket(handler)
+    }
+
+    /// A response after which `handler` has the connection, such as 200 for a CONNECT
+    /// request. The head carries neither Content-Length nor Transfer-Encoding.
+    public init(statusCode: HTTPStatusCode = .ok,
+                headers: HTTPHeaders = [:],
+                tunnel handler: some HTTPTunnelHandler) {
+        self.version = .http11
+        self.statusCode = statusCode
+        self.headers = headers
+        self.payload = .tunnel(handler)
     }
 }
 

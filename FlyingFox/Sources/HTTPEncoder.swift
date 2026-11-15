@@ -66,7 +66,7 @@ struct HTTPEncoder {
         switch payload {
         case .httpBody(let sequence):
             return sequence.count
-        case .webSocket:
+        case .webSocket, .tunnel:
             return nil
         }
     }
