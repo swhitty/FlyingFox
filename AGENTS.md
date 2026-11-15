@@ -52,6 +52,7 @@ container run --rm --mount src="$(pwd)",target=/flyingfox,type=bind swift:6.4 \
 - Pass `--event-stream-output-path <file> --experimental-event-stream-version 0` to get a JSON line per event. While the run is still going, SwiftPM writes these to a temporary `event-stream-*.jsonl` file (find it with `lsof -p <pid>` on the `swiftpm-testing-helper` process). It only copies the file to your path at the end.
 - A test with a `testStarted` event and no `testEnded` is the stuck one.
 - `sample <pid>` on macOS shows where each thread is waiting.
+- On macOS, `timeout` kills `swift test` but leaves its `swiftpm-testing-helper` child running, still holding sockets and CPU. Kill any leftover helper (`pkill -f swiftpm-testing-helper`) before the next run, or it can make later runs slow or flaky.
 
 ### Known flaky tests
 
