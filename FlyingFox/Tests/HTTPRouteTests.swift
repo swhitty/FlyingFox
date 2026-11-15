@@ -471,14 +471,6 @@ struct HTTPRouteTests {
 #endif
 
     @Test
-    func deprecated_Method() {
-        #expect(HTTPRoute("/fish/*").method == .wildcard)
-        #expect(HTTPRoute("GET /fish/*").method == .caseInsensitive("GET"))
-        #expect(HTTPRoute("PUT /fish/*").method == .caseInsensitive("PUT"))
-        #expect(HTTPRoute("GET,PUT /fish/*").method == .caseInsensitive("GET"))
-    }
-
-    @Test
     func routeParameters() {
         let route = HTTPRoute("GET /mock/:id")
         let parameters = route.parameters
