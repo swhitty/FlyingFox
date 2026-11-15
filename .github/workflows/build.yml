@@ -2,8 +2,17 @@ name: build
 
 on:
   push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # cancel superseded PR runs, but let every push to main finish
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   xcode-27:
@@ -11,7 +20,7 @@ jobs:
     timeout-minutes: 4
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: 🔍 Xcode Select
         run: |
           XCODE_PATH=`mdfind "kMDItemCFBundleIdentifier == 'com.apple.dt.Xcode' && kMDItemVersion = '27.0*'" -onlyin /Applications | head -1`
@@ -23,6 +32,21 @@ jobs:
       - name: Test
         run: swift test --skip-build --enable-code-coverage --xunit-output result.xml
         timeout-minutes: 1
+      - name: Gather code coverage
+        # Xcode 27 builds a test bundle per test target, so export from all of them
+        run: xcrun llvm-cov export -format="lcov" $(printf -- '-object %s ' .build/debug/*.xctest/Contents/MacOS/*) -instr-profile .build/debug/codecov/default.profdata > coverage_report.lcov
+      - name: Upload Coverage
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage_report.lcov
+      - name: Upload Junit
+        if: ${{ !cancelled() }}
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          report_type: test_results
+          files: ./result.xml
       - name: 📄 Summary
         uses: ./.github/actions/test-summary
         with:
@@ -36,27 +60,14 @@ jobs:
       DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Version
         run: swift --version
       - name: Build
-        run: swift build --build-tests --enable-code-coverage
+        run: swift build --build-tests
       - name: Test
-        run: swift test --skip-build --enable-code-coverage --xunit-output result.xml
+        run: swift test --skip-build
         timeout-minutes: 1
-      - name: Gather code coverage
-        run: xcrun llvm-cov export -format="lcov" .build/debug/FlyingFoxPackageTests.xctest/Contents/MacOS/FlyingFoxPackageTests -instr-profile .build/debug/codecov/default.profdata > coverage_report.lcov
-      - name: Upload Coverage
-        uses: codecov/codecov-action@v4
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage_report.lcov
-      - name: Upload Junit
-        if: ${{ !cancelled() }}
-        uses: codecov/test-results-action@v1
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./result.xml
 
   xcode_26_2:
     runs-on: macos-26
@@ -65,13 +76,14 @@ jobs:
       DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Version
         run: swift --version
       - name: Build
         run: swift build --build-tests
       - name: Test
         run: swift test --skip-build
+        timeout-minutes: 1
 
   xcode_16_4:
     runs-on: macos-15
@@ -80,13 +92,14 @@ jobs:
       DEVELOPER_DIR: /Applications/Xcode_16.4.app/Contents/Developer
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Version
         run: swift --version
       - name: Build
         run: swift build --build-tests
       - name: Test
         run: swift test --skip-build
+        timeout-minutes: 1
 
   xcode_16_2:
     runs-on: macos-15
@@ -95,13 +108,14 @@ jobs:
       DEVELOPER_DIR: /Applications/Xcode_16.2.app/Contents/Developer
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Version
         run: swift --version
       - name: Build
         run: swift build --build-tests
       - name: Test
         run: swift test --skip-build
+        timeout-minutes: 1
 
   linux_swift_6_0:
     runs-on: ubuntu-latest
@@ -109,13 +123,14 @@ jobs:
     timeout-minutes: 4
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Version
         run: swift --version
       - name: Build
         run: swift build --build-tests
       - name: Test
         run: swift test --skip-build
+        timeout-minutes: 1
 
   linux_swift_6_1:
     runs-on: ubuntu-latest
@@ -123,13 +138,14 @@ jobs:
     timeout-minutes: 4
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Version
         run: swift --version
       - name: Build
         run: swift build --build-tests
       - name: Test
         run: swift test --skip-build
+        timeout-minutes: 1
 
   linux_swift_6_2:
     runs-on: ubuntu-latest
@@ -137,13 +153,14 @@ jobs:
     timeout-minutes: 4
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Version
         run: swift --version
       - name: Build
         run: swift build --build-tests
       - name: Test
         run: swift test --skip-build
+        timeout-minutes: 1
 
   linux_swift_6_3:
     runs-on: ubuntu-latest
@@ -151,13 +168,14 @@ jobs:
     timeout-minutes: 4
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Version
         run: swift --version
       - name: Build
         run: swift build --build-tests
       - name: Test
         run: swift test --skip-build
+        timeout-minutes: 1
 
   linux_swift_6_4:
     runs-on: ubuntu-latest
@@ -165,20 +183,22 @@ jobs:
     timeout-minutes: 4
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Version
         run: swift --version
       - name: Build
         run: swift build --build-tests
       - name: Test
         run: swift test --skip-build
+        timeout-minutes: 1
 
   linux_swift_6_3_musl:
     runs-on: ubuntu-latest
     container: swift:6.3.3
+    timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Version
         run: swift --version
       - name: SDK List Pre
@@ -193,9 +213,10 @@ jobs:
   linux_swift_6_4_android:
     runs-on: ubuntu-latest
     container: swift:6.4.2
+    timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Version
         run: swift --version
       - name: Install NDK
@@ -218,9 +239,10 @@ jobs:
 
   windows_swift_6_4:
     runs-on: windows-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Install Swift
         uses: SwiftyLab/setup-swift@latest
         with:
@@ -231,3 +253,4 @@ jobs:
         run: swift build --build-tests
       - name: Test
         run: swift test --skip-build
+        timeout-minutes: 1
