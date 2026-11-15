@@ -58,6 +58,7 @@ public struct ePoll: EventQueue {
 
     private(set) var file: Socket.FileDescriptor
     private(set) var canary: Socket.FileDescriptor
+    private(set) var isStopped: Bool
     private(set) var existing: [Socket.FileDescriptor: Socket.Events]
     private let eventsLimit: Int
     private let triggerMode: TriggerMode
@@ -66,6 +67,7 @@ public struct ePoll: EventQueue {
     public init(triggering: TriggerMode = .edge, maxEvents limit: Int, logger: some Logging = .disabled) {
         self.file = .invalid
         self.canary = .invalid
+        self.isStopped = false
         self.existing = [:]
         self.eventsLimit = limit
         self.triggerMode = triggering
@@ -74,33 +76,50 @@ public struct ePoll: EventQueue {
 
     public mutating func open() throws {
         existing = [:]
-        self.file = try Self.makeQueue()
-        self.canary = try Self.makeEventTrigger()
-
-        var event = CSystemLinux.epoll_event()
-        let options: EPOLLEvents = [EPOLLEvents.edgeTriggered, EPOLLEvents.read]
-        event.events = options.rawValue
-        event.data.fd = canary.rawValue
-        guard epoll_ctl(file.rawValue, EPOLL_CTL_ADD, canary.rawValue, &event) != -1 else {
-            throw SocketError.makeFailed("epoll_ctl EPOLL_CTL_ADD")
+        isStopped = false
+        let file = try Self.makeQueue()
+        var canary = Socket.FileDescriptor.invalid
+        do {
+            canary = try Self.makeEventTrigger()
+            var event = CSystemLinux.epoll_event()
+            let options: EPOLLEvents = [EPOLLEvents.edgeTriggered, EPOLLEvents.read]
+            event.events = options.rawValue
+            event.data.fd = canary.rawValue
+            guard epoll_ctl(file.rawValue, EPOLL_CTL_ADD, canary.rawValue, &event) != -1 else {
+                throw SocketError.makeFailed("epoll_ctl EPOLL_CTL_ADD")
+            }
+        } catch {
+            try? Self.closeEventTrigger(file: canary)
+            try? Self.closeQueue(file: file)
+            throw error
         }
+        self.file = file
+        self.canary = canary
     }
 
+    /// Wakes any `getNotifications()` waiting on the queue without closing it.
+    ///
+    /// The canary is left open until `close()`. Closing it here instead would race a wait
+    /// that is about to start: its descriptor could be reused before `epoll_wait` is called.
     public mutating func stop() throws {
         existing = [:]
-        guard canary != .invalid else {
+        guard canary != .invalid, !isStopped else {
             throw SocketError.disconnected
         }
-        eventfd_write(canary.rawValue, 1);
-        canary = .invalid
-
+        isStopped = true
+        eventfd_write(canary.rawValue, 1)
     }
 
+    /// Closes the queue and its canary. Call only once no `getNotifications()` can still be waiting on it.
     public mutating func close() throws {
         guard file != .invalid else {
             throw SocketError.disconnected
         }
-        defer { file = .invalid }
+        defer {
+            try? Self.closeEventTrigger(file: canary)
+            canary = .invalid
+            file = .invalid
+        }
         try Self.closeQueue(file: file)
     }
 
@@ -158,7 +177,7 @@ public struct ePoll: EventQueue {
     }
 
     public func getNotifications() throws -> [EventNotification] {
-        guard canary != .invalid else {
+        guard canary != .invalid, !isStopped else {
             throw SocketError.disconnected
         }
         var events = Array(repeating: epoll_event(), count: eventsLimit)
@@ -209,6 +228,13 @@ public struct ePoll: EventQueue {
         guard file != .invalid else { return }
         guard Socket.close(file.rawValue) >= 0 else {
             throw SocketError.makeFailed("epoll")
+        }
+    }
+
+    static func closeEventTrigger(file: Socket.FileDescriptor) throws {
+        guard file != .invalid else { return }
+        guard Socket.close(file.rawValue) >= 0 else {
+            throw SocketError.makeFailed("eventfd")
         }
     }
 }
