@@ -58,8 +58,8 @@ package func withIdentifiableContinuation<T>(
     let state = Mutex((isStarted: false, isCancelled: false))
     nonisolated(unsafe) let body = body
     return await withTaskCancellationHandler {
-        await withCheckedContinuation(isolation: isolation, function: function) {
-            let continuation = IdentifiableContinuation(id: id, continuation: $0)
+        let operation = { (checked: CheckedContinuation<T, Never>) in
+            let continuation = IdentifiableContinuation(id: id, continuation: checked)
             body(continuation)
             let sendCancel = state.withLock {
                 $0.isStarted = true
@@ -69,6 +69,13 @@ package func withIdentifiableContinuation<T>(
                 handler(id)
             }
         }
+        // Swift 6.4 deprecates the `isolation:` overload for a nonisolated(nonsending) one,
+        // which inherits the isolation. Older compilers need it passed explicitly.
+#if compiler(>=6.4)
+        return await withCheckedContinuation(function: function, operation)
+#else
+        return await withCheckedContinuation(isolation: isolation, function: function, operation)
+#endif
     } onCancel: {
         let sendCancel = state.withLock {
             $0.isCancelled = true
@@ -105,8 +112,8 @@ package func withIdentifiableThrowingContinuation<T>(
     let state = Mutex((isStarted: false, isCancelled: false))
     nonisolated(unsafe) let body = body
     return try await withTaskCancellationHandler {
-        try await withCheckedThrowingContinuation(isolation: isolation, function: function) {
-            let continuation = IdentifiableContinuation(id: id, continuation: $0)
+        let operation = { (checked: CheckedContinuation<T, any Error>) in
+            let continuation = IdentifiableContinuation(id: id, continuation: checked)
             body(continuation)
             let sendCancel = state.withLock {
                 $0.isStarted = true
@@ -116,6 +123,13 @@ package func withIdentifiableThrowingContinuation<T>(
                 handler(id)
             }
         }
+        // Swift 6.4 deprecates the `isolation:` overload for a nonisolated(nonsending) one,
+        // which inherits the isolation. Older compilers need it passed explicitly.
+#if compiler(>=6.4)
+        return try await withCheckedThrowingContinuation(function: function, operation)
+#else
+        return try await withCheckedThrowingContinuation(isolation: isolation, function: function, operation)
+#endif
     } onCancel: {
         let sendCancel = state.withLock {
             $0.isCancelled = true

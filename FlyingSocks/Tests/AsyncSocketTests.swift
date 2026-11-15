@@ -53,7 +53,7 @@ struct AsyncSocketTests {
         let (s1, s2) = try await AsyncSocket.makePair()
 
         async let d2 = s2.readString(length: 12)
-        Task {
+        _ = Task {
             try await s1.writeString("Fish & Chips")
         }
 

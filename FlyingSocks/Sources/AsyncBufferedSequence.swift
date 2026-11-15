@@ -34,6 +34,19 @@ public protocol AsyncBufferedSequence<Element>: AsyncSequence, Sendable where As
 
 }
 
+// Iterators are taken out of an actor and advanced with the nonisolated `nextBuffer`,
+// so their conformance must not be isolated to a global actor (SendableMetatype).
+#if compiler(>=6.2)
+public protocol AsyncBufferedIteratorProtocol<Element>: AsyncIteratorProtocol, SendableMetatype {
+    // Buffered elements are returned in this collection type
+    associatedtype Buffer: Collection where Buffer.Element == Element
+
+    /// Retrieves available elements from the buffer. Suspends if 0 elements are available.
+    /// - Parameter count: The suggested number of elements to return
+    /// - Returns: Collection with between 1 and the number elements that was requested. Nil is returned if the sequence has ended.
+    mutating func nextBuffer(suggested count: Int) async throws -> Buffer?
+}
+#else
 public protocol AsyncBufferedIteratorProtocol<Element>: AsyncIteratorProtocol {
     // Buffered elements are returned in this collection type
     associatedtype Buffer: Collection where Buffer.Element == Element
@@ -43,6 +56,7 @@ public protocol AsyncBufferedIteratorProtocol<Element>: AsyncIteratorProtocol {
     /// - Returns: Collection with between 1 and the number elements that was requested. Nil is returned if the sequence has ended.
     mutating func nextBuffer(suggested count: Int) async throws -> Buffer?
 }
+#endif
 
 extension AsyncBufferedIteratorProtocol where Element: Sendable {
 
@@ -51,7 +65,8 @@ extension AsyncBufferedIteratorProtocol where Element: Sendable {
     /// non-Sendable `Buffer` crossing into an actor, and it can't be wrapped in
     /// `Disconnected` because it shares the iterator's region.
     mutating func nextElements(suggested count: Int) async throws -> [Element]? {
-        try await nextBuffer(suggested: count).map(Array.init)
+        guard let buffer = try await nextBuffer(suggested: count) else { return nil }
+        return Array(buffer)
     }
 }
 

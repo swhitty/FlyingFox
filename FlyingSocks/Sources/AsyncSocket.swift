@@ -429,7 +429,7 @@ private actor ClientPoolLoader {
         }
         try await pool.prepare()
         isStarted = true
-        Task { try await pool.run() }
+        _ = Task { try await pool.run() }
         return pool
     }
 }
