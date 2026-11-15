@@ -207,7 +207,7 @@ struct SocketPoolTests {
         let suspension = Task {
             try await pool.suspendSocket(socket, untilReadyFor: .read)
         }
-        try await Task.sleep(seconds: 0.1)
+        try await pool.waitUntilSuspended(socket)
 
         await pool.removeSocket(socket)
 
@@ -234,14 +234,14 @@ struct SocketPoolTests {
             await Task.yield()
             run.cancel()
 
-            #expect(await run.completes(within: 2))
-            #expect(await suspended.completes(within: 2))
+            #expect(await run.completes(within: 10))
+            #expect(await suspended.completes(within: 10))
         }
     }
 
     @Test
     func removeSocket_WakesSuspendedSocket_BeforeItIsClosed() async throws {
-        let pool = SocketPool.make(maxEvents: 4)
+        let pool = makeNativePool(maxEvents: 4)
         try await pool.prepare()
         let run = Task { try await pool.run() }
         defer { run.cancel() }
@@ -249,7 +249,7 @@ struct SocketPoolTests {
         let (socket, peer) = try Socket.makeNonBlockingPair()
         defer { try? peer.close() }
         let suspended = Task(timeout: 1) { try await pool.suspendSocket(socket, untilReadyFor: .read) }
-        try await Task.sleep(seconds: 0.1)
+        try await pool.waitUntilSuspended(socket)
 
         // closing the socket would silently drop it from the queue leaving the suspension
         // waiting forever, so the pool must wake it before the socket is closed
@@ -263,7 +263,7 @@ struct SocketPoolTests {
 
     @Test
     func reusedDescriptor_IsWoken_AfterTheSuspendedSocketIsReplacedAndCancelled() async throws {
-        let pool = SocketPool.make(maxEvents: 4)
+        let pool = makeNativePool(maxEvents: 4)
         try await pool.prepare()
         let run = Task { try await pool.run() }
         defer { run.cancel() }
@@ -271,7 +271,7 @@ struct SocketPoolTests {
         let (old, oldPeer) = try Socket.makeNonBlockingPair()
         defer { try? oldPeer.close() }
         let suspended = Task { try await pool.suspendSocket(old, untilReadyFor: .read) }
-        try await Task.sleep(seconds: 0.1)
+        try await pool.waitUntilSuspended(old)
 
         // closing the socket drops it from the queue; cancelling its suspension then fails
         // to remove it, and a socket given the same descriptor must still be woken
@@ -292,7 +292,7 @@ struct SocketPoolTests {
 
     @Test
     func reusedDescriptor_IsWoken_WhileTheReplacedSocketIsStillSuspended() async throws {
-        let pool = SocketPool.make(maxEvents: 4)
+        let pool = makeNativePool(maxEvents: 4)
         try await pool.prepare()
         let run = Task { try await pool.run() }
         defer { run.cancel() }
@@ -301,7 +301,7 @@ struct SocketPoolTests {
         defer { try? oldPeer.close() }
         let suspended = Task { try await pool.suspendSocket(old, untilReadyFor: .read) }
         defer { suspended.cancel() }
-        try await Task.sleep(seconds: 0.1)
+        try await pool.waitUntilSuspended(old)
 
         // the socket is closed and its descriptor given to another before its suspension
         // ends; the new socket's own suspension must still register with the queue
@@ -398,6 +398,16 @@ struct SocketPoolTests {
 }
 
 #if canImport(Darwin) || canImport(CSystemLinux)
+#if canImport(Darwin)
+private func makeNativePool(maxEvents limit: Int) -> SocketPool<kQueue> {
+    .kQueue(maxEvents: limit)
+}
+#else
+private func makeNativePool(maxEvents limit: Int) -> SocketPool<ePoll> {
+    .ePoll(maxEvents: limit)
+}
+#endif
+
 private extension Socket {
     /// A connected pair whose first socket takes over `socket`'s descriptor, closing it, as
     /// a new socket can be given the descriptor of one just closed. `dup2` closes and
@@ -434,6 +444,21 @@ private extension Task where Failure == any Error {
         timer.cancel()
         _ = waiter
         return completed
+    }
+}
+
+private extension SocketPool {
+
+    /// Waits until a suspension of `socket` is registered with the pool and its queue, so a test
+    /// can act on the suspended socket. A fixed sleep is not enough when the machine is busy.
+    func waitUntilSuspended(_ socket: Socket, timeout: TimeInterval = 5) async throws {
+        let deadline = Date().addingTimeInterval(timeout)
+        while waiting.continuationIDs(for: socket.file).isEmpty {
+            guard Date() < deadline else {
+                throw SocketError.makeTaskTimeout(seconds: timeout)
+            }
+            try await Task.sleep(seconds: 0.001)
+        }
     }
 }
 

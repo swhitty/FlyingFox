@@ -199,7 +199,7 @@ public final actor SocketPool<Queue: EventQueue>: AsyncSocketPool {
 
     typealias Continuation = IdentifiableContinuation<Void, any Swift.Error>
     private var loop: Continuation?
-    private var waiting = Waiting() {
+    private(set) var waiting = Waiting() {
         didSet {
             if let loop, !waiting.isEmpty {
                 self.loop = nil
