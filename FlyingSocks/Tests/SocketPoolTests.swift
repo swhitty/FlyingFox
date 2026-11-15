@@ -447,21 +447,6 @@ private extension Task where Failure == any Error {
     }
 }
 
-private extension SocketPool {
-
-    /// Waits until a suspension of `socket` is registered with the pool and its queue, so a test
-    /// can act on the suspended socket. A fixed sleep is not enough when the machine is busy.
-    func waitUntilSuspended(_ socket: Socket, timeout: TimeInterval = 5) async throws {
-        let deadline = Date().addingTimeInterval(timeout)
-        while waiting.continuationIDs(for: socket.file).isEmpty {
-            guard Date() < deadline else {
-                throw SocketError.makeTaskTimeout(seconds: timeout)
-            }
-            try await Task.sleep(seconds: 0.001)
-        }
-    }
-}
-
 private extension SocketPool where Queue == MockEventQueue  {
     static func make() -> Self {
         .init(queue: MockEventQueue())
