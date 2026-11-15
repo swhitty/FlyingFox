@@ -876,7 +876,9 @@ extension Task where Success == Never, Failure == Never {
             // always called after the body, so the continuation is stored
             continuation.withLock { $0 }?.resume()
         }
-        throw Swift.CancellationError()
+        // A bare CancellationError() here means the deprecated Task.CancellationError,
+        // and Swift.CancellationError doesn't exist before Swift 6.3.
+        throw _Concurrency.CancellationError()
     }
 }
 
