@@ -299,8 +299,10 @@ actor HTTPServerTests {
 
     @Test
     func handlerTimeout_Returns500() async throws {
+        // The handler can only finish by being cancelled at the timeout. A fixed sleep raced the
+        // deadline, which a busy executor can deliver long after the handler's sleep has ended.
         let server = HTTPServer.make(timeout: 0.1) { _ in
-            try await Task.sleep(seconds: 1)
+            try await Task.sleepUntilCancelled()
             return HTTPResponse.make(statusCode: .accepted)
         }
 
@@ -843,6 +845,18 @@ extension URLSessionWebSocketTask.Message: @retroactive Equatable { }
 extension Task where Success == Never, Failure == Never {
     static func sleep(seconds: TimeInterval) async throws {
         try await sleep(nanoseconds: UInt64(1_000_000_000 * seconds))
+    }
+
+    /// Suspends until the current task is cancelled, then throws `CancellationError`.
+    static func sleepUntilCancelled() async throws {
+        let continuation = Mutex<IdentifiableContinuation<Void, Never>?>(nil)
+        await withIdentifiableContinuation { c in
+            continuation.withLock { $0 = c }
+        } onCancel: { _ in
+            // always called after the body, so the continuation is stored
+            continuation.withLock { $0 }?.resume()
+        }
+        throw CancellationError()
     }
 }
 
