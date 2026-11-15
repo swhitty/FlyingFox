@@ -876,7 +876,7 @@ extension Task where Success == Never, Failure == Never {
             // always called after the body, so the continuation is stored
             continuation.withLock { $0 }?.resume()
         }
-        throw CancellationError()
+        throw Swift.CancellationError()
     }
 }
 
