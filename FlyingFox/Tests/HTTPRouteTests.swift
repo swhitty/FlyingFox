@@ -448,28 +448,6 @@ struct HTTPRouteTests {
         )
     }
 
-#if canImport(Darwin)
-    @Test
-    func body_MatchesRoute() async {
-        let route = HTTPRoute("GET /mock", body: .json(where: "food == 'fish'"))
-
-        #expect(
-            await route ~= HTTPRequest.make(path: "/mock",
-                                      body: #"{"age": 45, "food": "fish"}"#.data(using: .utf8)!)
-        )
-
-        #expect(
-            await route ~= HTTPRequest.make(path: "/mock",
-                                      body: #"{"food": "fish"}"#.data(using: .utf8)!)
-        )
-
-        #expect(
-            !(await route ~= HTTPRequest.make(path: "/mock",
-                                      body: #"{"age": 45}"#.data(using: .utf8)!))
-        )
-    }
-#endif
-
     @Test
     func routeParameters() {
         let route = HTTPRoute("GET /mock/:id")

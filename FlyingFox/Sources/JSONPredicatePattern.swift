@@ -33,31 +33,24 @@
 
 import Foundation
 
-@available(*, deprecated, message: "Use JSONBodyPattern")
+@available(*, unavailable, message: "Use JSONBodyPattern")
 public struct JSONPredicatePattern: HTTPBodyPattern {
 
-    nonisolated(unsafe) private var predicate: NSPredicate
-
     public init(_ predicate: NSPredicate) {
-        self.predicate = predicate
+        fatalError("Use JSONBodyPattern")
     }
 
     public func evaluate(_ body: Data) -> Bool {
-        do {
-            let object = try JSONSerialization.jsonObject(with: body, options: [])
-            return predicate.evaluate(with: object)
-        } catch {
-            return false
-        }
+        fatalError("Use JSONBodyPattern")
     }
 }
 
-@available(*, deprecated, message: "Use JSONBodyPattern")
+@available(*, unavailable, message: "Use JSONBodyPattern")
 public extension HTTPBodyPattern where Self == JSONPredicatePattern {
 
-    @available(*, deprecated, message: "Use JSONBodyPattern")
+    @available(*, unavailable, message: "Use JSONBodyPattern")
     static func json(where condition: String) -> JSONPredicatePattern {
-        JSONPredicatePattern(NSPredicate(format: condition))
+        fatalError("Use JSONBodyPattern")
     }
 }
 
