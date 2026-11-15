@@ -179,8 +179,9 @@ actor HTTPServerTests {
     func stop_ReturnsBeforeTimeout_WhenServerIsIdle() async throws {
         let server = HTTPServer.make()
         let task = try await startServer(server)
-        // allow the accept loop to suspend on the listening socket
-        try await Task.sleep(seconds: 0.2)
+        // wait for the accept loop to suspend on the listening socket
+        let listening = try #require(await server.state?.socket)
+        try await listening.waitUntilSuspended()
 
         let start = Date()
         await server.stop(timeout: 10)

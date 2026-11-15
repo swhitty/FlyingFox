@@ -116,7 +116,7 @@ struct AsyncSocketTests {
         let (s1, s2) = try await AsyncSocket.makePair()
 
         let read = Task { try await s1.read() }
-        try await Task.sleep(seconds: 0.1)
+        try await s1.waitUntilSuspended()
 
         // a closed descriptor silently leaves kqueue/epoll, so the pool must wake the suspended read
         try await s1.close()
