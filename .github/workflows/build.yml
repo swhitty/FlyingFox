@@ -28,7 +28,14 @@ jobs:
       - name: Version
         run: swift --version
       - name: Build
-        run: swift build --build-tests --enable-code-coverage
+        run: |
+          set -o pipefail
+          NO_COLOR=1 swift build --build-tests --enable-code-coverage 2>&1 | tee build.log
+      - name: Find warnings
+        if: ${{ !cancelled() }}
+        uses: ./.github/actions/annotate-warnings
+        with:
+          log: build.log
       - name: Test
         run: swift test --skip-build --enable-code-coverage --xunit-output result.xml
         timeout-minutes: 1

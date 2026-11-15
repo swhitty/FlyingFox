@@ -1,0 +1,13 @@
+name: 'Annotate Warnings'
+description: 'Report compiler warnings and errors from a swift build log as GitHub annotations'
+inputs:
+  log:
+    description: 'path to the build log, written with NO_COLOR=1'
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: 'Annotate'
+      run: awk -v root="$GITHUB_WORKSPACE/" -v summary="$GITHUB_STEP_SUMMARY" -f ./.github/actions/annotate-warnings/annotate.awk "${{ inputs.log }}"
+      shell: bash
