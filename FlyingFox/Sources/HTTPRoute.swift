@@ -150,17 +150,9 @@ public struct HTTPRoute: Sendable {
         }
     }
 
-    @available(*, deprecated, renamed: "methods", message: "Use ``methods`` instead")
+    @available(*, unavailable, renamed: "methods", message: "Use ``methods`` instead")
     public var method: Component {
-        if methods == HTTPMethod.allMethods {
-            return .wildcard
-        } else {
-            let firstMethod = HTTPMethod.sortedMethods
-                .filter { methods.contains($0) }
-                .first!
-                .rawValue
-            return .caseInsensitive(firstMethod)
-        }
+        fatalError("Use methods instead")
     }
 }
 

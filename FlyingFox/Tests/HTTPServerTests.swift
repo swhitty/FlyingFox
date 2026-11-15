@@ -43,7 +43,7 @@ actor HTTPServerTests {
 
     func startServerWithPort(_ server: HTTPServer, preferConnectionsDiscarding: Bool = true) async throws -> UInt16 {
         self.stopServer = server
-        Task {
+        _ = Task {
             try await HTTPServer.$preferConnectionsDiscarding.withValue(preferConnectionsDiscarding) {
                 try await server.run()
             }
@@ -663,7 +663,7 @@ actor HTTPServerTests {
             return true
         }
 
-        Task { try await server.run() }
+        _ = Task { try await server.run() }
         self.stopServer = server
 
         #expect(try await waiting.value == true)
