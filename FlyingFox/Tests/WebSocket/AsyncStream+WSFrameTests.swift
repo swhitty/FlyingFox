@@ -114,7 +114,7 @@ struct WSFrameSequenceTests {
         var iterator = frames?.makeAsyncIterator()
 
         #expect(
-            try await iterator?.next() == .fish
+            await iterator?.next() == .fish
         )
         #expect(terminated.withLock { !$0 })
 

@@ -143,7 +143,7 @@ struct WSHandlerTests {
 
         var iterator = frames.makeAsyncIterator()
         #expect(
-            try await iterator.next() == .pong
+            await iterator.next() == .pong
         )
     }
 
@@ -222,7 +222,7 @@ struct WSHandlerTests {
 
         var iterator = frames.makeAsyncIterator()
         #expect(
-            try await iterator.next() == .make(fin: true, opcode: .text, payload: "Hello".data(using: .utf8)!)
+            await iterator.next() == .make(fin: true, opcode: .text, payload: "Hello".data(using: .utf8)!)
         )
         try await Task.sleep(seconds: 0.05)
         // Besides the frame received, 2 wait in the buffer and 1 waits for space.
@@ -271,7 +271,7 @@ struct WSHandlerTests {
 
         var iterator = frames.makeAsyncIterator()
         #expect(
-            try await iterator.next() == .make(fin: true, opcode: .text, payload: "Hello".data(using: .utf8)!)
+            await iterator.next() == .make(fin: true, opcode: .text, payload: "Hello".data(using: .utf8)!)
         )
     }
 }
