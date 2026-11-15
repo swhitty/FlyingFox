@@ -246,11 +246,6 @@ struct AsyncSocketTests {
     @Test
     func sendMessage_receivesTuple() async throws {
         let (s1, s2, addr) = try await AsyncSocket.makeDatagramPair()
-        defer {
-            try? s1.close()
-            try? s2.close()
-            try? Socket.unlink(addr)
-        }
         async let received: (any SocketAddress, [UInt8]) = s2.receive(atMost: 100)
 
         let message = AsyncSocket.Message(peerAddress: addr, payload: "Shrimp 🦐")
@@ -259,6 +254,9 @@ struct AsyncSocketTests {
         #expect(
             try await received.1 == Array("Shrimp 🦐".data(using: .utf8)!)
         )
+        try? await s1.close()
+        try? await s2.close()
+        try? Socket.unlink(addr)
     }
     #endif
 
@@ -297,11 +295,6 @@ struct AsyncSocketTests {
     @Test
     func sendMessage_receivesMessage() async throws {
         let (s1, s2, addr) = try await AsyncSocket.makeDatagramPair()
-        defer {
-            try? s1.close()
-            try? s2.close()
-            try? Socket.unlink(addr)
-        }
 
         async let received: AsyncSocket.Message = s2.receive(atMost: 100)
 
@@ -311,6 +304,9 @@ struct AsyncSocketTests {
         #expect(
             try await received.payloadString == "Shrimp 🦐"
         )
+        try? await s1.close()
+        try? await s2.close()
+        try? Socket.unlink(addr)
     }
     #endif
 

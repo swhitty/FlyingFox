@@ -59,7 +59,6 @@ public struct WebSocketHTTPHandler: HTTPHandler, Sendable {
             return HTTPResponse(
                 version: .http11,
                 statusCode: .badRequest,
-                headers: [:],
                 body: error.localizedDescription.data(using: .utf8)!
             )
         }
