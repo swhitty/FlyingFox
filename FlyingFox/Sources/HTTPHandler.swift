@@ -75,7 +75,10 @@ public extension HTTPHandler where Self == ClosureHTTPHandler {
 }
 
 public extension HTTPHandler where Self == WebSocketHTTPHandler {
-    static func webSocket(_ handler: some WSMessageHandler, frameSize: Int = 16384) -> WebSocketHTTPHandler {
-        WebSocketHTTPHandler(handler: MessageFrameWSHandler(handler: handler, frameSize: frameSize))
+    /// - Parameters:
+    ///   - frameSize: The largest payload of a frame sent to the client.
+    ///   - capacity: How many messages or frames may wait in each direction. See `MessageFrameWSHandler.init`.
+    static func webSocket(_ handler: some WSMessageHandler, frameSize: Int = 16384, capacity: Int = 16) -> WebSocketHTTPHandler {
+        WebSocketHTTPHandler(handler: MessageFrameWSHandler(handler: handler, frameSize: frameSize, capacity: capacity))
     }
 }

@@ -148,6 +148,62 @@ struct WSHandlerTests {
     }
 
     @Test
+    func ping_IsAnswered_AfterMoreMessagesThanCapacity_WhenHandlerCancelsReadingItsInput() async throws {
+        let messages = OutputOnly(input: .readFirstThenCancel)
+        let handler = MessageFrameWSHandler.make(handler: messages, capacity: 2)
+        let (clientFrames, clientContinuation) = AsyncThrowingStream<WSFrame, any Error>.makeStream()
+        defer { clientContinuation.finish() }
+
+        let frames = try await handler.makeFrames(for: clientFrames)
+        for _ in 0..<5 { clientContinuation.yield(.fish) }
+        clientContinuation.yield(.ping)
+
+        var iterator = frames.makeAsyncIterator()
+        #expect(
+            await iterator.next() == .pong
+        )
+        // the input was cancelled, not released
+        #expect(messages.keepsInput)
+    }
+
+    @Test
+    func ping_IsAnswered_AfterMoreMessagesThanCapacity_WhenHandlerReleasesItsInput() async throws {
+        let handler = MessageFrameWSHandler.make(handler: OutputOnly(input: .release), capacity: 2)
+        let (clientFrames, clientContinuation) = AsyncThrowingStream<WSFrame, any Error>.makeStream()
+        defer { clientContinuation.finish() }
+
+        let frames = try await handler.makeFrames(for: clientFrames)
+        for _ in 0..<5 { clientContinuation.yield(.fish) }
+        clientContinuation.yield(.ping)
+
+        var iterator = frames.makeAsyncIterator()
+        #expect(
+            await iterator.next() == .pong
+        )
+    }
+
+    @Test
+    func ping_IsAnswered_AfterManyMessages_WhenCapacityIsMax_AndHandlerKeepsItsInputUnread() async throws {
+        let messages = Messages()
+        let handler = MessageFrameWSHandler.make(handler: messages, capacity: .max)
+        let (clientFrames, clientContinuation) = AsyncThrowingStream<WSFrame, any Error>.makeStream()
+        defer { clientContinuation.finish() }
+
+        let frames = try await handler.makeFrames(for: clientFrames)
+        for _ in 0..<100 { clientContinuation.yield(.fish) }
+        clientContinuation.yield(.ping)
+
+        var iterator = frames.makeAsyncIterator()
+        #expect(
+            await iterator.next() == .pong
+        )
+        // the messages were kept for the handler
+        #expect(
+            try await messages.input.takeNext() == .text("Fish")
+        )
+    }
+
+    @Test
     func close_IsEchoed_WhileHandlerIgnoresItsInput() async throws {
         let handler = MessageFrameWSHandler.make()
         let frames = try await handler.makeFrames(for: [.fish, .chips, .close])
@@ -202,9 +258,11 @@ struct WSHandlerTests {
         #expect(
             try await messages.input.takeNext() == .text("Fish")
         )
-        try await Task.sleep(seconds: 0.05)
         // Besides the message received, 2 wait in the buffer and 1 waits for space.
-        #expect(read.withLock { $0 } <= 4)
+        #expect(await eventually { read.withLock { $0 } == 4 })
+        // and no more are read
+        try await Task.sleep(seconds: 0.05)
+        #expect(read.withLock { $0 } == 4)
         withExtendedLifetime(frames) { }
     }
 
@@ -224,9 +282,11 @@ struct WSHandlerTests {
         #expect(
             await iterator.next() == .make(fin: true, opcode: .text, payload: "Hello".data(using: .utf8)!)
         )
-        try await Task.sleep(seconds: 0.05)
         // Besides the frame received, 2 wait in the buffer and 1 waits for space.
-        #expect(pulled.withLock { $0 } <= 4)
+        #expect(await eventually { pulled.withLock { $0 } == 4 })
+        // and no more are pulled
+        try await Task.sleep(seconds: 0.05)
+        #expect(pulled.withLock { $0 } == 4)
     }
 
     @Test
@@ -300,6 +360,55 @@ private struct UnfoldingMessages: WSMessageHandler {
     func makeMessages(for client: AsyncStream<WSMessage>) async throws -> AsyncStream<WSMessage> {
         AsyncStream(unfolding: next)
     }
+}
+
+// Keeps its output open, and stops reading its input as a broadcast-only
+// handler would.
+private final class OutputOnly: WSMessageHandler {
+
+    enum Input {
+        // reads the first message, then cancels the task reading the input,
+        // but keeps the input, so only the cancellation ends it
+        case readFirstThenCancel
+        // never reads the input, and does not keep it
+        case release
+    }
+
+    let input: Input
+    let output = AsyncStream<WSMessage>.makeStream()
+    private let kept = Mutex<AsyncStream<WSMessage>?>(nil)
+
+    var keepsInput: Bool {
+        kept.withLock { $0 != nil }
+    }
+
+    init(input: Input) {
+        self.input = input
+    }
+
+    func makeMessages(for client: AsyncStream<WSMessage>) async throws -> AsyncStream<WSMessage> {
+        switch input {
+        case .readFirstThenCancel:
+            kept.withLock { $0 = client }
+            Task {
+                for await _ in client {
+                    withUnsafeCurrentTask { $0?.cancel() }
+                }
+            }
+        case .release:
+            break
+        }
+        return output.stream
+    }
+}
+
+// Whether `condition` holds within a second.
+private func eventually(_ condition: () -> Bool) async -> Bool {
+    for _ in 0..<200 {
+        if condition() { return true }
+        try? await Task.sleep(seconds: 0.005)
+    }
+    return condition()
 }
 
 // Suspends its waiters, ignoring cancellation, until it is opened.

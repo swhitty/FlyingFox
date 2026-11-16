@@ -130,6 +130,41 @@ struct AsyncHandoffTests {
     }
 
     @Test
+    func send_ThrowsCancellationError_WhenSenderIsCancelled_WhileBufferHasSpace() async throws {
+        let handoff = AsyncHandoff<String>(capacity: 2)
+
+        let sender = Task {
+            withUnsafeCurrentTask { $0?.cancel() }
+            try await handoff.send("Fish")
+        }
+        await #expect(throws: CancellationError.self) {
+            try await sender.value
+        }
+        // The cancelled element is not buffered.
+        await handoff.finish()
+        #expect(try await handoff.next() == nil)
+    }
+
+    @Test
+    func send_ThrowsCancellationError_WhenSenderIsCancelled_WhileReceiverWaits() async throws {
+        let handoff = AsyncHandoff<String>()
+        let receiver = Task { try await handoff.next() }
+        // Gives the receiver time to wait. If it has not, send must still throw.
+        try await Task.sleep(seconds: 0.05)
+
+        let sender = Task {
+            withUnsafeCurrentTask { $0?.cancel() }
+            try await handoff.send("Fish")
+        }
+        await #expect(throws: CancellationError.self) {
+            try await sender.value
+        }
+        // The cancelled element is not delivered.
+        await handoff.finish()
+        #expect(try await receiver.value == nil)
+    }
+
+    @Test
     func next_ReturnsNil_WhenReceiverIsCancelled() async throws {
         let handoff = AsyncHandoff<String>()
         let receiver = Task { try await handoff.next() }
