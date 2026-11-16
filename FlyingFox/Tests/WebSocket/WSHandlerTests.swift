@@ -160,7 +160,7 @@ struct WSHandlerTests {
 
         var iterator = frames.makeAsyncIterator()
         #expect(
-            try await iterator.next() == .pong
+            await iterator.next() == .pong
         )
         // the input was cancelled, not released
         #expect(messages.keepsInput)
@@ -178,7 +178,7 @@ struct WSHandlerTests {
 
         var iterator = frames.makeAsyncIterator()
         #expect(
-            try await iterator.next() == .pong
+            await iterator.next() == .pong
         )
     }
 
@@ -195,7 +195,7 @@ struct WSHandlerTests {
 
         var iterator = frames.makeAsyncIterator()
         #expect(
-            try await iterator.next() == .pong
+            await iterator.next() == .pong
         )
         // the messages were kept for the handler
         #expect(
